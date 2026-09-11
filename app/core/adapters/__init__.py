@@ -1,0 +1,1 @@
+# MediKiosk AI Adapters Package

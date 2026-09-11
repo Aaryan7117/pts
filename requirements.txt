@@ -1,0 +1,31 @@
+# MediKiosk Backend — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# === Core Backend ===
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-dotenv==1.1.0
+python-multipart==0.0.20
+pydantic==2.11.3
+
+# === Database ===
+aiosqlite==0.21.0
+
+# === AI/ML Adapters ===
+openai==1.82.0               # Groq + Ollama (OpenAI-compatible)
+google-genai==1.14.0          # Gemini Flash (modern SDK)
+onnxruntime==1.22.0           # CPU inference for embeddings, ASR, TTS
+numpy==2.2.6
+
+# === OCR Engine ===
+rapidocr_onnxruntime==1.4.4
+opencv-python-headless==4.11.0.86
+Pillow==11.2.1
+
+# === TTS Engine ===
+piper-tts==1.2.0
+
+# === Utilities ===
+httpx==0.28.1
+aiofiles==24.1.0
+uuid7==0.1.0

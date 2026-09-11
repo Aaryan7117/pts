@@ -1,0 +1,343 @@
+"""
+MediKiosk — Resilient Multi-Provider LLM Service
+Hybrid failover: Gemini Flash (quality) → Groq Llama 3.1 70B (speed) → Ollama Qwen 7B (offline).
+150ms socket connectivity probe — zero offline TCP stalls.
+
+Ref: MediKiosk_Tech_Stack_Finalized.md Section 6
+"""
+
+import os
+import json
+import asyncio
+import socket
+import logging
+from abc import ABC, abstractmethod
+from typing import Optional, Type, TypeVar
+from pydantic import BaseModel, Field
+from app.config import settings
+
+logger = logging.getLogger("medikiosk.llm")
+T = TypeVar("T", bound=BaseModel)
+
+
+# ============================================================
+# Schema for LLM-extracted medications from OCR text
+# ============================================================
+class ExtractedMedication(BaseModel):
+    name: str = Field(description="Medication name")
+    dose: Optional[str] = Field(default=None, description="Dosage (e.g. 500mg)")
+    frequency: Optional[str] = Field(default=None, description="e.g. 1-0-1 or twice daily")
+    source_lines: list[int] = Field(min_length=1, description="Mandatory line citations from OCR output")
+
+
+class ExtractedMedicationList(BaseModel):
+    medications: list[ExtractedMedication] = Field(default_factory=list)
+
+
+# ============================================================
+# Abstract LLM Provider
+# ============================================================
+class LLMProvider(ABC):
+    timeout_seconds: float = 3.5
+    provider_name: str = "unknown"
+
+    @abstractmethod
+    async def generate_structured(self, prompt: str, schema: Type[T], system_prompt: str) -> T:
+        """Generate a structured response matching the given Pydantic schema."""
+        pass
+
+    @abstractmethod
+    async def generate_text(self, prompt: str, system_prompt: str) -> str:
+        """Generate a free-form text response (for interview follow-up questions)."""
+        pass
+
+
+# ============================================================
+# Gemini Flash Provider (Cloud Quality Tier)
+# ============================================================
+class GeminiFlashProvider(LLMProvider):
+    """Cloud Quality Tier: Gemini 2.5 Flash using official modern google-genai SDK."""
+
+    def __init__(self, api_key: str):
+        self.timeout_seconds = 4.0
+        self.provider_name = "GeminiFlash"
+        self._api_key = api_key
+        self._client = None
+
+    def _get_client(self):
+        if self._client is None:
+            from google import genai
+            self._client = genai.Client(api_key=self._api_key)
+        return self._client
+
+    async def generate_structured(self, prompt: str, schema: Type[T], system_prompt: str) -> T:
+        from google.genai import types
+
+        client = self._get_client()
+        config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            response_mime_type="application/json",
+            response_schema=schema,
+            temperature=0.1
+        )
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=config
+            ),
+            timeout=self.timeout_seconds
+        )
+        return schema.model_validate_json(response.text)
+
+    async def generate_text(self, prompt: str, system_prompt: str) -> str:
+        from google.genai import types
+
+        client = self._get_client()
+        config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=0.3
+        )
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=config
+            ),
+            timeout=self.timeout_seconds
+        )
+        return response.text
+
+
+# ============================================================
+# Groq Llama Provider (Cloud Speed Tier)
+# ============================================================
+class GroqLlamaProvider(LLMProvider):
+    """Cloud Speed Tier: Llama 3.1 70B on Groq LPUs (~280 tok/s)."""
+
+    def __init__(self, api_key: str):
+        self.timeout_seconds = 2.5
+        self.provider_name = "GroqLlama"
+        self._api_key = api_key
+        self._client = None
+
+    def _get_client(self):
+        if self._client is None:
+            from openai import AsyncOpenAI
+            self._client = AsyncOpenAI(
+                base_url="https://api.groq.com/openai/v1",
+                api_key=self._api_key
+            )
+        return self._client
+
+    async def generate_structured(self, prompt: str, schema: Type[T], system_prompt: str) -> T:
+        client = self._get_client()
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": f"{system_prompt}\nStrictly output valid JSON matching this schema:\n{json.dumps(schema.model_json_schema(), indent=2)}"},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            ),
+            timeout=self.timeout_seconds
+        )
+        return schema.model_validate_json(response.choices[0].message.content)
+
+    async def generate_text(self, prompt: str, system_prompt: str) -> str:
+        client = self._get_client()
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3
+            ),
+            timeout=self.timeout_seconds
+        )
+        return response.choices[0].message.content
+
+
+# ============================================================
+# Ollama Edge Provider (Offline Core)
+# ============================================================
+class OllamaEdgeProvider(LLMProvider):
+    """Offline Edge Core: Qwen 2.5 7B Q4 on Single 8GB RTX GPU."""
+
+    def __init__(self, base_url: str = None, model: str = None):
+        self.timeout_seconds = 12.0  # Local inference can be slower
+        self.provider_name = "OllamaEdge"
+        self._base_url = base_url or settings.OLLAMA_BASE_URL
+        self._model = model or settings.OLLAMA_MODEL
+        self._client = None
+
+    def _get_client(self):
+        if self._client is None:
+            from openai import AsyncOpenAI
+            self._client = AsyncOpenAI(
+                base_url=self._base_url,
+                api_key="ollama"  # Ollama doesn't need a real key
+            )
+        return self._client
+
+    async def generate_structured(self, prompt: str, schema: Type[T], system_prompt: str) -> T:
+        client = self._get_client()
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            f"{system_prompt}\n"
+                            f"Return JSON strictly matching this schema:\n"
+                            f"{json.dumps(schema.model_json_schema(), indent=2)}"
+                        )
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            ),
+            timeout=self.timeout_seconds
+        )
+        return schema.model_validate_json(response.choices[0].message.content)
+
+    async def generate_text(self, prompt: str, system_prompt: str) -> str:
+        client = self._get_client()
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3
+            ),
+            timeout=self.timeout_seconds
+        )
+        return response.choices[0].message.content
+
+
+# ============================================================
+# Resilient LLM Service (Failover Chain)
+# ============================================================
+class ResilientLLMService:
+    """
+    Intelligent failover with 150ms socket connectivity probe.
+    Zero offline TCP stalls during the live Wi-Fi unplug demo.
+
+    Chain: Online? → [Gemini Flash → Groq Llama] → [Ollama Qwen 7B → Ollama Qwen 3B]
+    """
+
+    def __init__(self):
+        self.cloud_providers: list[LLMProvider] = []
+        self.edge_providers: list[LLMProvider] = []
+
+        # Build cloud providers (only if API keys are available)
+        if settings.has_gemini:
+            self.cloud_providers.append(GeminiFlashProvider(settings.GEMINI_API_KEY))
+            logger.info("Gemini Flash provider registered (cloud quality tier)")
+
+        if settings.has_groq:
+            self.cloud_providers.append(GroqLlamaProvider(settings.GROQ_API_KEY))
+            logger.info("Groq Llama 3.1 70B provider registered (cloud speed tier)")
+
+        # Build edge providers (always available)
+        self.edge_providers.append(
+            OllamaEdgeProvider(model=settings.OLLAMA_MODEL)
+        )
+        logger.info(f"Ollama Edge provider registered (primary: {settings.OLLAMA_MODEL})")
+
+        # Fallback 3B model
+        if settings.OLLAMA_FALLBACK_MODEL:
+            self.edge_providers.append(
+                OllamaEdgeProvider(model=settings.OLLAMA_FALLBACK_MODEL)
+            )
+            logger.info(f"Ollama Fallback provider registered ({settings.OLLAMA_FALLBACK_MODEL})")
+
+    def is_online(self) -> bool:
+        """150ms socket probe — instantly detects offline state."""
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.15)
+            sock.connect(("1.1.1.1", 53))
+            sock.close()
+            return True
+        except (socket.timeout, socket.error, OSError):
+            return False
+
+    async def generate_structured(self, prompt: str, schema: Type[T], system_prompt: str) -> T:
+        """Execute structured generation with automatic failover."""
+        return await self._execute(
+            lambda provider: provider.generate_structured(prompt, schema, system_prompt)
+        )
+
+    async def generate_text(self, prompt: str, system_prompt: str) -> str:
+        """Execute text generation with automatic failover."""
+        return await self._execute(
+            lambda provider: provider.generate_text(prompt, system_prompt)
+        )
+
+    async def _execute(self, task_fn):
+        """Run task across provider chain with failover."""
+        candidates = []
+
+        if self.is_online():
+            candidates.extend(self.cloud_providers)
+            logger.debug("Network probe: ONLINE — cloud providers available")
+        else:
+            logger.info("Network probe: OFFLINE — routing to edge providers only")
+
+        candidates.extend(self.edge_providers)
+
+        if not candidates:
+            raise RuntimeError(
+                "No LLM providers available. Ensure Ollama is running: `ollama serve`"
+            )
+
+        last_error = None
+        for provider in candidates:
+            try:
+                logger.debug(f"Attempting provider: {provider.provider_name}")
+                result = await task_fn(provider)
+                logger.info(f"Provider {provider.provider_name} succeeded")
+                return result
+            except Exception as e:
+                logger.warning(
+                    f"Provider {provider.provider_name} failed: {type(e).__name__}: {e}. "
+                    f"Cascading to next provider..."
+                )
+                last_error = e
+                continue
+
+        raise RuntimeError(
+            f"All {len(candidates)} LLM providers exhausted. Last error: {last_error}"
+        )
+
+    def get_status(self) -> dict:
+        """Return current provider availability status (for health check endpoint)."""
+        return {
+            "is_online": self.is_online(),
+            "cloud_providers": [p.provider_name for p in self.cloud_providers],
+            "edge_providers": [p.provider_name for p in self.edge_providers],
+            "total_providers": len(self.cloud_providers) + len(self.edge_providers)
+        }
+
+
+# ============================================================
+# Singleton instance — initialized in main.py lifespan
+# ============================================================
+llm_service: Optional[ResilientLLMService] = None
+
+
+def get_llm_service() -> ResilientLLMService:
+    """Get the global LLM service instance."""
+    global llm_service
+    if llm_service is None:
+        llm_service = ResilientLLMService()
+    return llm_service

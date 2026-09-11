@@ -1,0 +1,54 @@
+# Environment and secrets
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Uploads and temporary evidence
+static/uploads/*
+!static/uploads/.gitkeep
+static/evidence/*
+!static/evidence/.gitkeep
+
+# Models directory (large weights)
+models/
+*.onnx
+*.bin
+*.pt
+*.safetensors
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
