@@ -22,9 +22,10 @@ rapidocr_onnxruntime==1.4.4
 opencv-python-headless==4.11.0.86
 Pillow==11.2.1
 
-# === TTS Engine (Offline Voice Synthesis) ===
-pyttsx3>=2.90                 # Native OS TTS (SAPI5 on Windows, 0 VRAM, 0 C++ compilation needed)
-# Piper TTS is supported via standalone executable binary ('piper') on system PATH
+# === TTS Engine ===
+# Cloud:   Sarvam AI Bulbul V3 (via httpx, no extra pip package)
+# Offline: IndicF5 (AI4Bharat) runs on the GPU Edge Server, accessed via SPEECH_SERVICE_URL
+#          Install on GPU server: pip install git+https://github.com/ai4bharat/IndicF5.git
 
 # === Utilities ===
 httpx==0.28.1

@@ -40,7 +40,7 @@ class Settings:
 
     # --- Model Paths ---
     INDICWHISPER_MODEL_PATH: str = os.getenv("INDICWHISPER_MODEL_PATH", "./models/indicwhisper")
-    PIPER_VOICE_MODEL_PATH: str = os.getenv("PIPER_VOICE_MODEL_PATH", "./models/piper/hi_IN-rohan-medium.onnx")
+    INDICF5_MODEL_PATH: str = os.getenv("INDICF5_MODEL_PATH", "ai4bharat/IndicF5")
     CONCEPT_BANK_PATH: str = os.getenv("CONCEPT_BANK_PATH", "./app/data/concept_bank.json")
 
     # --- Security ---

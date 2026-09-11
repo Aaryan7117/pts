@@ -1,19 +1,20 @@
 """
 MediKiosk — Text-to-Speech (TTS) Adapter
-Multi-tier: Sarvam Bulbul V3 (cloud quality) ↔ Remote Microservice Forwarding ↔ Local pyttsx3 / Piper (offline) ↔ Mock.
-Generates plain-language explain-back audio for patient verification.
+Two-tier: Sarvam Bulbul V3 (cloud) ↔ IndicF5 on GPU Edge Server (offline).
+Generates natural explain-back audio for patient verification in 5 Indian languages.
 
-Ref: MediKiosk_Tech_Stack_Finalized.md Section 3A
+Cloud:   Sarvam AI Bulbul V3 (<250ms, near-human, hi/ta/te/mr/en)
+Offline: IndicF5 (AI4Bharat) on On-Premise GPU Edge Server via SPEECH_SERVICE_URL
+         (~3.5 GB VRAM, sequential GPU sharing with Qwen 7B LLM)
+
+Ref: speech_stack_research.md — IndicF5 is the ONLY offline TTS
+     supporting all 5 target languages. Piper/Kokoro/XTTS/pyttsx3 are ELIMINATED.
 """
 
 import asyncio
 import base64
 import logging
-import os
 import socket
-import subprocess
-import tempfile
-from pathlib import Path
 from typing import Optional
 
 from app.config import settings
@@ -32,40 +33,23 @@ class TTSResult:
 
 class TTSService:
     """
-    Multi-tier TTS service with automatic failover and microservice forwarding.
+    Two-tier TTS with automatic failover.
 
-    1. Cloud Primary: Sarvam AI Bulbul V3 (<250ms, near-human Indian accent across 5 languages)
-    2. Remote Microservice: Forward to dedicated GPU Edge Server if SPEECH_SERVICE_URL configured
-    3. Offline Local: pyttsx3 (SAPI5 on Windows / OS native, 0 VRAM, 0 lag) or Piper CLI if on PATH
-    4. Fallback: Deterministic silence WAV generator
+    Tier 1 (Cloud):   Sarvam AI Bulbul V3
+                      Near-human Indian accent, <250ms, all 5 languages.
+                      Free ₹100 credit on signup.
+
+    Tier 2 (Offline): IndicF5 (AI4Bharat) on On-Premise GPU Edge Server
+                      State-of-the-art diffusion TTS, ~3.5 GB VRAM (sequential with LLM).
+                      Accessed via SPEECH_SERVICE_URL over local clinic LAN.
+                      Supports hi, ta, te, mr, en natively.
+
+    Dev Fallback:     Deterministic silence WAV (so API never crashes during dev
+                      when neither cloud nor GPU server is available).
     """
 
-    VOICE_MODELS: dict[str, str] = {
-        "hi": "hi_IN-rohan-medium",
-        "en": "en_US-lessac-medium",
-    }
-
     def __init__(self):
-        self._piper_available: Optional[bool] = None
-
-    def is_available(self) -> bool:
-        """Check if standalone Piper CLI executable is installed on PATH."""
-        if self._piper_available is None:
-            try:
-                result = subprocess.run(
-                    ["piper", "--version"],
-                    capture_output=True, text=True, timeout=5
-                )
-                self._piper_available = (result.returncode == 0)
-            except (FileNotFoundError, subprocess.TimeoutExpired):
-                self._piper_available = False
-
-            if self._piper_available:
-                logger.info("Piper CLI is available on system PATH")
-            else:
-                logger.info("Piper CLI not on PATH — pyttsx3 / Sarvam will be primary TTS")
-
-        return self._piper_available
+        pass
 
     def is_online(self) -> bool:
         """Quick 50ms network probe to check internet connectivity."""
@@ -80,50 +64,49 @@ class TTSService:
 
     async def synthesize(self, text: str, language: str = "hi") -> TTSResult:
         """
-        Synthesize speech from text across available providers with graceful degradation.
+        Synthesize speech from text.
+
+        Priority:
+          1. Sarvam Bulbul V3 (cloud, if online + API key present)
+          2. IndicF5 on GPU Edge Server (offline, via SPEECH_SERVICE_URL)
+          3. Silence WAV (dev fallback — never crashes the API)
         """
         if not text or not text.strip():
             silence = self._generate_silence_wav(duration_ms=500)
             return TTSResult(silence, base64.b64encode(silence).decode("utf-8"), 500, provider="empty_input")
 
-        # 1. Cloud Primary: Sarvam AI Bulbul V3
+        # --- Tier 1: Sarvam AI Bulbul V3 (Cloud) ---
         if self.is_online() and settings.has_sarvam:
             try:
                 return await self._synthesize_sarvam(text, language)
             except Exception as e:
-                logger.warning(f"Sarvam Bulbul TTS failed: {e}. Cascading to next tier.")
+                logger.warning(f"Sarvam Bulbul V3 failed: {e}. Cascading to IndicF5 Edge Server.")
 
-        # 2. Remote Microservice Forwarding (GPU Edge Server)
+        # --- Tier 2: IndicF5 on GPU Edge Server (Offline LAN) ---
         if settings.has_remote_speech:
             try:
-                return await self._synthesize_remote(text, language)
+                return await self._synthesize_indicf5_remote(text, language)
             except Exception as e:
-                logger.warning(f"Remote speech service forwarding failed: {e}. Falling back to local offline.")
+                logger.warning(f"IndicF5 Edge Server forwarding failed: {e}. Falling back to silence.")
 
-        # 3. Offline Tier A: Standalone Piper CLI (if installed)
-        if self.is_available():
-            try:
-                return await self._synthesize_piper(text, language)
-            except Exception as e:
-                logger.warning(f"Piper TTS synthesis failed: {e}. Trying pyttsx3.")
-
-        # 3. Offline Tier B: pyttsx3 (Native OS TTS, 0 VRAM, instant)
-        try:
-            return await self._synthesize_pyttsx3(text, language)
-        except Exception as e:
-            logger.warning(f"pyttsx3 synthesis failed: {e}. Falling back to silence WAV.")
-
-        # 4. Ultimate Fallback: Valid silence WAV
+        # --- Dev Fallback: Silence WAV ---
+        logger.warning(
+            "No TTS provider available (no Sarvam API key + no SPEECH_SERVICE_URL for IndicF5). "
+            "Returning silence WAV. Set SARVAM_API_KEY or SPEECH_SERVICE_URL in .env."
+        )
         silence = self._generate_silence_wav(duration_ms=1000)
         return TTSResult(
             audio_bytes=silence,
             audio_base64=base64.b64encode(silence).decode("utf-8"),
             duration_ms=1000,
-            provider="silence_fallback"
+            provider="silence_dev_fallback"
         )
 
+    # ================================================================
+    # Tier 1: Sarvam AI Bulbul V3 (Cloud)
+    # ================================================================
     async def _synthesize_sarvam(self, text: str, language: str) -> TTSResult:
-        """Cloud TTS via Sarvam AI Bulbul V3."""
+        """Cloud TTS via Sarvam AI Bulbul V3. Near-human Indian voice."""
         import httpx
 
         lang_map = {
@@ -161,13 +144,13 @@ class TTSService:
             res_json = response.json()
             audios = res_json.get("audios", [])
             if not audios:
-                raise ValueError("No audio returned from Sarvam Bulbul")
+                raise ValueError("No audio returned from Sarvam Bulbul V3")
 
             audio_b64 = audios[0]
             audio_bytes = base64.b64decode(audio_b64)
             duration_ms = int(len(audio_bytes) / 16.0)
 
-            logger.info(f"Sarvam Bulbul TTS generated ({language}): {len(audio_bytes)} bytes")
+            logger.info(f"Sarvam Bulbul V3 TTS ({language}): {len(audio_bytes)} bytes")
             return TTSResult(
                 audio_bytes=audio_bytes,
                 audio_base64=audio_b64,
@@ -175,14 +158,23 @@ class TTSService:
                 provider="sarvam_bulbul_v3"
             )
 
-    async def _synthesize_remote(self, text: str, language: str) -> TTSResult:
-        """Forward TTS synthesis to remote GPU Edge Microservice."""
+    # ================================================================
+    # Tier 2: IndicF5 on GPU Edge Server (Offline LAN Forwarding)
+    # ================================================================
+    async def _synthesize_indicf5_remote(self, text: str, language: str) -> TTSResult:
+        """
+        Forward TTS request to IndicF5 running on the On-Premise GPU Edge Server.
+
+        The Edge Server runs IndicF5 (AI4Bharat) on the RTX GPU, accessed over
+        the local clinic LAN / Wi-Fi subnet via SPEECH_SERVICE_URL.
+        IndicF5 natively supports hi, ta, te, mr, en with near-human quality.
+        """
         import httpx
 
         url = f"{settings.SPEECH_SERVICE_URL.rstrip('/')}/api/speech/synthesize"
         payload = {"text": text, "language": language}
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.post(url, json=payload)
             response.raise_for_status()
             data = response.json()
@@ -191,90 +183,26 @@ class TTSService:
             audio_bytes = base64.b64decode(audio_b64)
             duration_ms = data.get("duration_ms", int(len(audio_bytes) / 32.0))
 
-            logger.info(f"Remote Edge Microservice TTS generated: {len(audio_bytes)} bytes")
+            logger.info(f"IndicF5 Edge Server TTS ({language}): {len(audio_bytes)} bytes")
             return TTSResult(
                 audio_bytes=audio_bytes,
                 audio_base64=audio_b64,
                 duration_ms=duration_ms,
-                provider="remote_edge_microservice"
+                provider="indicf5_edge_server"
             )
 
-    async def _synthesize_piper(self, text: str, language: str) -> TTSResult:
-        """Synthesize speech using standalone Piper CLI subprocess."""
-        voice = self.VOICE_MODELS.get(language, self.VOICE_MODELS["hi"])
-
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out_file:
-            out_path = out_file.name
-
-        try:
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(
-                None,
-                lambda: subprocess.run(
-                    ["piper", "--model", voice, "--output_file", out_path],
-                    input=text,
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                    check=True
-                )
-            )
-
-            audio_bytes = Path(out_path).read_bytes()
-            duration_ms = int(len(audio_bytes) / 32.0)
-
-            return TTSResult(
-                audio_bytes=audio_bytes,
-                audio_base64=base64.b64encode(audio_bytes).decode("utf-8"),
-                duration_ms=duration_ms,
-                provider="piper_cli"
-            )
-        finally:
-            Path(out_path).unlink(missing_ok=True)
-
-    async def _synthesize_pyttsx3(self, text: str, language: str) -> TTSResult:
-        """Offline Native TTS via pyttsx3 (SAPI5 on Windows / OS native)."""
-        import pyttsx3
-
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out_file:
-            out_path = out_file.name
-
-        def _run_pyttsx3():
-            engine = pyttsx3.init()
-            engine.setProperty("rate", 145)  # Slightly slower for clear clinical comprehension
-            engine.save_to_file(text, out_path)
-            engine.runAndWait()
-
-        try:
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, _run_pyttsx3)
-
-            audio_bytes = Path(out_path).read_bytes()
-            if not audio_bytes:
-                raise ValueError("pyttsx3 generated empty audio file")
-
-            duration_ms = int(len(audio_bytes) / 32.0)
-            logger.info(f"pyttsx3 synthesized: {len(text)} chars → {len(audio_bytes)} bytes")
-
-            return TTSResult(
-                audio_bytes=audio_bytes,
-                audio_base64=base64.b64encode(audio_bytes).decode("utf-8"),
-                duration_ms=duration_ms,
-                provider="pyttsx3_native"
-            )
-        finally:
-            Path(out_path).unlink(missing_ok=True)
-
+    # ================================================================
+    # Dev Fallback: Silence WAV Generator
+    # ================================================================
     @staticmethod
     def _generate_silence_wav(duration_ms: int = 1000) -> bytes:
-        """Generate a minimal silent WAV file for mock responses."""
+        """Generate a minimal valid silent WAV file for dev/mock responses."""
         import struct
 
         sample_rate = 16000
         num_samples = int(sample_rate * duration_ms / 1000)
         data_size = num_samples * 2  # 16-bit = 2 bytes per sample
 
-        # WAV header
         header = struct.pack(
             '<4sI4s4sIHHIIHH4sI',
             b'RIFF',

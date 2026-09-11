@@ -22,7 +22,7 @@ class CallSessionStartResponse(BaseModel):
     opening_text: str = Field(description="Opening question text in the patient's language")
     opening_audio_base64: Optional[str] = Field(
         default=None,
-        description="Base64-encoded WAV/OGG audio of the opening question (via Piper TTS)"
+        description="Base64-encoded WAV/OGG audio of the opening question (via Sarvam Bulbul V3 / IndicF5)"
     )
 
 
