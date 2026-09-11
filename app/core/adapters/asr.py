@@ -75,22 +75,97 @@ class ASRService:
         """
         # Try cloud first if online
         if self.is_online():
-            try:
-                if settings.has_groq:
-                    return await self._transcribe_groq(audio_bytes, language)
-            except Exception as e:
-                logger.warning(f"Cloud ASR failed: {e}. Falling back to offline.")
+            # 1. Try Sarvam AI Saaras V4 (primary for Indian languages)
+            if settings.has_sarvam:
+                try:
+                    return await self._transcribe_sarvam(audio_bytes, language)
+                except Exception as e:
+                    logger.warning(f"Sarvam ASR failed: {e}. Cascading to Groq Whisper.")
 
-        # Offline floor: IndicWhisper
+            if settings.has_groq:
+                try:
+                    return await self._transcribe_groq(audio_bytes, language)
+                except Exception as e:
+                    logger.warning(f"Groq Whisper ASR failed: {e}. Falling back.")
+        # 2. Remote Microservice Forwarding (GPU Edge Server)
+        if settings.has_remote_speech:
+            try:
+                return await self._transcribe_remote(audio_bytes, language)
+            except Exception as e:
+                logger.warning(f"Remote ASR service failed: {e}. Falling back to offline.")
+
+        # 3. Offline floor: IndicWhisper / Conformer
         try:
             return await self._transcribe_indicwhisper(audio_bytes, language)
         except Exception as e:
             logger.warning(f"IndicWhisper failed: {e}. Using mock transcription for development.")
             return ASRResult(
-                text="[ASR: Audio received but model not loaded — install IndicWhisper on the GPU laptop]",
+                text="[ASR: Audio received but model not loaded — install IndicWhisper on GPU server]",
                 language=language,
                 confidence=0.0,
                 provider="mock"
+            )
+
+    async def _transcribe_remote(self, audio_bytes: bytes, language: str) -> ASRResult:
+        """Forward ASR transcription to remote GPU Edge Microservice."""
+        import httpx
+
+        url = f"{settings.SPEECH_SERVICE_URL.rstrip('/')}/api/speech/transcribe"
+        files = {"file": ("audio.wav", audio_bytes, "audio/wav")}
+        data = {"language": language}
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(url, files=files, data=data)
+            response.raise_for_status()
+            res_json = response.json()
+            return ASRResult(
+                text=res_json.get("text", "").strip(),
+                language=res_json.get("language", language),
+                confidence=float(res_json.get("confidence", 0.90)),
+                provider="remote_edge_microservice"
+            )
+
+    async def _transcribe_sarvam(self, audio_bytes: bytes, language: str) -> ASRResult:
+        """Cloud ASR via Sarvam AI Saaras V4."""
+        import httpx
+
+        lang_map = {
+            "hi": "hi-IN",
+            "ta": "ta-IN",
+            "te": "te-IN",
+            "mr": "mr-IN",
+            "en": "en-IN"
+        }
+        sarvam_lang = lang_map.get(language, "hi-IN")
+
+        headers = {
+            "api-subscription-key": settings.SARVAM_API_KEY
+        }
+        files = {
+            "file": ("audio.wav", audio_bytes, "audio/wav")
+        }
+        data = {
+            "model": "saaras:v4",
+            "language_code": sarvam_lang
+        }
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                "https://api.sarvam.ai/speech-to-text",
+                headers=headers,
+                files=files,
+                data=data
+            )
+            response.raise_for_status()
+            res_json = response.json()
+            transcript = res_json.get("transcript", "").strip()
+
+            logger.info(f"Sarvam ASR transcribed ({language}): {transcript[:50]}...")
+            return ASRResult(
+                text=transcript,
+                language=language,
+                confidence=0.96,
+                provider="sarvam_saaras_v4"
             )
 
     async def _transcribe_groq(self, audio_bytes: bytes, language: str) -> ASRResult:

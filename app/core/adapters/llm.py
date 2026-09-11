@@ -27,7 +27,12 @@ class ExtractedMedication(BaseModel):
     name: str = Field(description="Medication name")
     dose: Optional[str] = Field(default=None, description="Dosage (e.g. 500mg)")
     frequency: Optional[str] = Field(default=None, description="e.g. 1-0-1 or twice daily")
-    source_lines: list[int] = Field(min_length=1, description="Mandatory line citations from OCR output")
+    source_lines: list[int] = Field(default_factory=list, description="Line citations from OCR output (offline)")
+    box_2d: Optional[list[int]] = Field(
+        default=None,
+        description="[ymin, xmin, ymax, xmax] 0-1000 normalized coordinates for doctor UI visual grounding (cloud)"
+    )
+    confidence: float = Field(default=0.9, ge=0.0, le=1.0)
 
 
 class ExtractedMedicationList(BaseModel):
@@ -107,6 +112,42 @@ class GeminiFlashProvider(LLMProvider):
             timeout=self.timeout_seconds
         )
         return response.text
+
+    async def generate_prescription_vision(
+        self,
+        image_bytes: bytes,
+        mime_type: str = "image/jpeg"
+    ) -> ExtractedMedicationList:
+        """Multimodal Vision OCR: Directly extract medications with 2D bounding boxes from image."""
+        from google.genai import types
+
+        client = self._get_client()
+        image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        system_prompt = (
+            "You are an expert clinical pharmacologist and prescription vision specialist. "
+            "Examine this handwritten or printed doctor prescription. Extract all medications, "
+            "their dosages, frequency of intake (e.g. 1-0-1, OD, BD, TDS), and detect the 2D bounding box "
+            "for each medication in normalized coordinates [ymin, xmin, ymax, xmax] on a 0-1000 scale. "
+            "Return JSON matching the schema."
+        )
+        config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            response_mime_type="application/json",
+            response_schema=ExtractedMedicationList,
+            temperature=0.1
+        )
+        response = await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[
+                    image_part,
+                    "Extract all medications and their 2D bounding boxes [ymin, xmin, ymax, xmax] from this prescription."
+                ],
+                config=config
+            ),
+            timeout=8.0
+        )
+        return ExtractedMedicationList.model_validate_json(response.text)
 
 
 # ============================================================
@@ -318,6 +359,27 @@ class ResilientLLMService:
         raise RuntimeError(
             f"All {len(candidates)} LLM providers exhausted. Last error: {last_error}"
         )
+
+    async def extract_prescription_vision(
+        self,
+        image_bytes: bytes,
+        mime_type: str = "image/jpeg"
+    ) -> Optional[ExtractedMedicationList]:
+        """Attempt zero-shot prescription vision extraction via Gemini Flash if online."""
+        if not self.is_online():
+            return None
+
+        for provider in self.cloud_providers:
+            if isinstance(provider, GeminiFlashProvider):
+                try:
+                    logger.info("Extracting prescription via Gemini Flash Vision...")
+                    result = await provider.generate_prescription_vision(image_bytes, mime_type)
+                    logger.info(f"Gemini Flash Vision extracted {len(result.medications)} medications")
+                    return result
+                except Exception as e:
+                    logger.warning(f"Gemini Flash Vision failed: {e}. Falling back to OCR.")
+                    return None
+        return None
 
     def get_status(self) -> dict:
         """Return current provider availability status (for health check endpoint)."""

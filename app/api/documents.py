@@ -58,74 +58,121 @@ async def upload_document(
 
     logger.info(f"Document saved: {file_path} ({len(image_bytes)} bytes)")
 
-    # Step 1: Run OCR
+    # Step 1: Try Cloud Multimodal Vision (Gemini Flash) if online
+    llm = get_llm_service()
     ocr_service = get_ocr_service()
-    try:
-        ocr_result = ocr_service.process_image(image_bytes)
-    except Exception as e:
-        logger.error(f"OCR failed: {e}")
-        # Save document record as failed
-        await db.execute(
-            "INSERT INTO documents (id, encounter_id, file_path, ocr_status) VALUES (?, ?, ?, 'FAILED')",
-            (document_id, encounter_id, str(file_path))
-        )
-        await db.commit()
-        return DocumentUploadResponse(
-            document_id=document_id,
-            ocr_status="FAILED",
-            raw_ocr_text="",
-            overall_ocr_confidence=0.0
-        )
-
-    # Check OCR confidence — refuse if too low
-    if ocr_result.overall_confidence < 0.50:
-        logger.warning(f"OCR confidence too low: {ocr_result.overall_confidence:.2f}")
-        await db.execute(
-            """
-            INSERT INTO documents (id, encounter_id, file_path, ocr_status, ocr_raw_text, ocr_lines)
-            VALUES (?, ?, ?, 'LOW_CONFIDENCE', ?, ?)
-            """,
-            (document_id, encounter_id, str(file_path), ocr_result.raw_text,
-             json.dumps(ocr_result.to_dict()["lines"]))
-        )
-        await db.commit()
-        return DocumentUploadResponse(
-            document_id=document_id,
-            ocr_status="LOW_CONFIDENCE",
-            raw_ocr_text=ocr_result.raw_text,
-            overall_ocr_confidence=ocr_result.overall_confidence
-        )
-
-    # Step 2: Send line-indexed text to LLM for medication extraction
     extracted_meds: list[ExtractedMedication] = []
+    ocr_status = "SUCCESS"
+    raw_ocr_text = ""
+    overall_conf = 0.95
+    ocr_lines_data = []
+    highlighted_path = ""
+    evidence_file = str(EVIDENCE_DIR / f"{document_id}-boxed.jpg")
 
-    try:
-        llm = get_llm_service()
-        system_prompt = (
-            "You are a clinical prescription parser. Extract all medications from the OCR text below. "
-            "For each medication, provide: name, dose, frequency, and the exact source line numbers "
-            "from the OCR output (source_lines). Only extract what is explicitly written. "
-            "Do NOT invent or guess medications."
-        )
-        prompt = f"OCR Text (line-indexed):\n{ocr_result.indexed_text}"
-
-        med_list = await llm.generate_structured(prompt, ExtractedMedicationList, system_prompt)
+    vision_result = await llm.extract_prescription_vision(image_bytes)
+    if vision_result and vision_result.medications:
+        logger.info(f"Gemini Flash Vision successfully extracted {len(vision_result.medications)} medications")
         extracted_meds = [
             ExtractedMedication(
                 name=m.name,
                 dose=m.dose,
                 frequency=m.frequency,
-                source_lines=m.source_lines,
-                confidence=ocr_result.overall_confidence
+                source_lines=m.source_lines or [],
+                box_2d=m.box_2d,
+                confidence=m.confidence
             )
-            for m in med_list.medications
+            for m in vision_result.medications
         ]
+        ocr_status = "SUCCESS"
+        raw_ocr_text = "\n".join(f"{m.name} {m.dose or ''} {m.frequency or ''}" for m in extracted_meds)
 
-        logger.info(f"LLM extracted {len(extracted_meds)} medications from document")
-    except Exception as e:
-        logger.warning(f"LLM extraction failed: {e}. Returning raw OCR only.")
+        # Generate evidence image from box_2d
+        boxes = [m.box_2d for m in extracted_meds if m.box_2d]
+        if boxes:
+            try:
+                highlighted_path = ocr_service.generate_evidence_image_from_boxes(
+                    image_bytes, boxes, evidence_file
+                )
+            except Exception as e:
+                logger.warning(f"Vision evidence boxing failed: {e}")
+    else:
+        # Offline Floor Route: RapidOCR + Local LLM
+        try:
+            ocr_result = ocr_service.process_image(image_bytes)
+        except Exception as e:
+            logger.error(f"OCR failed: {e}")
+            await db.execute(
+                "INSERT INTO documents (id, encounter_id, file_path, ocr_status) VALUES (?, ?, ?, 'FAILED')",
+                (document_id, encounter_id, str(file_path))
+            )
+            await db.commit()
+            return DocumentUploadResponse(
+                document_id=document_id,
+                ocr_status="FAILED",
+                raw_ocr_text="",
+                overall_ocr_confidence=0.0
+            )
 
-    # Step 3: Run drug interaction check
+        overall_conf = ocr_result.overall_confidence
+        raw_ocr_text = ocr_result.raw_text
+        ocr_lines_data = ocr_result.to_dict()["lines"]
+
+        # Check OCR confidence — refuse if too low
+        if ocr_result.overall_confidence < 0.50:
+            logger.warning(f"OCR confidence too low: {ocr_result.overall_confidence:.2f}")
+            await db.execute(
+                """
+                INSERT INTO documents (id, encounter_id, file_path, ocr_status, ocr_raw_text, ocr_lines)
+                VALUES (?, ?, ?, 'LOW_CONFIDENCE', ?, ?)
+                """,
+                (document_id, encounter_id, str(file_path), ocr_result.raw_text, json.dumps(ocr_lines_data))
+            )
+            await db.commit()
+            return DocumentUploadResponse(
+                document_id=document_id,
+                ocr_status="LOW_CONFIDENCE",
+                raw_ocr_text=ocr_result.raw_text,
+                overall_ocr_confidence=ocr_result.overall_confidence
+            )
+
+        # Send line-indexed text to LLM for medication extraction
+        try:
+            system_prompt = (
+                "You are a clinical prescription parser. Extract all medications from the OCR text below. "
+                "For each medication, provide: name, dose, frequency, and the exact source line numbers "
+                "from the OCR output (source_lines). Only extract what is explicitly written. "
+                "Do NOT invent or guess medications."
+            )
+            prompt = f"OCR Text (line-indexed):\n{ocr_result.indexed_text}"
+            med_list = await llm.generate_structured(prompt, ExtractedMedicationList, system_prompt)
+            extracted_meds = [
+                ExtractedMedication(
+                    name=m.name,
+                    dose=m.dose,
+                    frequency=m.frequency,
+                    source_lines=m.source_lines,
+                    confidence=ocr_result.overall_confidence
+                )
+                for m in med_list.medications
+            ]
+            logger.info(f"LLM extracted {len(extracted_meds)} medications from document")
+        except Exception as e:
+            logger.warning(f"LLM extraction failed: {e}. Returning raw OCR only.")
+
+        # Generate line-based evidence image
+        if extracted_meds:
+            all_source_lines = []
+            for m in extracted_meds:
+                all_source_lines.extend(m.source_lines)
+
+            try:
+                highlighted_path = ocr_service.generate_evidence_image(
+                    image_bytes, all_source_lines, evidence_file
+                )
+            except Exception as e:
+                logger.warning(f"Evidence image generation failed: {e}")
+
+    # Step 2: Run drug interaction check
     med_names = [m.name for m in extracted_meds]
 
     # Also check against existing encounter medications
@@ -141,35 +188,22 @@ async def upload_document(
         DrugInteractionAlert(**alert) for alert in drug_alerts_raw
     ]
 
-    # Step 4: Generate evidence-boxed image
-    highlighted_path = ""
-    if extracted_meds:
-        all_source_lines = []
-        for m in extracted_meds:
-            all_source_lines.extend(m.source_lines)
-
-        evidence_file = str(EVIDENCE_DIR / f"{document_id}-boxed.jpg")
-        try:
-            highlighted_path = ocr_service.generate_evidence_image(
-                image_bytes, all_source_lines, evidence_file
-            )
-        except Exception as e:
-            logger.warning(f"Evidence image generation failed: {e}")
-
-    # Step 5: Save to database
+    # Step 3: Save to database
     await db.execute(
         """
         INSERT INTO documents
         (id, encounter_id, file_path, ocr_status, ocr_raw_text, ocr_lines, highlighted_path)
-        VALUES (?, ?, ?, 'SUCCESS', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
             document_id, encounter_id, str(file_path),
-            ocr_result.raw_text,
-            json.dumps(ocr_result.to_dict()["lines"]),
+            ocr_status,
+            raw_ocr_text,
+            json.dumps(ocr_lines_data),
             highlighted_path
         )
     )
+
 
     # Save extracted medications as clinical facts
     for med in extracted_meds:
@@ -205,10 +239,11 @@ async def upload_document(
 
     return DocumentUploadResponse(
         document_id=document_id,
-        ocr_status="SUCCESS",
+        ocr_status=ocr_status,
         extracted_medications=extracted_meds,
         flagged_interactions=drug_alerts,
         highlighted_image_url=highlighted_url,
-        raw_ocr_text=ocr_result.raw_text,
-        overall_ocr_confidence=ocr_result.overall_confidence
+        raw_ocr_text=raw_ocr_text,
+        overall_ocr_confidence=overall_conf
     )
+

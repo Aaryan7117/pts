@@ -197,6 +197,60 @@ class OCRService:
             logger.error(f"Evidence image generation failed: {e}")
             return ""
 
+    def generate_evidence_image_from_boxes(
+        self,
+        image_bytes: bytes,
+        boxes_2d: list[list[int]],
+        output_path: str
+    ) -> str:
+        """
+        Generate an evidence-boxed image from normalized 2D bounding boxes [ymin, xmin, ymax, xmax] (0-1000 scale).
+
+        Args:
+            image_bytes: Original prescription image bytes
+            boxes_2d: List of [ymin, xmin, ymax, xmax] 0-1000 normalized coordinates
+            output_path: Path to save the highlighted image
+
+        Returns:
+            Path to the saved highlighted image.
+        """
+        try:
+            from PIL import Image, ImageDraw
+
+            image = Image.open(io.BytesIO(image_bytes))
+            draw = ImageDraw.Draw(image, "RGBA")
+            width, height = image.size
+
+            for box in boxes_2d:
+                if len(box) == 4:
+                    # Descale 0-1000 normalized coordinates to actual pixel coordinates
+                    ymin, xmin, ymax, xmax = box
+                    x1 = int((xmin / 1000.0) * width)
+                    y1 = int((ymin / 1000.0) * height)
+                    x2 = int((xmax / 1000.0) * width)
+                    y2 = int((ymax / 1000.0) * height)
+
+                    # Draw semi-transparent green/yellow glowing highlight box
+                    draw.rectangle(
+                        [max(0, x1 - 4), max(0, y1 - 4), min(width, x2 + 4), min(height, y2 + 4)],
+                        fill=(0, 220, 100, 60),      # Glowing green transparent fill
+                        outline=(0, 200, 80, 255),    # Vibrant green border
+                        width=3
+                    )
+
+            # Save the highlighted image
+            output = Path(output_path)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            image.save(str(output), "JPEG", quality=90)
+
+            logger.info(f"Evidence image (2D boxes) saved: {output_path} ({len(boxes_2d)} boxes)")
+            return str(output)
+
+        except Exception as e:
+            logger.error(f"Evidence image generation from boxes failed: {e}")
+            return ""
+
+
 
 # Singleton
 _ocr_service: Optional[OCRService] = None

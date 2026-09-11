@@ -47,6 +47,11 @@ class Settings:
     DOCTOR_PIN: str = os.getenv("DOCTOR_PIN", "1234")
     AUDIO_PURGE_AFTER_SECONDS: int = int(os.getenv("AUDIO_PURGE_AFTER_SECONDS", "300"))
 
+    # --- Deployment Topology ---
+    # Options: STANDALONE (single node), CLUSTER (thin-client + GPU edge node), CLOUD (Gemini/Groq/Sarvam)
+    DEPLOYMENT_MODE: str = os.getenv("DEPLOYMENT_MODE", "STANDALONE").upper()
+    SPEECH_SERVICE_URL: str = os.getenv("SPEECH_SERVICE_URL", "")
+
     # --- Derived ---
     @property
     def has_groq(self) -> bool:
@@ -59,6 +64,18 @@ class Settings:
     @property
     def has_sarvam(self) -> bool:
         return bool(self.SARVAM_API_KEY)
+
+    @property
+    def has_remote_speech(self) -> bool:
+        return bool(self.SPEECH_SERVICE_URL)
+
+    @property
+    def is_cluster(self) -> bool:
+        return self.DEPLOYMENT_MODE == "CLUSTER"
+
+    @property
+    def is_cloud(self) -> bool:
+        return self.DEPLOYMENT_MODE == "CLOUD"
 
 
 settings = Settings()

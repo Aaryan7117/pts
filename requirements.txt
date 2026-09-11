@@ -14,7 +14,7 @@ aiosqlite==0.21.0
 # === AI/ML Adapters ===
 openai==1.82.0               # Groq + Ollama (OpenAI-compatible)
 google-genai==1.14.0          # Gemini Flash (modern SDK)
-onnxruntime==1.22.0           # CPU inference for embeddings, ASR, TTS
+onnxruntime==1.22.0           # CPU inference for embeddings, ASR, OCR
 numpy==2.2.6
 
 # === OCR Engine ===
@@ -22,10 +22,15 @@ rapidocr_onnxruntime==1.4.4
 opencv-python-headless==4.11.0.86
 Pillow==11.2.1
 
-# === TTS Engine ===
-piper-tts==1.2.0
+# === TTS Engine (Offline Voice Synthesis) ===
+pyttsx3>=2.90                 # Native OS TTS (SAPI5 on Windows, 0 VRAM, 0 C++ compilation needed)
+# Piper TTS is supported via standalone executable binary ('piper') on system PATH
 
 # === Utilities ===
 httpx==0.28.1
 aiofiles==24.1.0
 uuid7==0.1.0
+
+# === Testing ===
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

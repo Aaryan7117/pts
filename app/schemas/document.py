@@ -13,8 +13,12 @@ class ExtractedMedication(BaseModel):
     name: str = Field(description="Medication name")
     dose: Optional[str] = Field(default=None, description="Dosage (e.g. 500mg)")
     frequency: Optional[str] = Field(default=None, description="e.g. 1-0-1 or twice daily")
-    source_lines: list[int] = Field(min_length=1, description="Mandatory line citations from OCR output")
-    confidence: float = Field(ge=0.0, le=1.0)
+    source_lines: list[int] = Field(default_factory=list, description="Line citations from OCR output (offline)")
+    box_2d: Optional[list[int]] = Field(
+        default=None,
+        description="[ymin, xmin, ymax, xmax] 0-1000 normalized coordinates for doctor UI visual grounding (cloud)"
+    )
+    confidence: float = Field(default=0.9, ge=0.0, le=1.0)
 
 
 class DocumentUploadResponse(BaseModel):
