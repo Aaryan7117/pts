@@ -92,4 +92,5 @@ The server will start at `http://localhost:8000`.
 ---
 
 ## 👥 Authors & Contributors
-- **Aaryan Madhan** (@Aaryan7117) - *Lead Developer*
+- **Aaryan Madhan** (@Aaryan7117) - *Backend Lead Developer*
+- **R Mubashir Sheriff** (@mubashir-73) - *Android & Telephony Developer*
