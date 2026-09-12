@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../app/state/language_provider.dart';
+import '../../app/theme/colors.dart';
+import '../../app/theme/dimensions.dart';
+import '../../app/theme/typography.dart';
+import '../../core/widgets/medi_scaffold.dart';
+import '../../core/widgets/emergency_banner.dart';
+import '../../core/widgets/primary_button.dart';
+import '../../core/widgets/secondary_button.dart';
+
+/// Screen 11 — Red Flag / Triage Safety Screen
+/// Deep crimson visual alert with immediate clinical escalation
+/// Ref: MEDIKIOSK_ANDROID_DESIGN_SPEC.md Section 8 (Screen 11)
+class TriageScreen extends StatelessWidget {
+  const TriageScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
+    return MediScaffold(
+      title: 'Emergency Triage Alert',
+      backgroundColor: MediColors.red50,
+      currentLanguage: lang.currentLanguage,
+      onLanguageChanged: (l) => lang.setLanguage(l),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            EmergencyBanner(
+              title: lang.translate('emergency_title'),
+              message:
+                  'Our safety engine detected symptoms requiring prompt medical assessment. Do not wait in the normal queue. Please notify the nearest OPD triage nurse immediately.',
+              onAlertStaff: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('OPD Staff Terminal Alerted! Attendant is approaching.'),
+                    backgroundColor: MediColors.red800,
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: MediDimensions.space24),
+            Container(
+              padding: const EdgeInsets.all(MediDimensions.space20),
+              decoration: BoxDecoration(
+                color: MediColors.surface,
+                borderRadius: MediDimensions.borderLg,
+                border: Border.all(color: MediColors.triageRed, width: 2.0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'What to do right now (अभी क्या करें):',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: MediColors.triageRed),
+                  ),
+                  const SizedBox(height: MediDimensions.space12),
+                  _buildTriageStep('1', 'Sit down calmly and do not exert yourself.'),
+                  _buildTriageStep('2', 'Show this screen to Room 1 (Emergency Triage).'),
+                  _buildTriageStep('3', 'Your token has been elevated to Priority Status (RED).'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PrimaryActionButton(
+            label: 'Go Directly to Emergency Room (आपातकालीन कक्ष)',
+            backgroundColor: MediColors.triageRed,
+            icon: Icons.local_hospital_rounded,
+            onPressed: () => Navigator.of(context).pushNamed('/emergency'),
+          ),
+          const SizedBox(height: MediDimensions.space12),
+          SecondaryActionButton(
+            label: 'Continue Routine Intake (सामान्य प्रक्रिया जारी रखें)',
+            onPressed: () => Navigator.of(context).pushNamed('/doc_intro'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTriageStep(String number, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: MediDimensions.space8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: MediColors.red100,
+            child: Text(number, style: const TextStyle(color: MediColors.red800, fontSize: 13, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: MediDimensions.space12),
+          Expanded(child: Text(text, style: MediTypography.bodyMedium.copyWith(color: MediColors.textPrimary))),
+        ],
+      ),
+    );
+  }
+}
