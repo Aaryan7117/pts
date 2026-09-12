@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/state/language_provider.dart';
 import '../../app/state/encounter_provider.dart';
+import '../../app/state/intake_provider.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -59,6 +60,61 @@ class WelcomeScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: MediDimensions.space24),
+
+            // 1-Tap Voice AI Fast Track Card
+            InkWell(
+              onTap: () {
+                encounter.bootstrap(channel: 'android_byod', language: lang.currentLanguage);
+                context.read<IntakeProvider>().startSession(
+                  encounterId: encounter.encounterId ?? 'enc-001',
+                  language: lang.currentLanguage,
+                );
+                Navigator.of(context).pushNamed('/active_call');
+              },
+              borderRadius: MediDimensions.borderLg,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(MediDimensions.space16),
+                decoration: BoxDecoration(
+                  color: MediColors.emerald50,
+                  borderRadius: MediDimensions.borderLg,
+                  border: Border.all(color: MediColors.emerald800, width: 1.5),
+                  boxShadow: MediDimensions.elevation2,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: const BoxDecoration(
+                        color: MediColors.emerald800,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.phone_in_talk_rounded, color: MediColors.white, size: 28),
+                    ),
+                    const SizedBox(width: MediDimensions.space16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '1-Tap AI Voice Call (सीधा फोन कॉल)',
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: MediColors.emerald900),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Skip forms and speak symptoms directly to AI',
+                            style: MediTypography.bodySmall.copyWith(color: MediColors.emerald800),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: MediColors.emerald800, size: 18),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: MediDimensions.space16),
           ],
         ),
       ),

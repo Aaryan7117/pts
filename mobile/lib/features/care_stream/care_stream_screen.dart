@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/state/language_provider.dart';
 import '../../app/state/encounter_provider.dart';
+import '../../app/state/intake_provider.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
 import '../../core/widgets/medi_scaffold.dart';
@@ -102,6 +103,10 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
           if (_selectedStream == 'Emergency') {
             Navigator.of(context).pushNamed('/emergency');
           } else {
+            context.read<IntakeProvider>().startSession(
+              encounterId: encounter.encounterId ?? 'enc-001',
+              language: lang.currentLanguage,
+            );
             Navigator.of(context).pushNamed('/intake');
           }
         },

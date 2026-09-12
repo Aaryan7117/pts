@@ -57,7 +57,17 @@ class IntakeRepository {
     required int turnIndex,
     String? fallbackWords,
   }) async {
-    // In mock mode, returns simulated SOCRATES adaptive turn
+    if (!useMock && fallbackWords != null && fallbackWords.isNotEmpty) {
+      try {
+        return await api.sendTextTurn(
+          sessionId: sessionId,
+          text: fallbackWords,
+        );
+      } catch (_) {
+        // Fall back gracefully to mock if network fails
+      }
+    }
+    // In mock mode or fallback, returns simulated SOCRATES adaptive turn
     return MockDataSource.getMockAudioTurn(
       turnIndex: turnIndex,
       patientWords: fallbackWords,

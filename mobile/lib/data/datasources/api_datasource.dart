@@ -9,13 +9,15 @@ import '../models/queue_status.dart';
 /// Connects to `http://<backend_host>:8000`
 /// Ref: API_CONTRACT_AUDIT.md
 class ApiDataSource {
+  static String defaultBaseUrl = 'http://10.0.2.2:8000';
   final String baseUrl;
   final http.Client client;
 
   ApiDataSource({
-    this.baseUrl = 'http://10.0.2.2:8000', // Default Android emulator/host LAN loopback
+    String? baseUrl,
     http.Client? client,
-  }) : client = client ?? http.Client();
+  })  : baseUrl = baseUrl ?? defaultBaseUrl,
+        client = client ?? http.Client();
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
@@ -62,6 +64,27 @@ class ApiDataSource {
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>);
     } else {
       throw HttpException('Failed to start call session: ${response.statusCode}');
+    }
+  }
+
+  /// Process Text / Symptom Turn
+  Future<AudioTurnResponse> sendTextTurn({
+    required String sessionId,
+    required String text,
+  }) async {
+    final response = await client.post(
+      _uri('/api/call/text-turn'),
+      body: {
+        'session_id': sessionId,
+        'text': text,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return AudioTurnResponse.fromJson(
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>);
+    } else {
+      throw HttpException('Failed to process text turn: ${response.statusCode}');
     }
   }
 
