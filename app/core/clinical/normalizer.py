@@ -7,6 +7,11 @@ Pipeline:
   2. Multilingual sentence transformer embeds the statement in 15ms on CPU
   3. Cosine similarity maps phrase to SNOMED/NAMASTE concepts without LLM hallucination
 
+Embedding model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  (XLM-RoBERTa based, ~470 MB, natively covers hi, mr, ta, te, en).
+  English-only models such as all-MiniLM-L6-v2 emit [UNK] for Devanagari,
+  Tamil and Telugu input and must not be substituted here.
+
 Ref: MediKiosk_Tech_Stack_Finalized.md Section 3B
 """
 
@@ -46,7 +51,7 @@ class ConceptMatch:
 
 class SemanticConceptNormalizer:
     """
-    Combines deterministic NegEx rule-checking with multilingual ONNX vector embeddings.
+    Combines deterministic NegEx rule-checking with multilingual sentence-transformer embeddings.
     Maps patient statements in 5 languages to standardized SNOMED-CT & NAMASTE concept codes.
 
     Confidence Tiers:
@@ -70,14 +75,18 @@ class SemanticConceptNormalizer:
     POST_NEGATION_TRIGGERS = {"nahi", "nhi", "nahin", "not", "illai", "ledu"}
 
     def __init__(self):
-        self._onnx_session = None
-        self._tokenizer = None
+        self._embedding_model = None  # SentenceTransformer instance
         self._concept_embeddings: Optional[np.ndarray] = None
+        self._variant_owners: Optional[np.ndarray] = None
         self._concept_metadata: Optional[list[dict]] = None
         self._loaded = False
 
+    def warmup(self) -> None:
+        """Eagerly load the embedding model and pre-compute the concept index."""
+        self._load_models()
+
     def _load_models(self):
-        """Lazy-load ONNX embedding model and concept bank."""
+        """Load the multilingual embedding model and pre-compute the concept index."""
         if self._loaded:
             return
 
@@ -87,33 +96,57 @@ class SemanticConceptNormalizer:
             with open(concept_bank_path, "r", encoding="utf-8") as f:
                 bank = json.load(f)
                 self._concept_metadata = bank.get("concepts", [])
-                # Pre-computed embeddings would be loaded here
-                # For now, we'll use the built-in concept bank
                 logger.info(f"Loaded concept bank: {len(self._concept_metadata)} concepts")
         else:
             logger.warning(f"Concept bank not found at {concept_bank_path}. Using built-in defaults.")
             self._concept_metadata = self._get_default_concepts()
 
-        # Try to load ONNX embedding model
         try:
-            import onnxruntime as ort
-            # The model would be at a known path
-            model_path = Path("./models/multilingual-minilm/model.onnx")
-            if model_path.exists():
-                self._onnx_session = ort.InferenceSession(
-                    str(model_path),
-                    providers=['CPUExecutionProvider']
-                )
-                logger.info("Multilingual MiniLM ONNX model loaded")
-            else:
-                logger.warning(
-                    f"Embedding model not found at {model_path}. "
-                    f"Using keyword-based fallback matching."
-                )
+            from sentence_transformers import SentenceTransformer
+            self._embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
+            logger.info(f"Loaded embedding model: {settings.EMBEDDING_MODEL_NAME}")
+            self._build_concept_index()
         except ImportError:
-            logger.warning("onnxruntime not available. Using keyword-based fallback.")
+            logger.warning(
+                "sentence-transformers not installed. Using keyword-based fallback. "
+                "Install with: pip install sentence-transformers"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to load embedding model: {e}. Using keyword fallback.")
 
         self._loaded = True
+
+    def _build_concept_index(self):
+        """
+        Embed each concept variant (canonical name + every native-script keyword)
+        as its own vector rather than concatenating them into one string. A Tamil
+        or Telugu query then scores against a same-script anchor instead of a
+        diluted multi-script blob, which is what makes cross-script matching work.
+        """
+        variants: list[str] = []
+        owners: list[int] = []
+
+        for idx, concept in enumerate(self._concept_metadata or []):
+            for text in [concept.get("name", "")] + list(concept.get("keywords", [])):
+                if text and text.strip():
+                    variants.append(text.strip())
+                    owners.append(idx)
+
+        if not variants:
+            logger.warning("Concept bank is empty — no embeddings computed.")
+            return
+
+        self._concept_embeddings = self._embedding_model.encode(
+            variants,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+            batch_size=64,
+        )
+        self._variant_owners = np.asarray(owners, dtype=np.int32)
+        logger.info(
+            f"Pre-computed {len(variants)} concept variant embeddings "
+            f"across {len(self._concept_metadata or [])} concepts"
+        )
 
     def check_negation(self, text: str, lang: str) -> bool:
         """
@@ -158,8 +191,8 @@ class SemanticConceptNormalizer:
                 is_negated=True
             )
 
-        # Step 2: Try ONNX vector embedding match
-        if self._onnx_session is not None and self._concept_embeddings is not None:
+        # Step 2: Try sentence-transformer vector embedding match
+        if self._embedding_model is not None and self._concept_embeddings is not None:
             return self._embedding_match(text)
 
         # Step 3: Fallback — keyword-based matching
@@ -167,8 +200,8 @@ class SemanticConceptNormalizer:
 
     def _keyword_match(self, text: str, lang: str) -> ConceptMatch:
         """
-        Fallback keyword-based matching when ONNX model isn't available.
-        Uses multi-language keyword lists in the concept bank.
+        Fallback substring matching when the embedding model is unavailable.
+        Uses the multi-language keyword lists in the concept bank.
         """
         text_lower = text.lower()
         best_match = None
@@ -196,14 +229,13 @@ class SemanticConceptNormalizer:
             return ConceptMatch(concept=None, score=0.0, status="ESCALATE_TO_LLM")
 
     def _embedding_match(self, text: str) -> ConceptMatch:
-        """Vector embedding cosine similarity match against concept bank."""
-        query_vector = self._embed_onnx(text)
+        """Cosine similarity against every concept variant; best variant wins."""
+        query_vector = self._embed_text(text)
 
         similarities = np.dot(self._concept_embeddings, query_vector)
-        best_idx = int(np.argmax(similarities))
-        best_score = float(similarities[best_idx])
-
-        concept = self._concept_metadata[best_idx] if self._concept_metadata else None
+        best_variant = int(np.argmax(similarities))
+        best_score = float(similarities[best_variant])
+        concept = self._concept_metadata[int(self._variant_owners[best_variant])]
 
         if best_score >= 0.82:
             return ConceptMatch(concept=concept, score=best_score, status="CONFIRMED_MATCH")
@@ -212,11 +244,11 @@ class SemanticConceptNormalizer:
         else:
             return ConceptMatch(concept=concept, score=best_score, status="ESCALATE_TO_LLM")
 
-    def _embed_onnx(self, text: str) -> np.ndarray:
-        """Run ONNX inference to get embedding vector. Placeholder for tokenizer integration."""
-        # This would use the actual tokenizer + ONNX session
-        # For now, return a random normalized vector
-        raise NotImplementedError("ONNX embedding inference — implement with tokenizer on GPU laptop")
+    def _embed_text(self, text: str) -> np.ndarray:
+        """Get normalized embedding vector using sentence-transformers."""
+        return self._embedding_model.encode(
+            text, normalize_embeddings=True, show_progress_bar=False
+        )
 
     @staticmethod
     def _get_default_concepts() -> list[dict]:

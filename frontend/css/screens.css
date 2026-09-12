@@ -1,0 +1,583 @@
+/* ============================================================
+   MediKiosk — Screen-Specific Layouts
+   Welcome, Voice Intake, Scan Rx, Queue Status, Doctor Dashboard
+   ============================================================ */
+
+/* ── Screen 1: Welcome ── */
+.welcome-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+.welcome-screen__three-container {
+  width: 100%;
+  max-width: 520px;
+  height: 54vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: -12px;
+}
+
+/* ── Directional Mic Guide (Illiteracy-friendly) ── */
+.guide-beacon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: rgba(8, 145, 178, 0.12);
+  color: #0891b2;
+  border-radius: 50%;
+  border: 1.5px solid rgba(8, 145, 178, 0.35);
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.2);
+  animation: guide-bounce 1.6s ease-in-out infinite;
+}
+
+.guide-pulse-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(8, 145, 178, 0.4);
+  animation: beacon-pulse 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+@keyframes guide-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+@keyframes beacon-pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.welcome-screen__mic-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: 0;
+  z-index: 5;
+}
+
+.welcome-screen__mic-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-weight: 500;
+  opacity: 0;
+  animation: fade-in-up 0.6s ease 1s both;
+}
+
+.welcome-screen__footer {
+  position: absolute;
+  bottom: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Screen 2: Voice Intake ── */
+.voice-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.voice-screen__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  flex-shrink: 0;
+}
+
+.voice-screen__doctor-pip {
+  width: 180px;
+  height: 220px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 2px solid var(--border-light);
+  box-shadow: var(--shadow-lg);
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.voice-screen__conversation {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.voice-screen__center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-4);
+}
+
+.voice-screen__status {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: center;
+}
+
+.voice-screen__facts {
+  width: 100%;
+  padding: var(--space-4) var(--space-6);
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-surface);
+}
+
+.voice-screen__facts-scroll {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scroll-snap-type: x mandatory;
+}
+
+.voice-screen__facts-scroll .fact-card {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+.voice-screen__facts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.voice-screen__facts-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.voice-screen__facts-count {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.voice-screen__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+/* ── Screen 3: Scan Prescription ── */
+.scan-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.scan-screen__camera-area {
+  flex: 1;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.scan-screen__camera-area video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scan-screen__camera-area canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.scan-screen__viewfinder {
+  position: absolute;
+  inset: 10%;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-lg);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.scan-screen__capture-btn {
+  position: absolute;
+  bottom: var(--space-8);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 4px solid var(--accent);
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-fast);
+}
+
+.scan-screen__capture-btn:hover {
+  transform: translateX(-50%) scale(1.1);
+}
+
+.scan-screen__capture-btn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+.scan-screen__capture-btn::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.scan-screen__results {
+  padding: var(--space-6);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-light);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.scan-screen__meds-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.scan-screen__med-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+
+.scan-screen__med-name {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.scan-screen__med-dose {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.scan-screen__evidence-img {
+  margin-top: var(--space-4);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.scan-screen__actions {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-light);
+}
+
+/* ── Screen 4: Queue Status ── */
+.queue-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: var(--space-8);
+  padding: var(--space-8);
+}
+
+.queue-screen__token {
+  font-size: 96px;
+  font-weight: 800;
+  color: var(--accent-dark);
+  letter-spacing: 4px;
+  line-height: 1;
+}
+
+.queue-screen__label {
+  font-size: var(--text-xl);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.queue-screen__position {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.queue-screen__position-number {
+  font-size: var(--text-5xl);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.queue-screen__wait {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+}
+
+.queue-screen__status-badge {
+  padding: var(--space-3) var(--space-8);
+  border-radius: var(--radius-full);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.queue-screen__refresh-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ── Screen 5: Doctor Dashboard ── */
+.doctor-screen {
+  display: flex !important;
+  flex-direction: row !important;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.doctor-screen__sidebar {
+  width: 400px;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.doctor-screen__sidebar-header {
+  padding: var(--space-5) var(--space-5);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doctor-screen__sidebar-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.doctor-screen__queue-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.doctor-screen__main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--bg-primary);
+}
+
+.doctor-screen__patient-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+}
+
+.doctor-screen__patient-name {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}
+
+.doctor-screen__section {
+  margin-bottom: var(--space-6);
+}
+
+.doctor-screen__section-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.doctor-screen__facts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-3);
+}
+
+.doctor-screen__alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.doctor-screen__evidence-container {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.doctor-screen__evidence-container img {
+  width: 100%;
+  display: block;
+}
+
+.doctor-screen__call-btn {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-light);
+}
+
+/* ── Language selection pills ── */
+.language-pill-group {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: center;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  z-index: 10;
+  flex-wrap: wrap;
+}
+
+.lang-pill {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+}
+
+.lang-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.lang-pill.active {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(8, 145, 178, 0.3);
+}
+
+/* ── Voice screen controls ── */
+.voice-screen__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.mic-btn.mic-btn-sm {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+}
+
+.mic-btn.mic-btn-sm svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* ── Doctor Screen Clinical Facts ── */
+.doctor-fact-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--transition-fast);
+}
+
+.doctor-fact-card:hover {
+  border-color: var(--accent);
+}
+
+.doctor-fact-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doctor-fact-card__category {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.doctor-fact-card__value {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.doctor-fact-card__words {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.doctor-fact-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+

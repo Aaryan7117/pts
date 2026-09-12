@@ -114,7 +114,22 @@ async def process_audio_turn(
     # Step 1: Transcribe audio → text
     asr = get_asr_service()
     asr_result = await asr.transcribe(audio_bytes, language)
-    transcript = asr_result.text
+    transcript = (asr_result.text or "").strip()
+
+    # If no speech was detected, reprompt kindly without losing turn state
+    if not transcript:
+        reprompt_text = "I couldn't hear that clearly. Could you please speak again?" if language == "en" else "माफ़ कीजिए, मैं सुन नहीं पाया। कृपया दोबारा बोलें।"
+        tts = get_tts_service()
+        tts_result = await tts.synthesize(reprompt_text, language)
+        return AudioTurnResponse(
+            session_id=session_id,
+            turn_index=session["turn_count"],
+            patient_transcript="",
+            extracted_facts=[],
+            next_question_text=reprompt_text,
+            next_question_audio_base64=tts_result.audio_base64,
+            is_completed=False
+        )
 
     # Step 2: Process through interview engine
     result = engine.process_response(transcript)
@@ -186,6 +201,97 @@ async def process_audio_turn(
         next_question_audio_base64=next_question_audio,
         is_completed=result["is_completed"]
     )
+
+
+@router.post("/text-turn", response_model=AudioTurnResponse)
+async def process_text_turn(
+    session_id: str = Form(...),
+    text: str = Form(...),
+    db=Depends(get_db)
+):
+    """
+    Process a single text turn in the conversational intake loop.
+    Enables touchscreen keyboard typing for patients who prefer typing over speaking.
+    """
+    session = _active_sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Call session not found or expired.")
+
+    engine: InterviewEngine = session["engine"]
+    language = session["language"]
+    transcript = text.strip()
+
+    # Process through interview engine
+    result = engine.process_response(transcript)
+
+    # Convert extracted facts to response format
+    extracted_facts = []
+    for fact in result["extracted_facts"]:
+        extracted_facts.append(ExtractedFactSummary(
+            category=fact["category"],
+            field=fact["field"],
+            concept=fact.get("concept") or fact["value"],
+            concept_code=fact.get("concept_code"),
+            confidence=fact["confidence"],
+            provenance=fact["provenance"]
+        ))
+
+        # Persist fact to database
+        fact_id = f"fact-{uuid.uuid4().hex[:8]}"
+        await db.execute(
+            """
+            INSERT INTO clinical_facts
+            (id, encounter_id, category, field, value, patient_words,
+             normalized_concept, concept_code, provenance_tier, source_type,
+             confidence, is_negated, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'patient_text', ?, ?, 'pending')
+            """,
+            (
+                fact_id, session["encounter_id"],
+                fact["category"], fact["field"], fact["value"], transcript,
+                fact.get("concept"), fact.get("concept_code"),
+                fact["provenance"], fact["confidence"],
+                1 if fact.get("is_negated") else 0
+            )
+        )
+
+    # Generate next question audio (if interview continues)
+    next_question_text = None
+    next_question_audio = None
+
+    if result["next_question"]:
+        next_question_text = result["next_question"]["question_text"]
+        tts = get_tts_service()
+        tts_result = await tts.synthesize(next_question_text, language)
+        next_question_audio = tts_result.audio_base64
+
+    # Update session state
+    session["turn_count"] += 1
+    turn_index = session["turn_count"]
+
+    # Update DB
+    current_step = result["next_question"]["section_id"] if result["next_question"] else "completed"
+    await db.execute(
+        "UPDATE call_sessions SET turn_count = ?, current_step = ? WHERE id = ?",
+        (turn_index, current_step, session_id)
+    )
+    await db.commit()
+
+    logger.info(
+        f"Text turn #{turn_index}: '{transcript[:60]}...' → "
+        f"{len(extracted_facts)} facts, completed={result['is_completed']}"
+    )
+
+    return AudioTurnResponse(
+        session_id=session_id,
+        turn_index=turn_index,
+        patient_transcript=transcript,
+        extracted_facts=extracted_facts,
+        next_question_text=next_question_text,
+        next_question_audio_base64=next_question_audio,
+        is_completed=result["is_completed"]
+    )
+
 
 
 @router.post("/session/end", response_model=CallSessionEndResponse)

@@ -255,15 +255,9 @@ class InterviewEngine:
 
         self.captured_facts.extend(extracted_facts)
 
-        # Decide: follow-up or advance to next section
-        max_follow = section.get("max_follow_ups", 0)
-
-        if self.follow_up_count < max_follow and match.status == "REQUIRES_EXPLAIN_BACK":
-            self.follow_up_count += 1
-        else:
-            # Advance to next section
-            self.current_section_idx += 1
-            self.follow_up_count = 0
+        # Advance to next clinical section on every turn (eliminates repetitive questioning)
+        self.current_section_idx += 1
+        self.follow_up_count = 0
 
         # Get next question
         next_question = self.get_current_question()

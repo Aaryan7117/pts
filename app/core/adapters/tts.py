@@ -125,7 +125,7 @@ class TTSService:
         payload = {
             "inputs": [text],
             "target_language_code": sarvam_lang,
-            "speaker": "meera",
+            "speaker": "aditya",
             "pitch": 0,
             "pace": 1.0,
             "loudness": 1.5,

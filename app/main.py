@@ -14,6 +14,7 @@ Endpoints:
 Run: python run.py
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -58,6 +59,12 @@ async def lifespan(app: FastAPI):
     logger.info(f"Cloud LLM providers: {status['cloud_providers'] or 'None (offline mode)'}")
     logger.info(f"Edge LLM providers: {status['edge_providers']}")
     logger.info(f"Total providers: {status['total_providers']}")
+
+    # Pre-compute multilingual concept embeddings so the first patient turn
+    # doesn't pay the model load cost. Degrades to keyword matching on failure.
+    if settings.EMBEDDING_WARMUP_ON_STARTUP:
+        from app.core.clinical.normalizer import get_normalizer
+        await asyncio.to_thread(get_normalizer().warmup)
 
     logger.info("")
     logger.info(f"  Swagger UI:  http://{settings.HOST}:{settings.PORT}/docs")

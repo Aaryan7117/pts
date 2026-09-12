@@ -64,7 +64,7 @@ class GeminiFlashProvider(LLMProvider):
     """Cloud Quality Tier: Gemini 2.5 Flash using official modern google-genai SDK."""
 
     def __init__(self, api_key: str):
-        self.timeout_seconds = 4.0
+        self.timeout_seconds = 10.0
         self.provider_name = "GeminiFlash"
         self._api_key = api_key
         self._client = None
@@ -87,7 +87,7 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=prompt,
                 config=config
             ),
@@ -105,7 +105,7 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=prompt,
                 config=config
             ),
@@ -138,7 +138,7 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=[
                     image_part,
                     "Extract all medications and their 2D bounding boxes [ymin, xmin, ymax, xmax] from this prescription."

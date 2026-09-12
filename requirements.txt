@@ -27,6 +27,17 @@ Pillow==11.2.1
 # Offline: IndicF5 (AI4Bharat) runs on the GPU Edge Server, accessed via SPEECH_SERVICE_URL
 #          Install on GPU server: pip install git+https://github.com/ai4bharat/IndicF5.git
 
+# === ASR Engine ===
+# Cloud:   Sarvam AI Saaras V4 (via httpx, no extra pip package)
+# Offline: IndicConformer 600M (AI4Bharat) / faster-whisper run on the GPU Edge Server,
+#          accessed via SPEECH_SERVICE_URL
+#          Install on GPU server: pip install nemo_toolkit[asr] onnxruntime
+
+# === Semantic Embedding (Concept Normalizer) ===
+# paraphrase-multilingual-MiniLM-L12-v2 (~470 MB) for symptom-to-SNOMED/NAMASTE
+# matching across hi, mr, ta, te, en. Never swap in an English-only model.
+sentence-transformers>=3.0.0
+
 # === Utilities ===
 httpx==0.28.1
 aiofiles==24.1.0

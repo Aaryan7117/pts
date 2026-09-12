@@ -35,13 +35,24 @@ class Settings:
     # --- Google Gemini (Cloud Quality LLM) ---
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
-    # --- Sarvam AI (Cloud ASR) ---
+    # --- Sarvam AI (Cloud Speech: Saaras V4 ASR + Bulbul V3 TTS) ---
     SARVAM_API_KEY: str = os.getenv("SARVAM_API_KEY", "")
 
-    # --- Model Paths ---
-    INDICWHISPER_MODEL_PATH: str = os.getenv("INDICWHISPER_MODEL_PATH", "./models/indicwhisper")
+    # --- Model Paths (resolved on the On-Premise GPU Edge Server) ---
+    INDICCONFORMER_MODEL_PATH: str = os.getenv("INDICCONFORMER_MODEL_PATH", "./models/indicconformer")
     INDICF5_MODEL_PATH: str = os.getenv("INDICF5_MODEL_PATH", "ai4bharat/IndicF5")
     CONCEPT_BANK_PATH: str = os.getenv("CONCEPT_BANK_PATH", "./app/data/concept_bank.json")
+
+    # --- Semantic Concept Normalizer (Multilingual Embeddings, CPU) ---
+    # Must stay multilingual: patient input arrives in Devanagari (hi/mr), Tamil,
+    # Telugu and Latin script. English-only models tokenize Indic scripts to [UNK].
+    EMBEDDING_MODEL_NAME: str = os.getenv(
+        "EMBEDDING_MODEL_NAME",
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+    EMBEDDING_WARMUP_ON_STARTUP: bool = (
+        os.getenv("EMBEDDING_WARMUP_ON_STARTUP", "true").lower() == "true"
+    )
 
     # --- Security ---
     DOCTOR_PIN: str = os.getenv("DOCTOR_PIN", "1234")

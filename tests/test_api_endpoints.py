@@ -81,6 +81,46 @@ def test_call_session_start(client):
     assert len(session_data["opening_audio_base64"]) > 0
 
 
+def test_call_session_text_turn_and_end(client):
+    """Verify touchscreen keyboard text turn and ending session."""
+    # 1. Bootstrap encounter
+    bootstrap_res = client.post("/api/encounters/bootstrap", json={
+        "device_id": "kiosk-unit-02",
+        "device_channel": "kiosk",
+        "language": "hi"
+    })
+    assert bootstrap_res.status_code == 200
+    encounter_id = bootstrap_res.json()["encounter_id"]
+
+    # 2. Start call session
+    session_res = client.post("/api/call/session/start", json={
+        "encounter_id": encounter_id,
+        "language": "hi"
+    })
+    assert session_res.status_code == 200
+    session_id = session_res.json()["session_id"]
+
+    # 3. Submit text turn (keyboard typing)
+    turn_res = client.post("/api/call/text-turn", data={
+        "session_id": session_id,
+        "text": "मुझे 3 दिन से तेज सिरदर्द और बुखार है"
+    })
+    assert turn_res.status_code == 200
+    turn_data = turn_res.json()
+    assert turn_data["turn_index"] == 1
+    assert "patient_transcript" in turn_data
+    assert "extracted_facts" in turn_data
+
+    # 4. End session
+    end_res = client.post("/api/call/session/end", json={
+        "session_id": session_id
+    })
+    assert end_res.status_code == 200
+    end_data = end_res.json()
+    assert end_data["status"] == "COMPLETED"
+    assert "assigned_token" in end_data
+
+
 def test_doctor_auth_and_queue(client):
     """Verify Doctor PIN authentication gate and doctor OPD queue view."""
     # Invalid PIN returns 401
