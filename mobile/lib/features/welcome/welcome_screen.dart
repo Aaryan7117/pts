@@ -63,12 +63,14 @@ class WelcomeScreen extends StatelessWidget {
 
             // 1-Tap Voice AI Fast Track Card
             InkWell(
-              onTap: () {
-                encounter.bootstrap(channel: 'android_byod', language: lang.currentLanguage);
-                context.read<IntakeProvider>().startSession(
+              onTap: () async {
+                await encounter.bootstrap(channel: 'android_byod', language: lang.currentLanguage);
+                if (!context.mounted) return;
+                await context.read<IntakeProvider>().startSession(
                   encounterId: encounter.encounterId ?? 'enc-001',
                   language: lang.currentLanguage,
                 );
+                if (!context.mounted) return;
                 Navigator.of(context).pushNamed('/active_call');
               },
               borderRadius: MediDimensions.borderLg,
@@ -124,12 +126,14 @@ class WelcomeScreen extends StatelessWidget {
           PrimaryActionButton(
             label: lang.translate('start_button'),
             icon: Icons.play_arrow_rounded,
-            onPressed: () {
-              encounter.bootstrap(
+            onPressed: () async {
+              await encounter.bootstrap(
                 channel: 'android_byod',
                 language: lang.currentLanguage,
               );
-              Navigator.of(context).pushNamed('/language');
+              if (context.mounted) {
+                Navigator.of(context).pushNamed('/language');
+              }
             },
           ),
           const SizedBox(height: MediDimensions.space8),

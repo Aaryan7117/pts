@@ -8,6 +8,7 @@ import '../../app/theme/typography.dart';
 import '../../core/widgets/medi_scaffold.dart';
 import '../../core/widgets/listening_wave.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../core/services/speech_service.dart';
 
 /// Screen 07 — Active Voice Capture
 /// Real-time audio waveform and live speech transcription
@@ -20,12 +21,46 @@ class ActiveVoiceCaptureScreen extends StatefulWidget {
 }
 
 class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
-  final TextEditingController _textController = TextEditingController(
-    text: 'मुझे दो दिन से तेज सिरदर्द और हल्का बुखार है',
-  );
+  final TextEditingController _textController = TextEditingController();
+  final SpeechService _speech = SpeechService();
+  bool _isListening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startListening();
+    });
+  }
+
+  void _startListening() async {
+    final lang = context.read<LanguageProvider>();
+    setState(() => _isListening = true);
+    final ok = await _speech.startListening(
+      languageCode: lang.currentLanguage,
+      onResult: (text) {
+        if (mounted) {
+          setState(() {
+            _textController.text = text;
+          });
+        }
+      },
+    );
+    if (!ok && mounted) {
+      setState(() => _isListening = false);
+    }
+  }
+
+  void _stopListening() async {
+    await _speech.stopListening();
+    if (mounted) {
+      setState(() => _isListening = false);
+    }
+  }
 
   @override
   void dispose() {
+    _speech.stopListening();
     _textController.dispose();
     super.dispose();
   }
@@ -36,7 +71,7 @@ class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
     final intake = context.watch<IntakeProvider>();
 
     return MediScaffold(
-      title: 'Listening...',
+      title: _isListening ? 'Listening...' : 'Voice Input',
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
@@ -44,21 +79,32 @@ class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
           children: [
           const SizedBox(height: MediDimensions.space24),
           Text(
-            lang.translate('listening'),
+            _isListening ? lang.translate('listening') : 'Tap mic or speak now',
             style: MediTypography.headlineLarge,
           ),
           const SizedBox(height: MediDimensions.space12),
-          const Text(
-            'Speak clearly near the microphone (माइक के पास बोलें)',
-            style: TextStyle(fontSize: 16, color: MediColors.textMuted),
+          Text(
+            _isListening
+                ? 'Speak clearly near the microphone (माइक के पास बोलें)'
+                : 'Tap the wave or mic to resume listening',
+            style: const TextStyle(fontSize: 16, color: MediColors.textMuted),
           ),
-          const SizedBox(height: MediDimensions.space40),
+          const SizedBox(height: MediDimensions.space32),
 
-          // Active 5-Bar Waveform
-          const ListeningWave(
-            isActive: true,
-            color: MediColors.brandPrimary,
-            height: 64,
+          // Active 5-Bar Waveform (tappable to start/stop listening)
+          GestureDetector(
+            onTap: () {
+              if (_isListening) {
+                _stopListening();
+              } else {
+                _startListening();
+              }
+            },
+            child: ListeningWave(
+              isActive: _isListening,
+              color: _isListening ? MediColors.brandPrimary : MediColors.slate400,
+              height: 64,
+            ),
           ),
 
           const SizedBox(height: MediDimensions.space40),
@@ -77,20 +123,30 @@ class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(
-                        color: MediColors.red600,
-                        shape: BoxShape.circle,
+                    Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: MediColors.red600,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Speech / Symptom Input:',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: MediColors.textMuted),
+                        ),
+                      ],
+                    ),
+                    if (_textController.text.isNotEmpty)
+                      GestureDetector(
+                        onTap: () => setState(() => _textController.clear()),
+                        child: const Text('Clear', style: TextStyle(color: MediColors.red600, fontWeight: FontWeight.w600, fontSize: 13)),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Live ASR Transcript:',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: MediColors.textMuted),
-                    ),
                   ],
                 ),
                 const SizedBox(height: MediDimensions.space12),
@@ -100,11 +156,48 @@ class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500, height: 1.4),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
-                    hintText: 'Recognized patient speech will appear here...',
+                    hintText: 'Type or select symptoms below...',
                   ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: MediDimensions.space16),
+
+          // Quick Symptom Chips to test any concept in Concept Bank
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Or tap symptom to test AI (या लक्षण चुनें):',
+              style: MediTypography.caption.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(height: MediDimensions.space8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              'छाती में दर्द (Chest Pain)',
+              'पेट में दर्द (Stomach Pain)',
+              'खांसी (Cough)',
+              'उल्टी (Vomiting)',
+              'कमर दर्द (Back Pain)',
+              'घुटने में दर्द (Knee Pain)',
+              'सांस लेने में तकलीफ (Breathlessness)',
+              'चक्कर आना (Dizziness)',
+            ].map((symptom) {
+              final label = symptom.split('(').first.trim();
+              return ActionChip(
+                label: Text(symptom, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                backgroundColor: MediColors.slate100,
+                side: const BorderSide(color: MediColors.border),
+                onPressed: () {
+                  setState(() {
+                    _textController.text = label;
+                  });
+                },
+              );
+            }).toList(),
           ),
           const SizedBox(height: MediDimensions.space24),
         ],
@@ -113,9 +206,24 @@ class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
     bottomBar: PrimaryActionButton(
         label: 'Done Speaking (बोलना समाप्त)',
         icon: Icons.check_circle,
-        onPressed: () {
-          intake.submitTurn(patientSpeech: _textController.text);
-          Navigator.of(context).pushNamed('/processing');
+        onPressed: () async {
+          await _speech.stopListening();
+          final text = _textController.text.trim();
+          if (text.isEmpty) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('कृपया बोलें या नीचे से कोई लक्षण चुनें (Please speak or tap a symptom below)'),
+                  backgroundColor: MediColors.amber800,
+                ),
+              );
+            }
+            return;
+          }
+          await intake.submitTurn(patientSpeech: text);
+          if (context.mounted) {
+            Navigator.of(context).pushNamed('/processing');
+          }
         },
       ),
     );

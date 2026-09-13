@@ -275,6 +275,18 @@ async def process_text_turn(
         "UPDATE call_sessions SET turn_count = ?, current_step = ? WHERE id = ?",
         (turn_index, current_step, session_id)
     )
+
+    # Check if any extracted fact is a clinical emergency red flag (e.g. chest pain, cardiac, dyspnea)
+    for fact in result["extracted_facts"]:
+        concept_str = (fact.get("concept") or fact.get("value") or "").lower()
+        if any(rf in concept_str for rf in ["chest pain", "difficulty breathing", "heart", "cardiac"]):
+            await db.execute(
+                "UPDATE encounters SET severity_badge = 'RED' WHERE id = ?",
+                (session["encounter_id"],)
+            )
+            logger.warning(f"RED FLAG DETECTED in session {session_id}: {concept_str} → Triaged to RED")
+            break
+
     await db.commit()
 
     logger.info(
@@ -323,13 +335,25 @@ async def end_call_session(request: CallSessionEndRequest, db=Depends(get_db)):
     drug_alerts = DrugInteractionEngine.check_prescriptions(medication_facts)
 
     # Determine severity badge
-    severity = "GREEN"
-    has_red_flags = False
+    enc_row = await db.execute("SELECT severity_badge FROM encounters WHERE id = ?", (encounter_id,))
+    enc_rec = await enc_row.fetchone()
+    current_badge = enc_rec["severity_badge"] if enc_rec else "GREEN"
+
+    severity = current_badge
+    has_red_flags = (current_badge == "RED")
+
+    # Check all facts for red flag symptoms (chest pain, dyspnea, cardiac)
+    for f in summary.get("facts", []):
+        c_str = (f.get("concept") or f.get("value") or "").lower()
+        if any(rf in c_str for rf in ["chest pain", "difficulty breathing", "heart", "cardiac"]):
+            severity = "RED"
+            has_red_flags = True
+            break
 
     if any(a["severity"] == "CRITICAL" for a in drug_alerts):
         severity = "RED"
         has_red_flags = True
-    elif any(a["severity"] in ("HIGH", "MODERATE") for a in drug_alerts):
+    elif severity != "RED" and any(a["severity"] in ("HIGH", "MODERATE") for a in drug_alerts):
         severity = "YELLOW"
 
     # Get the queue token

@@ -65,7 +65,13 @@ class DocumentUploadResponse {
               .toList() ??
           const [],
       flaggedInteractions: (json['flagged_interactions'] as List<dynamic>?)
-              ?.map((e) => e.toString())
+              ?.map((e) {
+                if (e is Map<String, dynamic>) {
+                  return e['clinical_warning'] as String? ??
+                      '${e['drug_a']} + ${e['drug_b']}: ${e['severity']}';
+                }
+                return e.toString();
+              })
               .toList() ??
           const [],
       highlightedImageUrl: json['highlighted_image_url'] as String?,

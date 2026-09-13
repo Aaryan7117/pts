@@ -105,16 +105,25 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
             ? const Color(0xFF2E7D32)
             : (_selectedStream == 'Emergency' ? const Color(0xFFD32F2F) : null),
         icon: Icons.arrow_forward_rounded,
-        onPressed: () {
+        onPressed: () async {
           encounter.setDepartment(_selectedStream);
           if (_selectedStream == 'Emergency') {
             Navigator.of(context).pushNamed('/emergency');
           } else {
-            context.read<IntakeProvider>().startSession(
-              encounterId: encounter.encounterId ?? 'enc-001',
+            if (encounter.encounterId == null) {
+              await encounter.bootstrap(
+                channel: 'android_byod',
+                language: lang.currentLanguage,
+              );
+            }
+            if (!context.mounted) return;
+            await context.read<IntakeProvider>().startSession(
+              encounterId: encounter.encounterId!,
               language: lang.currentLanguage,
             );
-            Navigator.of(context).pushNamed('/intake');
+            if (context.mounted) {
+              Navigator.of(context).pushNamed('/intake');
+            }
           }
         },
       ),

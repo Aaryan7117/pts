@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/state/language_provider.dart';
 import '../../app/state/intake_provider.dart';
+import '../../app/state/encounter_provider.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -17,6 +18,8 @@ class DocumentCameraScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
     final intake = context.read<IntakeProvider>();
+
+    final encounter = context.read<EncounterProvider>();
 
     return MediScaffold(
       title: 'Align Document',
@@ -96,7 +99,8 @@ class DocumentCameraScreen extends StatelessWidget {
         height: 72,
         child: ElevatedButton.icon(
           onPressed: () {
-            intake.processDocument('active-encounter');
+            final encId = encounter.encounterId ?? 'enc-001';
+            intake.processDocument(encId);
             Navigator.of(context).pushNamed('/ocr_processing');
           },
           icon: const Icon(Icons.camera_rounded, size: 32),

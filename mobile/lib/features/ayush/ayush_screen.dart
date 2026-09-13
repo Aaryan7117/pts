@@ -8,7 +8,7 @@ import '../../app/theme/typography.dart';
 import '../../core/widgets/medi_scaffold.dart';
 import '../../core/widgets/choice_card.dart';
 import '../../core/widgets/primary_button.dart';
-import '../../data/datasources/mock_datasource.dart';
+import '../../data/models/ayush_profile.dart';
 
 /// Screen 18 — AYUSH Profile (Dashavidha Pariksha)
 /// Agni, Prakriti, Koshtha, and Ahara-Vihara assessment
@@ -292,7 +292,6 @@ class _AyushScreenState extends State<AyushScreen> {
               duration: const Duration(seconds: 2),
             ),
           );
-
           Navigator.of(context).pushNamed('/queue');
         },
       ),

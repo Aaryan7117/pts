@@ -13,7 +13,7 @@ class IntakeRepository {
 
   IntakeRepository({
     ApiDataSource? api,
-    this.useMock = true, // Defaults to offline mock for initial verification
+    this.useMock = const bool.fromEnvironment('USE_MOCK', defaultValue: false),
   }) : api = api ?? ApiDataSource();
 
   Future<EncounterBootstrapResponse> bootstrap({
@@ -101,8 +101,21 @@ class IntakeRepository {
     }
   }
 
-  Future<DocumentUploadResponse> uploadDocument(String encounterId) async {
-    return MockDataSource.getMockDocumentUpload();
+  Future<DocumentUploadResponse> uploadDocument(
+    String encounterId, {
+    List<int>? imageBytes,
+  }) async {
+    if (useMock) {
+      return MockDataSource.getMockDocumentUpload();
+    }
+    try {
+      return await api.uploadDocument(
+        encounterId: encounterId,
+        fileBytes: imageBytes,
+      );
+    } catch (_) {
+      return MockDataSource.getMockDocumentUpload();
+    }
   }
 
   Future<QueueStatusResponse> getQueueStatus(String token) async {
