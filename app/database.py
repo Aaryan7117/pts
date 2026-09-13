@@ -55,6 +55,47 @@ async def _create_tables(db: aiosqlite.Connection):
 
     await db.executescript("""
         -- ============================================================
+        -- PATIENTS: Master demographic registry
+        -- ============================================================
+        CREATE TABLE IF NOT EXISTS patients (
+            id              TEXT PRIMARY KEY,
+            name            TEXT NOT NULL,
+            age             INTEGER,
+            gender          TEXT,
+            phone           TEXT,
+            language        TEXT DEFAULT 'hi',
+            abha_id         TEXT,
+            hospital_mrn    TEXT,
+            created_at      TEXT DEFAULT (datetime('now'))
+        );
+
+        -- ============================================================
+        -- DOCTORS: Staff directory and consultation rooms
+        -- ============================================================
+        CREATE TABLE IF NOT EXISTS doctors (
+            id              TEXT PRIMARY KEY,
+            name            TEXT NOT NULL,
+            pin             TEXT DEFAULT '1234',
+            department      TEXT NOT NULL,
+            specialty       TEXT,
+            room_number     TEXT,
+            is_available    INTEGER DEFAULT 1,
+            created_at      TEXT DEFAULT (datetime('now'))
+        );
+
+        -- ============================================================
+        -- DEPARTMENTS: Hospital clinical specialty units
+        -- ============================================================
+        CREATE TABLE IF NOT EXISTS departments (
+            id              TEXT PRIMARY KEY,
+            name            TEXT NOT NULL UNIQUE,
+            code            TEXT UNIQUE,
+            description     TEXT,
+            floor           TEXT,
+            is_active       INTEGER DEFAULT 1
+        );
+
+        -- ============================================================
         -- ENCOUNTERS: Each patient visit / kiosk session
         -- ============================================================
         CREATE TABLE IF NOT EXISTS encounters (

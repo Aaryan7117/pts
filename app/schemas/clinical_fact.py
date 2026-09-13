@@ -57,7 +57,7 @@ class ClinicalFact(BaseModel):
     normalized_concept: Optional[str] = Field(default=None, description="Standardized medical concept name")
     concept_code: Optional[str] = Field(default=None, description="SNOMED:xxxxx or NAMASTE:xxxxx code")
 
-    provenance_tier: Literal["TOUCH", "LOOKUP", "EMBEDDING", "LLM", "OCR"] = Field(
+    provenance_tier: Literal["TOUCH", "LOOKUP", "EMBEDDING", "LLM", "OCR", "VOICE"] = Field(
         description="How was this fact derived? Touch=direct input, Embedding=vector match, LLM=model extraction"
     )
     source_type: Optional[Literal[
