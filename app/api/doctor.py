@@ -14,14 +14,10 @@ from app.schemas.doctor import (
     PatientDetailView
 )
 from app.schemas.encounter import EncounterSummary
-<<<<<<< HEAD
-from app.schemas.clinical_fact import ClinicalFact, DrugInteractionAlert, LabResultAlert, ClinicalGapAlert
-=======
 from app.schemas.clinical_fact import (
     ClinicalFact, SourceReference, ConfidenceBreakdown,
     DrugInteractionAlert, LabResultAlert, ClinicalGapAlert
 )
->>>>>>> origin/main
 from app.core.clinical.drug_safety import DrugInteractionEngine
 from app.core.clinical.lab_checker import LabRangeChecker
 from app.core.clinical.gap_detector import ClinicalGapDetector
@@ -337,6 +333,12 @@ async def get_patient_detail(encounter_id: str, db=Depends(get_db)):
                 "Sparsha Pariksha (Skin Palpation)"
             ]
         }
+
+    # Merge any specific AYUSH fact fields directly into ayush_intake_data
+    if ayush_intake_data:
+        for f in facts_dicts:
+            if f.get("category", "").startswith("ayush_") and f.get("field"):
+                ayush_intake_data[f["field"]] = f.get("value")
 
     return PatientDetailView(
         encounter=encounter_summary,

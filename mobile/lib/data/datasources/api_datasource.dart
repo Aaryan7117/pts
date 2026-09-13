@@ -120,7 +120,6 @@ class ApiDataSource {
     }
   }
 
-<<<<<<< HEAD
   /// Calculate AYUSH Prakriti and Agni Scoring
   Future<Map<String, dynamic>> calculateAyushAssessment(
       Map<String, dynamic> ayushData) async {
