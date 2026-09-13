@@ -19,26 +19,32 @@ class AiProcessingScreen extends StatefulWidget {
 }
 
 class _AiProcessingScreenState extends State<AiProcessingScreen> {
-  Timer? _timer;
-
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(milliseconds: 1400), () {
-      if (mounted) {
-        final intake = context.read<IntakeProvider>();
-        if (intake.isInterviewCompleted) {
-          Navigator.of(context).pushReplacementNamed('/summary');
-        } else {
-          Navigator.of(context).pushReplacementNamed('/followup');
-        }
-      }
-    });
+    _startCheckLoop();
+  }
+
+  void _startCheckLoop() async {
+    final intake = context.read<IntakeProvider>();
+    // Wait minimum 1000ms for calming animation
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    // Wait until intake provider has finished network processing
+    while (mounted && intake.isProcessingTurn) {
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+
+    if (!mounted) return;
+    if (intake.isInterviewCompleted) {
+      Navigator.of(context).pushReplacementNamed('/summary');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/followup');
+    }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     super.dispose();
   }
 

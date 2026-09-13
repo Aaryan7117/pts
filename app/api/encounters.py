@@ -37,7 +37,18 @@ async def bootstrap_encounter(request: EncounterBootstrapRequest, db=Depends(get
     """
     encounter_id = f"enc-{uuid.uuid4().hex[:8]}"
     patient_id = f"pat-{uuid.uuid4().hex[:8]}"
-    token = request.qr_token or _generate_token()
+    
+    # Ensure token is unique in database to prevent IntegrityError
+    for _ in range(20):
+        token = request.qr_token or _generate_token()
+        row = await db.execute("SELECT 1 FROM encounters WHERE token_number = ?", (token,))
+        if not await row.fetchone():
+            break
+        if request.qr_token:
+            token = f"{request.qr_token}-{uuid.uuid4().hex[:4]}"
+            break
+    else:
+        token = f"T-{uuid.uuid4().hex[:6].upper()}"
 
     await db.execute(
         """

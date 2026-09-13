@@ -103,8 +103,15 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
           if (_selectedStream == 'Emergency') {
             Navigator.of(context).pushNamed('/emergency');
           } else {
+            if (encounter.encounterId == null) {
+              await encounter.bootstrap(
+                channel: 'android_byod',
+                language: lang.currentLanguage,
+              );
+            }
+            if (!context.mounted) return;
             await context.read<IntakeProvider>().startSession(
-              encounterId: encounter.encounterId ?? 'enc-001',
+              encounterId: encounter.encounterId!,
               language: lang.currentLanguage,
             );
             if (context.mounted) {

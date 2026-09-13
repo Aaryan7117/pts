@@ -8,7 +8,7 @@ import '../../app/theme/typography.dart';
 import '../../core/widgets/medi_scaffold.dart';
 import '../../core/widgets/choice_card.dart';
 import '../../core/widgets/primary_button.dart';
-import '../../data/datasources/mock_datasource.dart';
+import '../../data/models/ayush_profile.dart';
 
 /// Screen 18 — AYUSH Profile (Dashavidha Pariksha)
 /// Agni, Prakriti, Koshtha, and Ahara-Vihara assessment
@@ -134,7 +134,29 @@ class _AyushScreenState extends State<AyushScreen> {
         backgroundColor: MediColors.ayushGreen,
         icon: Icons.confirmation_number_rounded,
         onPressed: () {
-          intake.setAyushRecord(MockDataSource.getMockAyush());
+          intake.setAyushRecord(AyurvedicIntakeRecord(
+            agni: AgniAssessment(
+              agniType: _selectedAgni,
+              appetitePattern: _selectedAgni == 'sama' ? 'regular' : 'excessive',
+              bowelRegularity: _selectedKoshtha == 'madhyama' ? 'regular' : 'irregular_hard',
+              namasteCode: 'NAMASTE:AGNI-${_selectedAgni.toUpperCase()}',
+            ),
+            prakritiBaseline: PrakritiAssessment(
+              dominantDosha: _selectedPrakriti,
+              bodyFrame: _selectedPrakriti == 'vata' ? 'thin_prominent_joints' : 'medium_muscular',
+              skinTexture: _selectedPrakriti == 'vata' ? 'dry_rough_cool' : 'smooth_balanced',
+              digestionSpeed: 'moderate',
+              weatherSensitivity: _selectedPrakriti == 'vata' ? 'cold' : 'none',
+              sleepPattern: _selectedPrakriti == 'vata' ? 'light_broken' : 'sound_deep',
+              namasteCode: 'NAMASTE:PRAKRITI-${_selectedPrakriti.toUpperCase()}',
+            ),
+            koshtha: KoshthaAssessment(
+              koshthaType: _selectedKoshtha,
+              bowelFrequency: _selectedKoshtha == 'madhyama' ? 'once_daily' : 'irregular',
+              stoolConsistency: _selectedKoshtha == 'madhyama' ? 'soft_formed' : 'hard_dry',
+              namasteCode: 'NAMASTE:KOSHTHA-${_selectedKoshtha.toUpperCase()}',
+            ),
+          ));
           Navigator.of(context).pushNamed('/queue');
         },
       ),

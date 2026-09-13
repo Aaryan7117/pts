@@ -3,13 +3,13 @@ import 'package:provider/provider.dart';
 import '../../app/state/language_provider.dart';
 import '../../app/state/intake_provider.dart';
 import '../../app/state/encounter_provider.dart';
+import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
 import '../../core/widgets/medi_scaffold.dart';
 import '../../core/widgets/summary_card.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/secondary_button.dart';
-import '../../data/datasources/mock_datasource.dart';
 
 /// Screen 10 — Simple Summary Confirmation
 /// Closed-loop explain-back fact verification with tactile [YES] / [NO]
@@ -23,7 +23,7 @@ class SummaryConfirmationScreen extends StatelessWidget {
     final intake = context.watch<IntakeProvider>();
     final encounter = context.read<EncounterProvider>();
 
-    final displayFacts = intake.facts.isNotEmpty ? intake.facts : MockDataSource.getMockFacts();
+    final displayFacts = intake.facts;
 
     return MediScaffold(
       title: 'Confirm Information',
@@ -43,17 +43,41 @@ class SummaryConfirmationScreen extends StatelessWidget {
           ),
           const SizedBox(height: MediDimensions.space20),
           Expanded(
-            child: ListView.builder(
-              itemCount: displayFacts.length,
-              itemBuilder: (context, index) {
-                final fact = displayFacts[index];
-                return SummaryCard(
-                  fact: fact,
-                  onConfirm: () => intake.confirmFact(fact.id),
-                  onReject: () => intake.rejectFact(fact.id),
-                );
-              },
-            ),
+            child: displayFacts.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(MediDimensions.space24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.notes_rounded, size: 64, color: MediColors.slate400),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No Symptoms Recorded Yet\n(कोई लक्षण दर्ज नहीं हुआ)',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: MediColors.textMuted),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap "+ Add Another Symptom" below to speak or type your complaints.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 14, color: MediColors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: displayFacts.length,
+                    itemBuilder: (context, index) {
+                      final fact = displayFacts[index];
+                      return SummaryCard(
+                        fact: fact,
+                        onConfirm: () => intake.confirmFact(fact.id),
+                        onReject: () => intake.rejectFact(fact.id),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -66,7 +90,11 @@ class SummaryConfirmationScreen extends StatelessWidget {
             onPressed: () {
               // If patient reported chest pain or emergency symptom, route to triage
               final hasEmergencySymptom = displayFacts.any(
-                (f) => f.value.toLowerCase().contains('chest') || f.value.toLowerCase().contains('heart'),
+                (f) =>
+                    f.value.toLowerCase().contains('chest') ||
+                    f.value.toLowerCase().contains('heart') ||
+                    f.value.toLowerCase().contains('छाती') ||
+                    f.value.toLowerCase().contains('cardiac'),
               );
 
               if (hasEmergencySymptom) {

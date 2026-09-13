@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/state/language_provider.dart';
+import '../../app/state/intake_provider.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -19,7 +20,6 @@ class OcrProcessingScreen extends StatefulWidget {
 
 class _OcrProcessingScreenState extends State<OcrProcessingScreen>
     with SingleTickerProviderStateMixin {
-  Timer? _timer;
   late AnimationController _animController;
 
   @override
@@ -30,16 +30,26 @@ class _OcrProcessingScreenState extends State<OcrProcessingScreen>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    _timer = Timer(const Duration(milliseconds: 1600), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/ocr_result');
-      }
-    });
+    _waitForOcrCompletion();
+  }
+
+  void _waitForOcrCompletion() async {
+    final intake = context.read<IntakeProvider>();
+    // Show scanning animation for at least 1400ms
+    await Future.delayed(const Duration(milliseconds: 1400));
+
+    // Wait until document upload & OCR parsing finishes
+    while (mounted && intake.isProcessingTurn) {
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('/ocr_result');
+    }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _animController.dispose();
     super.dispose();
   }

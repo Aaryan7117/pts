@@ -8,7 +8,6 @@ import '../../app/theme/typography.dart';
 import '../../core/widgets/medi_scaffold.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/secondary_button.dart';
-import '../../data/datasources/mock_datasource.dart';
 
 /// Screen 15 — OCR Result & Evidence Highlighting
 /// Displays extracted medicines with line citations and evidence grounding
@@ -21,9 +20,8 @@ class OcrResultScreen extends StatelessWidget {
     final lang = context.watch<LanguageProvider>();
     final intake = context.watch<IntakeProvider>();
 
-    final medications = intake.extractedMedications.isNotEmpty
-        ? intake.extractedMedications
-        : MockDataSource.getMockDocumentUpload().extractedMedications;
+    final medications = intake.extractedMedications;
+    final flaggedInteractions = intake.lastDocumentResult?.flaggedInteractions ?? const [];
 
     return MediScaffold(
       title: 'Extracted Medications',
@@ -41,12 +39,63 @@ class OcrResultScreen extends StatelessWidget {
             'Extracted from your scanned document. Please verify these match your medicines.',
             style: TextStyle(fontSize: 16, color: MediColors.textMuted),
           ),
-          const SizedBox(height: MediDimensions.space20),
+          const SizedBox(height: MediDimensions.space16),
+          if (flaggedInteractions.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(MediDimensions.space12),
+              decoration: BoxDecoration(
+                color: MediColors.amber50,
+                borderRadius: MediDimensions.borderMd,
+                border: Border.all(color: MediColors.amber800),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: MediColors.amber800, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Drug Interaction Advisory',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: MediColors.amber900),
+                        ),
+                        const SizedBox(height: 4),
+                        ...flaggedInteractions.map((alert) => Text('• $alert', style: const TextStyle(fontSize: 13, color: MediColors.textPrimary))),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: MediDimensions.space16),
+          ],
           Expanded(
-            child: ListView.separated(
-              itemCount: medications.length,
-              separatorBuilder: (_, _) => const SizedBox(height: MediDimensions.space12),
-              itemBuilder: (context, index) {
+            child: medications.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.description_outlined, size: 64, color: MediColors.slate400),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No Medications Detected\n(कोई दवा नहीं मिली)',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: MediColors.textMuted),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'You can continue to vitals or rescan a clearer photo.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: MediColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: medications.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: MediDimensions.space12),
+                    itemBuilder: (context, index) {
                 final med = medications[index];
                 return Container(
                   padding: const EdgeInsets.all(MediDimensions.space16),
