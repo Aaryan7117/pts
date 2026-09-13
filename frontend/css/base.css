@@ -1,15 +1,14 @@
-/* ============================================================
-   MediKiosk — Base Styles
-   Reset, global styles, font imports.
-   ============================================================ */
+/**
+ * MediKiosk Web — Base Styles, Resets, Typography & Indic Script Rules
+ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
-/* ── Reset ── */
+/* --- Reset & Box Sizing --- */
 *, *::before, *::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 html {
@@ -17,128 +16,123 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-family-sans);
 }
 
 body {
-  font-family: var(--font-sans);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.6;
   min-height: 100vh;
-  overflow: hidden;
+  line-height: 1.5;
+  background-color: var(--bg-canvas);
+  overflow-x: hidden;
 }
 
-a {
-  color: var(--accent);
-  text-decoration: none;
+/* Indic Script Diacritic Protection */
+/* When Indic text is loaded, prevent clipping of top/bottom vowel matras */
+:lang(hi), :lang(mr), :lang(ta), :lang(te), .indic-text {
+  line-height: 1.55 !important;
 }
 
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  outline: none;
-}
-
-input {
-  font-family: inherit;
-  border: none;
-  outline: none;
-}
-
-img {
-  max-width: 100%;
-  display: block;
-}
-
-/* ── App container ── */
-#app {
-  width: 100vw;
-  height: 100vh;
-  position: relative;
-  overflow: hidden;
-}
-
-/* ── Screen container (each screen is a full-viewport panel) ── */
-.screen {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--transition-slow), transform var(--transition-slow);
-  transform: translateX(30px);
-}
-
-.screen.active {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-.screen.exiting {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-
-/* ── System status bar ── */
-.status-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-6);
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-light);
-  z-index: 100;
-  flex-shrink: 0;
-}
-
-.status-bar__brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+/* --- Typographic Hierarchy --- */
+h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
-  font-size: var(--text-lg);
-  color: var(--accent-dark);
+  color: var(--text-primary);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 
-.status-bar__brand svg {
-  width: 28px;
-  height: 28px;
+.text-display {
+  font-size: 3.25rem; /* 52px */
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
-.status-bar__badges {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+.text-h1 {
+  font-size: 2.25rem; /* 36px */
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-/* ── Scrollbar styling ── */
+.text-h2 {
+  font-size: 1.75rem; /* 28px */
+  line-height: 1.28;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.text-h3 {
+  font-size: 1.375rem; /* 22px */
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.text-h4 {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.text-body-lg {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.text-body {
+  font-size: 1rem; /* 16px */
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.text-small {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.text-caption {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.4;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.text-mono {
+  font-family: var(--font-family-mono);
+}
+
+/* Accessibility Focus States */
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Base scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--bg-surface-subtle);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-medium);
+  background: var(--pr-slate-300);
   border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
-/* ── Selection ── */
-::selection {
-  background: var(--accent);
-  color: var(--text-inverse);
-}
-
-/* ── Focus visible ── */
-:focus-visible {
-  outline: 2px solid var(--border-focus);
-  outline-offset: 2px;
+  background: var(--pr-slate-400);
 }
