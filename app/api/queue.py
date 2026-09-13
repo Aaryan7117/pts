@@ -59,7 +59,13 @@ async def get_all_queue(db=Depends(get_db)):
         SELECT qt.*, e.severity_badge, e.language, e.channel
         FROM queue_tokens qt
         JOIN encounters e ON qt.encounter_id = e.id
-        ORDER BY qt.position ASC
+        ORDER BY
+            CASE e.severity_badge
+                WHEN 'RED' THEN 0
+                WHEN 'YELLOW' THEN 1
+                ELSE 2
+            END,
+            qt.position ASC
         """
     )
     entries = await rows.fetchall()

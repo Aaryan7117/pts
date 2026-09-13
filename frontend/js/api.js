@@ -105,4 +105,84 @@ export const api = {
 
   callNext: (encounterId) =>
     request(`/api/doctor/patient/${encounterId}/call-next`, { method: 'POST' }),
+
+  // ── Unified Auth & Directory ──
+  login: (role, identifier, password) =>
+    request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ role, identifier, password }),
+    }),
+
+  registerPatient: (patientData) =>
+    request('/api/auth/patient/register', {
+      method: 'POST',
+      body: JSON.stringify(patientData),
+    }),
+
+  getHospitalDirectory: () => request('/api/auth/directory'),
+
+  // ── Patient Portal ──
+  getPatientDashboard: (identifier) =>
+    request(`/api/patient/dashboard/${encodeURIComponent(identifier)}`),
+
+  uploadPatientDocument: async (patientId, file, documentType = 'prescription', documentDate = null) => {
+    const form = new FormData();
+    form.append('patient_id', patientId);
+    form.append('document', file);
+    form.append('document_type', documentType);
+    if (documentDate) form.append('document_date', documentDate);
+
+    const res = await fetch('/api/patient/document/upload', { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
+  // ── Doctor Longitudinal & Verification ──
+  getPatientByAbha: (abhaId) =>
+    request(`/api/doctor/patient/by-abha/${encodeURIComponent(abhaId)}`),
+
+  verifyEncounter: (encounterId, doctorId, notes = '') =>
+    request(`/api/doctor/encounter/${encounterId}/verify`, {
+      method: 'POST',
+      body: JSON.stringify({ doctor_id: doctorId, notes }),
+    }),
+
+  // ── AYUSH Dashavidha Pariksha ──
+  saveAyushAssessment: (encounterId, record) =>
+    request(`/api/ayush/encounter/${encounterId}/assessment`, {
+      method: 'POST',
+      body: JSON.stringify(record),
+    }),
+
+  getAyushAssessment: (encounterId) =>
+    request(`/api/ayush/encounter/${encounterId}/assessment`),
+
+  calculateAyush: (payload) =>
+    request('/api/ayush/calculate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  // ── Multi-Document Batch & Timeline ──
+  batchUploadDocuments: async (encounterId, files, documentType = 'prescription', documentDate = null) => {
+    const form = new FormData();
+    form.append('encounter_id', encounterId);
+    form.append('document_type', documentType);
+    if (documentDate) form.append('document_date', documentDate);
+    for (const f of files) {
+      form.append('files', f);
+    }
+    const res = await fetch('/api/documents/batch-upload', { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
+  getDocumentTimeline: (encounterId) =>
+    request(`/api/documents/encounter/${encounterId}/timeline`),
 };

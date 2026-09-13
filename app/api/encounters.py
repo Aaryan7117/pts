@@ -19,12 +19,26 @@ logger = logging.getLogger("medikiosk.api.encounters")
 router = APIRouter(prefix="/api/encounters", tags=["Encounters"])
 
 
-def _generate_token() -> str:
-    """Generate a human-readable OPD token number."""
+async def _generate_unique_token(db, requested_token: str | None = None) -> str:
+    """Generate a guaranteed unique human-readable OPD token number."""
     import random
-    prefix = random.choice(["A", "B", "C"])
-    number = random.randint(1, 999)
-    return f"{prefix}-{number:03d}"
+    if requested_token:
+        cursor = await db.execute("SELECT 1 FROM encounters WHERE token_number = ?", (requested_token,))
+        if not await cursor.fetchone():
+            return requested_token
+        # If collision on requested token, append a random 2-digit suffix
+        suffix_token = f"{requested_token}-{random.randint(10, 99)}"
+        return suffix_token
+
+    for _ in range(50):
+        prefix = random.choice(["A", "B", "C", "D", "K"])
+        number = random.randint(100, 999)
+        candidate = f"{prefix}-{number}"
+        cursor = await db.execute("SELECT 1 FROM encounters WHERE token_number = ?", (candidate,))
+        if not await cursor.fetchone():
+            return candidate
+
+    return f"T-{uuid.uuid4().hex[:6].upper()}"
 
 
 @router.post("/bootstrap", response_model=EncounterBootstrapResponse)
@@ -37,7 +51,7 @@ async def bootstrap_encounter(request: EncounterBootstrapRequest, db=Depends(get
     """
     encounter_id = f"enc-{uuid.uuid4().hex[:8]}"
     patient_id = f"pat-{uuid.uuid4().hex[:8]}"
-    token = request.qr_token or _generate_token()
+    token = await _generate_unique_token(db, request.qr_token)
 
     await db.execute(
         """

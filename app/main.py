@@ -111,12 +111,20 @@ from app.api.call_sessions import router as call_sessions_router
 from app.api.documents import router as documents_router
 from app.api.queue import router as queue_router
 from app.api.doctor import router as doctor_router
+from app.api.auth import router as auth_router
+from app.api.patient import router as patient_router
+from app.api.ayush import router as ayush_router
+from app.api.ivr import router as ivr_router
 
 app.include_router(encounters_router)
 app.include_router(call_sessions_router)
 app.include_router(documents_router)
 app.include_router(queue_router)
 app.include_router(doctor_router)
+app.include_router(auth_router)
+app.include_router(patient_router)
+app.include_router(ayush_router)
+app.include_router(ivr_router)
 
 
 # === Health Check ===

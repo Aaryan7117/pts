@@ -13,7 +13,25 @@
 </head>
 <body>
   <div id="app">
-    <!-- Status Bar (hidden on welcome, visible on other screens) -->
+    <!-- Top Portal Navigation Bar -->
+    <nav class="top-nav" id="topNav">
+      <div class="top-nav__brand" id="navBrandLogo">
+        <svg viewBox="0 0 28 28" fill="none" width="24" height="24">
+          <rect width="28" height="28" rx="6" fill="#0891b2"/>
+          <path d="M7 14h3l2-5 3 10 2-7h4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>MediKiosk <small style="font-size:10px; opacity:0.75; font-weight:normal;">AIIA AYUSH</small></span>
+      </div>
+      <div class="top-nav__links">
+        <button class="top-nav__btn" id="navBtnHub">🌐 Role Hub</button>
+        <button class="top-nav__btn active" id="navBtnKiosk">🏥 OPD Kiosk</button>
+        <button class="top-nav__btn" id="navBtnPatient">👤 Patient Portal</button>
+        <button class="top-nav__btn" id="navBtnDoctor">🩺 Doctor Station</button>
+        <a href="/mobile.html" class="top-nav__btn" target="_blank" style="text-decoration: none;">📱 Mobile App ↗</a>
+      </div>
+    </nav>
+
+    <!-- Status Bar (hidden on welcome/hub, visible on intake screens) -->
     <div class="status-bar" id="statusBar" style="display: none;">
       <div class="status-bar__brand">
         <svg viewBox="0 0 28 28" fill="none">
@@ -25,6 +43,262 @@
       <div class="status-bar__badges">
         <span id="networkBadge" class="badge badge-online">Online</span>
         <span id="tokenBadge" class="badge badge-teal" style="display: none;"></span>
+      </div>
+    </div>
+
+    <!-- Screen 0: Role Selector Hub (Central Gateway) -->
+    <div class="screen hub-screen" id="screenHub">
+      <div class="hub-header">
+        <div class="hub-badge">✨ All India Institute of Ayurveda (AIIA) OPD System</div>
+        <h1 class="hub-title">Unified Clinical <span>Intake & Care</span> Hub</h1>
+        <p class="hub-subtitle">
+          Select your portal to interact with MediKiosk AI, track real-time queue tokens and verified medical records, or manage clinical consultations.
+        </p>
+      </div>
+
+      <div class="hub-grid">
+        <!-- Card 1: Kiosk -->
+        <div class="hub-card hub-card--primary" id="hubCardKiosk">
+          <div class="hub-card__icon-wrap">🏥</div>
+          <div>
+            <h3 class="hub-card__title">
+              Physical OPD Kiosk
+              <span class="hub-card__badge hub-card__badge-required">Primary Deliverable</span>
+            </h3>
+            <p class="hub-card__desc">
+              Walk-in intake for rural and elderly patients. Features animated 3D AI doctor avatar, hands-free multilingual voice conversation, and prescription scanner.
+            </p>
+          </div>
+          <div class="hub-card__footer">
+            <span class="hub-card__action-text">Launch Kiosk Mode →</span>
+            <span class="badge badge-teal">AIIA OPD Lobby</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Patient Portal -->
+        <div class="hub-card" id="hubCardPatient">
+          <div class="hub-card__icon-wrap">👤</div>
+          <div>
+            <h3 class="hub-card__title">
+              Patient Health Portal
+              <span class="hub-card__badge hub-card__badge-new">ABHA Enabled</span>
+            </h3>
+            <p class="hub-card__desc">
+              Citizens can log in with ABHA ID to view digital health cards, check live OPD token queue position, review doctor-verified prescriptions, upload medical documents, and search hospital staff.
+            </p>
+          </div>
+          <div class="hub-card__footer">
+            <span class="hub-card__action-text">Open Patient Portal →</span>
+            <span class="badge badge-purple">ABHA Citizen Access</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Doctor Station -->
+        <div class="hub-card" id="hubCardDoctor">
+          <div class="hub-card__icon-wrap">🩺</div>
+          <div>
+            <h3 class="hub-card__title">
+              Doctor Workstation
+              <span class="hub-card__badge hub-card__badge-required">Clinical Review</span>
+            </h3>
+            <p class="hub-card__desc">
+              Clinical triaging queue with Ayush Dashavidha Pariksha, longitudinal ABHA patient history across multiple visits, and 1-click clinical verification sign-off.
+            </p>
+          </div>
+          <div class="hub-card__footer">
+            <span class="hub-card__action-text">Doctor Login (PIN: 1234) →</span>
+            <span class="badge badge-warning">OPD Chambers</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Mobile BYOD -->
+        <div class="hub-card" id="hubCardMobile">
+          <div class="hub-card__icon-wrap">📱</div>
+          <div>
+            <h3 class="hub-card__title">
+              Mobile BYOD Companion
+              <span class="hub-card__badge hub-card__badge-new">QR / Phone</span>
+            </h3>
+            <p class="hub-card__desc">
+              Smartphone simulator for elderly patients waiting in OPD chairs. Direct 1-Tap AI Voice Call and 5 regional languages (Hindi, English, Tamil, Telugu, Marathi).
+            </p>
+          </div>
+          <div class="hub-card__footer">
+            <span class="hub-card__action-text">Open Mobile Simulator ↗</span>
+            <span class="badge badge-online">BYOD Waiting Area</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen: Patient Portal -->
+    <div class="screen patient-screen" id="screenPatient">
+      <!-- Section A: Patient Auth (if logged out) -->
+      <div id="patientAuthSection" class="patient-auth-box">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4);">
+          <div style="font-size: 28px;">👤</div>
+          <span class="badge badge-teal">ABHA Health Locker</span>
+        </div>
+        <h2>Patient Portal Login</h2>
+        <p>Access your AIIA OPD consultations, live token position, verified doctor prescriptions, and hospital directory.</p>
+
+        <!-- Quick Demo Login Button -->
+        <div style="background: rgba(8, 145, 178, 0.1); border: 1px dashed rgba(8, 145, 178, 0.4); border-radius: var(--radius-md); padding: 12px; margin-bottom: 20px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 6px;">QUICK EVALUATION DEMO</div>
+          <button class="btn btn-primary" id="quickDemoPatientBtn" style="width: 100%; font-size: 13px;">
+            ⚡ 1-Tap Demo Patient: Ramesh Kumar
+          </button>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">ABHA: 91-4821-3910-4819 | Mobile: 9876543210</div>
+        </div>
+
+        <form id="patientLoginForm" style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">ABHA ID or Mobile Number</label>
+            <input type="text" id="patientIdentifierInput" placeholder="e.g. 91-4821-3910-4819 or 9876543210" required style="width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary);" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">Password / PIN</label>
+            <input type="password" id="patientPasswordInput" placeholder="Enter password (default: patient123)" required style="width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary);" />
+          </div>
+          <div id="patientLoginError" style="color: var(--severity-red); font-size: 12px; display: none;"></div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 6px;">Sign In to Health Portal</button>
+        </form>
+      </div>
+
+      <!-- Section B: Patient Dashboard (if logged in) -->
+      <div id="patientDashboardSection" class="patient-container" style="display: none;">
+        <!-- Top bar with user profile & logout -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 16px 24px; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #0891b2, #3b82f6); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 18px;" id="patientAvatarInitial">R</div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px; color: var(--text-primary);" id="patientHeaderName">Ramesh Kumar</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">ABHA: <span id="patientHeaderAbha" style="font-family: monospace; color: #38bdf8;">91-4821-3910-4819</span></div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" id="patientRefreshBtn">🔄 Refresh</button>
+            <button class="btn btn-ghost" id="patientLogoutBtn">Sign Out</button>
+          </div>
+        </div>
+
+        <!-- Digital ABHA Health Card -->
+        <div class="abha-card">
+          <div class="abha-card__band"></div>
+          <div class="abha-card__header">
+            <div>
+              <div class="abha-card__emblem">Government of India • Ayushman Bharat Digital Mission</div>
+              <div style="font-weight: 800; font-size: 18px; color: #fff; margin-top: 2px;">ABHA DIGITAL HEALTH CARD</div>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge badge-teal" style="font-size: 10px;">AIIA Verified Citizen</span>
+            </div>
+          </div>
+          <div class="abha-card__number" id="cardAbhaNumber">91-4821-3910-4819</div>
+          <div class="abha-card__details">
+            <div>
+              <span style="color: #64748b; display: block; font-size: 10px; text-transform: uppercase;">Full Name</span>
+              <strong id="cardPatientName" style="color: #f1f5f9; font-size: 14px;">Ramesh Kumar</strong>
+            </div>
+            <div>
+              <span style="color: #64748b; display: block; font-size: 10px; text-transform: uppercase;">Linked Mobile</span>
+              <span id="cardPatientMobile" style="font-family: monospace; color: #f1f5f9;">9876543210</span>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="color: #64748b; display: block; font-size: 10px; text-transform: uppercase;">Primary Care Hospital</span>
+              <span style="color: #cbd5e1;">All India Institute of Ayurveda (AIIA)</span>
+            </div>
+            <div style="margin-top: 8px;">
+              <span style="color: #64748b; display: block; font-size: 10px; text-transform: uppercase;">AYUSH OPD Status</span>
+              <span class="badge badge-online" style="font-size: 10px;">Active Patient</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live OPD Queue Tracker Card -->
+        <div class="panel-card" style="border-left: 4px solid var(--accent);">
+          <div class="panel-card__title">
+            <span>🎫 Live OPD Queue & Waiting Status</span>
+            <span class="badge badge-teal" id="patientTokenBadge">Token: A-101</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+            <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+              <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Your OPD Token</div>
+              <div style="font-size: 28px; font-weight: 800; color: var(--accent); font-family: monospace;" id="patientLiveToken">—</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+              <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Patients Ahead</div>
+              <div style="font-size: 28px; font-weight: 800; color: #f59e0b;" id="patientAheadCount">—</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+              <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Estimated Wait</div>
+              <div style="font-size: 28px; font-weight: 800; color: #10b981;" id="patientWaitTime">—</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+              <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Consulting Chamber</div>
+              <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-top: 6px;" id="patientAssignedRoom">Room 204 (Kayachikitsa)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Column Grid: Verified Consultations & Upload Documents / Directory -->
+        <div class="patient-grid">
+          <!-- Left Column: Verified Encounters History -->
+          <div class="panel-card">
+            <div class="panel-card__title">
+              <span>📋 Doctor-Verified Medical Records</span>
+              <span class="badge badge-purple" id="verifiedCountBadge">0 Verified</span>
+            </div>
+            <div id="patientVisitsList" style="display: flex; flex-direction: column; gap: 12px; max-height: 440px; overflow-y: auto;">
+              <div class="empty-state">
+                <div class="empty-state__icon">📄</div>
+                <div class="empty-state__text">No past medical encounters found</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Direct Prescription Upload & Hospital Directory -->
+          <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+            <!-- Direct Prescription Upload Box -->
+            <div class="panel-card">
+              <div class="panel-card__title">
+                <span>📁 Upload Medical Documents & Lab Reports</span>
+              </div>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">
+                Batch upload doctor prescriptions, biochemical lab investigations, or discharge summaries to your ABHA health record.
+              </p>
+              <div style="border: 2px dashed var(--border-light); border-radius: var(--radius-md); padding: 16px; text-align: center; background: rgba(255,255,255,0.01); display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                  <select id="portalDocTypeSelect" style="padding: 6px 10px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                    <option value="prescription">📄 Prescription (Medications)</option>
+                    <option value="lab_report">🧪 Lab Report (Biochemistry / CBC / Glucose)</option>
+                    <option value="discharge_summary">🏥 Discharge Summary / Note</option>
+                  </select>
+                </div>
+                <input type="file" id="portalPrescriptionFileInput" accept="image/*,.pdf" multiple style="display: none;" />
+                <div>
+                  <button class="btn btn-secondary" id="portalUploadPickBtn" style="font-size: 13px;">📁 Choose File(s) to Upload</button>
+                </div>
+                <div id="portalUploadSelectedFileName" style="font-size: 12px; color: var(--accent);"></div>
+                <div>
+                  <button class="btn btn-primary" id="portalUploadSubmitBtn" style="display: none;">🚀 Upload to ABHA Vault</button>
+                </div>
+              </div>
+              <!-- Uploaded Documents Preview -->
+              <div id="patientDocumentsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+            <!-- Hospital Doctor Directory & Phone Map -->
+            <div class="panel-card">
+              <div class="panel-card__title">
+                <span>🏥 AIIA Hospital Doctors & Chamber Phone Directory</span>
+              </div>
+              <div id="hospitalDirectoryList" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -144,8 +418,18 @@
             <span class="badge badge-teal" id="queueTotalBadge">0</span>
           </div>
           <button class="btn btn-ghost" id="doctorExitBtn" style="font-size: var(--text-xs); padding: 4px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-sm);">
-            ← Kiosk
+            ← Hub
           </button>
+        </div>
+        <div style="padding: 10px 14px; border-bottom: 1px solid var(--border-light); background: rgba(0, 0, 0, 0.2);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase;">🔍 ABHA History Lookup</label>
+            <span style="font-size: 10px; color: var(--text-muted);">Longitudinal</span>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="doctorAbhaSearchInput" placeholder="91-4821-3910-4819" style="flex: 1; padding: 6px 8px; font-size: 11px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary);" />
+            <button class="btn btn-secondary" id="doctorAbhaSearchBtn" style="padding: 6px 10px; font-size: 11px;" title="Search patient history">Find</button>
+          </div>
         </div>
         <div class="doctor-screen__queue-list" id="doctorQueueList">
           <div class="empty-state">
@@ -182,6 +466,133 @@
         </div>
         <button class="btn btn-primary btn-lg" id="pinSubmitBtn" style="width: 100%;">Authenticate</button>
         <button class="btn btn-ghost" id="pinCancelBtn" style="width: 100%; margin-top: var(--space-3);">Cancel</button>
+      </div>
+    </div>
+
+    <!-- AYUSH Dashavidha Pariksha Interactive Modal -->
+    <div class="modal-overlay" id="ayushParikshaModal">
+      <div class="modal" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; padding: var(--space-6);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+          <div>
+            <div style="font-size: var(--text-lg); font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+              🌿 AYUSH Dashavidha Pariksha Assessment
+            </div>
+            <div style="font-size: var(--text-xs); color: var(--text-secondary);">
+              All India Institute of Ayurveda (AIIA) Clinical Protocol & NAMASTE Terminology
+            </div>
+          </div>
+          <button class="btn btn-ghost" id="ayushModalCloseBtn" style="font-size: 18px; padding: 4px 8px;">✕</button>
+        </div>
+
+        <form id="ayushParikshaForm" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Section 1: Prakriti -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 14px;">
+            <div style="font-size: 13px; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 10px;">
+              1. Constitutional Assessment (Prakriti)
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Body Frame</label>
+                <select id="ayushFrameInput" class="select-input" style="width: 100%; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                  <option value="thin_light_prominent_joints">Thin, Light, Prominent Joints (Vata)</option>
+                  <option value="medium_muscular" selected>Medium, Symmetrical, Muscular (Pitta)</option>
+                  <option value="broad_sturdy_heavy">Broad, Sturdy, Heavy-boned (Kapha)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Skin Texture</label>
+                <select id="ayushSkinInput" class="select-input" style="width: 100%; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                  <option value="dry_rough_cool">Dry, Rough, Cool to touch (Vata)</option>
+                  <option value="warm_reddish_sweaty" selected>Warm, Reddish, Prone to sweat (Pitta)</option>
+                  <option value="smooth_oily_cool">Smooth, Soft, Oily, Cool (Kapha)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Weather Sensitivity</label>
+                <select id="ayushWeatherInput" class="select-input" style="width: 100%; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                  <option value="intolerant_to_cold">Aversion to Cold & Wind (Vata)</option>
+                  <option value="intolerant_to_heat" selected>Aversion to Sun & Heat (Pitta)</option>
+                  <option value="intolerant_to_dampness">Aversion to Dampness & Humidity (Kapha)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Sleep Pattern</label>
+                <select id="ayushSleepInput" class="select-input" style="width: 100%; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                  <option value="light_interrupted">Light, easily broken, dreams of flying (Vata)</option>
+                  <option value="moderate_sound" selected>Moderate, sound (6-7 hrs), vivid dreams (Pitta)</option>
+                  <option value="heavy_prolonged">Deep, heavy, prolonged (8+ hrs) (Kapha)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Agni & Ama -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 14px;">
+            <div style="font-size: 13px; font-weight: 700; color: #f59e0b; text-transform: uppercase; margin-bottom: 10px;">
+              2. Digestive Fire & Metabolic State (Agni & Ama)
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Appetite Rhythm</label>
+                <select id="ayushAppetiteInput" class="select-input" style="width: 100%; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                  <option value="regular">Regular & Predictable (Sama Agni)</option>
+                  <option value="irregular_skips" selected>Irregular, forgets meals / variable (Vishama Agni)</option>
+                  <option value="excessive_burning">Sharp, burning hunger, irritable if delayed (Tikshna Agni)</option>
+                  <option value="low_absent">Low appetite, slow digestion (Manda Agni)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Post-Meal Heaviness (Ama Marker)</label>
+                <select id="ayushAmaInput" class="select-input" style="width: 100%; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                  <option value="no">No heaviness — Feels light and energetic</option>
+                  <option value="yes" selected>Heaviness / Bloating / Coating on tongue (Ama present)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Koshtha & Ahara -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 14px;">
+            <div style="font-size: 13px; font-weight: 700; color: #a78bfa; text-transform: uppercase; margin-bottom: 10px;">
+              3. Bowel Habit & Dietary Predominance (Koshtha & Ahara)
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Bowel Evacuation (Koshtha)</label>
+                <select id="ayushKoshthaInput" class="select-input" style="width: 100%; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                  <option value="krura" selected>Krura — Hard, dry, constipated (Vata)</option>
+                  <option value="mridu">Mridu — Soft, loose, immediate response to milk/tea (Pitta)</option>
+                  <option value="madhyama">Madhyama — Regular, once daily, formed (Kapha/Sama)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Predominant Diet Taste (Shadrasa)</label>
+                <select id="ayushTasteInput" class="select-input" style="width: 100%; padding: 8px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;">
+                  <option value="katu_lavana" selected>Katu & Lavana (Pungent, Spicy, Salty)</option>
+                  <option value="madhura_snigdha">Madhura (Sweet, Heavy, Dairy, Wheat)</option>
+                  <option value="amla_lavana">Amla & Lavana (Sour, Fermented, Pickled)</option>
+                  <option value="tikta_kashaya">Tikta & Kashaya (Bitter, Astringent, Raw)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real-Time Evaluation Preview -->
+          <div style="background: rgba(8, 145, 178, 0.1); border: 1px dashed rgba(8, 145, 178, 0.4); border-radius: var(--radius-md); padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase;">Diagnostic Assessment Preview</div>
+              <div id="ayushLivePreview" style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-top: 2px;">
+                Prakriti: Dvandvaja (Vata-Pitta) • Agni: Vishama • Koshtha: Krura
+              </div>
+            </div>
+            <span class="badge badge-teal" id="ayushNamasteCodeBadge">NAMASTE:DOSHA-VP-001</span>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+            <button type="button" class="btn btn-ghost" id="ayushModalCancelBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="ayushModalSaveBtn">💾 Save AYUSH Pariksha</button>
+          </div>
+        </form>
       </div>
     </div>
 

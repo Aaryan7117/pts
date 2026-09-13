@@ -24,6 +24,37 @@ class _AyushScreenState extends State<AyushScreen> {
   String _selectedAgni = 'sama';
   String _selectedPrakriti = 'tridoshaja';
   String _selectedKoshtha = 'madhyama';
+  bool _hasCoatedTongue = false;
+  bool _hasMorningStiffness = false;
+
+  String _getPrakritiNamasteCode() {
+    switch (_selectedPrakriti) {
+      case 'vata': return 'NAM-PRAK-VATA';
+      case 'pitta': return 'NAM-PRAK-PITTA';
+      case 'kapha': return 'NAM-PRAK-KAPHA';
+      case 'vata_pitta': return 'NAM-PRAK-VP';
+      case 'pitta_kapha': return 'NAM-PRAK-PK';
+      case 'vata_kapha': return 'NAM-PRAK-VK';
+      default: return 'NAM-PRAK-TRI';
+    }
+  }
+
+  String _getAgniNamasteCode() {
+    switch (_selectedAgni) {
+      case 'vishama': return 'NAM-AGNI-VISH';
+      case 'tikshna': return 'NAM-AGNI-TIK';
+      case 'manda': return 'NAM-AGNI-MAND';
+      default: return 'NAM-AGNI-SAM';
+    }
+  }
+
+  String _getKoshthaNamasteCode() {
+    switch (_selectedKoshtha) {
+      case 'krura': return 'NAM-KOSH-KRU';
+      case 'mridu': return 'NAM-KOSH-MRI';
+      default: return 'NAM-KOSH-MAD';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,17 +69,32 @@ class _AyushScreenState extends State<AyushScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: MediColors.emerald50,
                     borderRadius: MediDimensions.borderSm,
+                    border: Border.all(color: MediColors.emerald200),
                   ),
                   child: const Text(
                     'NAMASTE PORTAL COMPLIANT',
                     style: TextStyle(color: MediColors.emerald800, fontWeight: FontWeight.w700, fontSize: 12),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: MediDimensions.borderSm,
+                    border: Border.all(color: Colors.amber.shade200),
+                  ),
+                  child: Text(
+                    '${_getPrakritiNamasteCode()} • ${_getAgniNamasteCode()}',
+                    style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.w600, fontSize: 12),
                   ),
                 ),
               ],
@@ -77,11 +123,58 @@ class _AyushScreenState extends State<AyushScreen> {
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
+              title: 'Vishama Agni (विषम अग्नि)',
+              subtitle: 'Irregular digestion, gas, bloating, fluctuating appetite',
+              icon: Icons.waves_rounded,
+              isSelected: _selectedAgni == 'vishama',
+              onTap: () => setState(() => _selectedAgni = 'vishama'),
+            ),
+            const SizedBox(height: MediDimensions.space8),
+            LargeChoiceCard(
               title: 'Tikshna Agni (तीक्ष्ण अग्नि)',
               subtitle: 'Excessive appetite, heartburn, acidity, rapid digestion',
               icon: Icons.whatshot_rounded,
               isSelected: _selectedAgni == 'tikshna',
               onTap: () => setState(() => _selectedAgni = 'tikshna'),
+            ),
+            const SizedBox(height: MediDimensions.space8),
+            LargeChoiceCard(
+              title: 'Manda Agni (मन्द अग्नि)',
+              subtitle: 'Sluggish digestion, post-meal heaviness, low appetite',
+              icon: Icons.hourglass_bottom_rounded,
+              isSelected: _selectedAgni == 'manda',
+              onTap: () => setState(() => _selectedAgni = 'manda'),
+            ),
+
+            const SizedBox(height: MediDimensions.space16),
+            // Ama Markers
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: MediDimensions.borderMd,
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Metabolic Toxins / Ama Markers (आम लक्षण)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('White or yellowish coating on tongue (जिह्वा लेप)'),
+                    value: _hasCoatedTongue,
+                    onChanged: (v) => setState(() => _hasCoatedTongue = v ?? false),
+                  ),
+                  CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Morning body heaviness or joint stiffness (गौरव / जकड़ाहट)'),
+                    value: _hasMorningStiffness,
+                    onChanged: (v) => setState(() => _hasMorningStiffness = v ?? false),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: MediDimensions.space24),
@@ -91,7 +184,7 @@ class _AyushScreenState extends State<AyushScreen> {
             const SizedBox(height: MediDimensions.space12),
             LargeChoiceCard(
               title: 'Tridoshaja / Balanced (त्रिदोषज)',
-              subtitle: 'Medium frame, balanced sleep, good seasonal resilience',
+              subtitle: 'Harmonious frame, balanced sleep, good resilience',
               icon: Icons.balance_rounded,
               isSelected: _selectedPrakriti == 'tridoshaja',
               onTap: () => setState(() => _selectedPrakriti = 'tridoshaja'),
@@ -104,6 +197,22 @@ class _AyushScreenState extends State<AyushScreen> {
               isSelected: _selectedPrakriti == 'vata',
               onTap: () => setState(() => _selectedPrakriti = 'vata'),
             ),
+            const SizedBox(height: MediDimensions.space8),
+            LargeChoiceCard(
+              title: 'Pitta Dominant (पित्त प्रधान)',
+              subtitle: 'Medium frame, warm body, sharp hunger, heat sensitive',
+              icon: Icons.wb_sunny_rounded,
+              isSelected: _selectedPrakriti == 'pitta',
+              onTap: () => setState(() => _selectedPrakriti = 'pitta'),
+            ),
+            const SizedBox(height: MediDimensions.space8),
+            LargeChoiceCard(
+              title: 'Kapha Dominant (कफ प्रधान)',
+              subtitle: 'Broad sturdy build, calm demeanor, deep sleep, cold skin',
+              icon: Icons.water_drop_rounded,
+              isSelected: _selectedPrakriti == 'kapha',
+              onTap: () => setState(() => _selectedPrakriti = 'kapha'),
+            ),
 
             const SizedBox(height: MediDimensions.space24),
 
@@ -112,7 +221,7 @@ class _AyushScreenState extends State<AyushScreen> {
             const SizedBox(height: MediDimensions.space12),
             LargeChoiceCard(
               title: 'Madhyama Koshtha (मध्यम कोष्ठ)',
-              subtitle: 'Regular once-daily bowel motion, normal soft stool',
+              subtitle: 'Regular once-daily bowel motion, normal soft formed stool',
               icon: Icons.check_circle_outline,
               isSelected: _selectedKoshtha == 'madhyama',
               onTap: () => setState(() => _selectedKoshtha = 'madhyama'),
@@ -120,10 +229,18 @@ class _AyushScreenState extends State<AyushScreen> {
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
               title: 'Krura Koshtha (क्रूर कोष्ठ)',
-              subtitle: 'Constipation-prone, hard dry stools, requires laxative',
+              subtitle: 'Constipation-prone, hard dry stools, requires laxatives',
               icon: Icons.warning_amber_rounded,
               isSelected: _selectedKoshtha == 'krura',
               onTap: () => setState(() => _selectedKoshtha = 'krura'),
+            ),
+            const SizedBox(height: MediDimensions.space8),
+            LargeChoiceCard(
+              title: 'Mridu Koshtha (मृदु कोष्ठ)',
+              subtitle: 'Easy loose motions, sensitive digestion, evacuated quickly with milk',
+              icon: Icons.opacity_rounded,
+              isSelected: _selectedKoshtha == 'mridu',
+              onTap: () => setState(() => _selectedKoshtha = 'mridu'),
             ),
             const SizedBox(height: MediDimensions.space24),
           ],
@@ -134,7 +251,48 @@ class _AyushScreenState extends State<AyushScreen> {
         backgroundColor: MediColors.ayushGreen,
         icon: Icons.confirmation_number_rounded,
         onPressed: () {
-          intake.setAyushRecord(MockDataSource.getMockAyush());
+          final agniRec = AgniAssessment(
+            agniType: _selectedAgni,
+            appetitePattern: _selectedAgni == 'sama' ? 'regular' : (_selectedAgni == 'tikshna' ? 'excessive' : 'irregular'),
+            postMealHeaviness: _hasMorningStiffness || _selectedAgni == 'manda',
+            bowelRegularity: _selectedKoshtha == 'madhyama' ? 'regular' : 'irregular',
+            namasteCode: _getAgniNamasteCode(),
+          );
+
+          final prakritiRec = PrakritiAssessment(
+            dominantDosha: _selectedPrakriti,
+            bodyFrame: _selectedPrakriti == 'kapha' ? 'broad_heavy' : (_selectedPrakriti == 'vata' ? 'thin_light' : 'medium_muscular'),
+            skinTexture: _selectedPrakriti == 'vata' ? 'dry_rough' : (_selectedPrakriti == 'pitta' ? 'warm_reddish' : 'smooth_oily'),
+            digestionSpeed: _selectedAgni == 'tikshna' ? 'rapid' : (_selectedAgni == 'manda' ? 'slow' : 'moderate'),
+            weatherSensitivity: _selectedPrakriti == 'pitta' ? 'intolerant_to_heat' : 'intolerant_to_cold',
+            sleepPattern: _selectedPrakriti == 'vata' ? 'light_interrupted' : (_selectedPrakriti == 'kapha' ? 'deep_heavy' : 'moderate'),
+            namasteCode: _getPrakritiNamasteCode(),
+          );
+
+          final koshthaRec = KoshthaAssessment(
+            koshthaType: _selectedKoshtha,
+            bowelFrequency: _selectedKoshtha == 'madhyama' ? 'once_daily' : (_selectedKoshtha == 'mridu' ? 'twice_or_more' : 'alternate_days'),
+            stoolConsistency: _selectedKoshtha == 'krura' ? 'hard_dry' : (_selectedKoshtha == 'mridu' ? 'soft_loose' : 'soft_formed'),
+            namasteCode: _getKoshthaNamasteCode(),
+          );
+
+          final fullRecord = AyurvedicIntakeRecord(
+            agni: agniRec,
+            prakritiBaseline: prakritiRec,
+            koshtha: koshthaRec,
+            provisionalDoshaImbalance: [_selectedPrakriti.toUpperCase(), if (_hasCoatedTongue) 'AMA_POSITIVE'],
+          );
+
+          intake.setAyushRecord(fullRecord);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('AYUSH Profile Saved (${_getPrakritiNamasteCode()} • ${_getAgniNamasteCode()})'),
+              backgroundColor: MediColors.ayushGreen,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+
           Navigator.of(context).pushNamed('/queue');
         },
       ),

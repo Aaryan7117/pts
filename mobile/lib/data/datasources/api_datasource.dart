@@ -115,4 +115,155 @@ class ApiDataSource {
       throw HttpException('Failed to fetch queue status: ${response.statusCode}');
     }
   }
+
+  /// Calculate AYUSH Prakriti and Agni Scoring
+  Future<Map<String, dynamic>> calculateAyushAssessment(
+      Map<String, dynamic> ayushData) async {
+    final response = await client.post(
+      _uri('/api/ayush/calculate'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(ayushData),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw HttpException('Failed to calculate AYUSH assessment: ${response.statusCode}');
+    }
+  }
+
+  /// Save AYUSH Assessment for an Encounter
+  Future<Map<String, dynamic>> saveAyushAssessment({
+    required String encounterId,
+    required Map<String, dynamic> intakeData,
+  }) async {
+    final response = await client.post(
+      _uri('/api/ayush/encounter/$encounterId'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(intakeData),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw HttpException('Failed to save AYUSH assessment: ${response.statusCode}');
+    }
+  }
+
+  /// Fetch AYUSH Assessment for an Encounter
+  Future<Map<String, dynamic>> getAyushAssessment(String encounterId) async {
+    final response = await client.get(_uri('/api/ayush/encounter/$encounterId'));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw HttpException('Failed to fetch AYUSH assessment: ${response.statusCode}');
+    }
+  }
+
+  /// Batch Upload Clinical Documents (Prescription, Lab Report, Discharge Summary)
+  Future<Map<String, dynamic>> batchUploadDocuments({
+    required String encounterId,
+    required List<File> files,
+    String documentType = 'prescription',
+    String? patientId,
+    String? documentDate,
+  }) async {
+    final request = http.MultipartRequest('POST', _uri('/api/documents/batch-upload'));
+    request.fields['encounter_id'] = encounterId;
+    request.fields['document_type'] = documentType;
+    if (patientId != null) request.fields['patient_id'] = patientId;
+    if (documentDate != null) request.fields['document_date'] = documentDate;
+
+    for (final file in files) {
+      final stream = http.ByteStream(file.openRead());
+      final length = await file.length();
+      final multipartFile = http.MultipartFile(
+        'files',
+        stream,
+        length,
+        filename: file.path.split(Platform.pathSeparator).last,
+      );
+      request.files.add(multipartFile);
+    }
+
+    final streamedResponse = await client.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw HttpException('Failed to upload documents: ${response.statusCode}');
+    }
+  }
+
+  /// Fetch Longitudinal Document Timeline with Lab Panic Checks
+  Future<Map<String, dynamic>> getEncounterTimeline(String encounterId) async {
+    final response = await client.get(_uri('/api/documents/encounter/$encounterId/timeline'));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw HttpException('Failed to fetch document timeline: ${response.statusCode}');
+    }
+  }
+
+  /// Patient Portal: Fetch Personal Dashboard & ABHA Card
+  Future<Map<String, dynamic>> getPatientDashboard(String patientId) async {
+    final response = await client.get(_uri('/api/patient/dashboard/$patientId'));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw HttpException('Failed to fetch patient dashboard: ${response.statusCode}');
+    }
+  }
+
+  /// Doctor Verification Sign-off
+  Future<Map<String, dynamic>> verifyEncounter({
+    required String encounterId,
+    required String doctorId,
+    required String doctorNotes,
+    String status = 'VERIFIED',
+  }) async {
+    final response = await client.post(
+      _uri('/api/doctor/encounter/$encounterId/verify'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'doctor_id': doctorId,
+        'doctor_notes': doctorNotes,
+        'status': status,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw HttpException('Failed to verify encounter: ${response.statusCode}');
+    }
+  }
+
+  /// Doctor ABHA Lookup: Retrieve Longitudinal Patient History
+  Future<Map<String, dynamic>> lookupPatientByAbha(String abhaId) async {
+    final response = await client.get(_uri('/api/doctor/patient/by-abha/$abhaId'));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw HttpException('Failed to lookup patient by ABHA: ${response.statusCode}');
+    }
+  }
+
+  /// OPD Hospital Directory with Phone Numbers and Room Numbers
+  Future<List<dynamic>> getHospitalDirectory() async {
+    final response = await client.get(_uri('/api/auth/directory'));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return (data['doctors'] as List<dynamic>?) ?? [];
+    } else {
+      throw HttpException('Failed to fetch hospital directory: ${response.statusCode}');
+    }
+  }
 }
+

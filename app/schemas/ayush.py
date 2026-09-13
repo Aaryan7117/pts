@@ -16,7 +16,7 @@ class AgniAssessment(BaseModel):
     )
     appetite_pattern: Literal["regular", "irregular_skips", "excessive_burning", "low_absent"]
     post_meal_heaviness: bool = Field(description="Indicates Ama (endotoxin accumulation)")
-    bowel_regularity: Literal["regular", "constipated_hard", "loose_burning", "sluggish_mucus"]
+    bowel_regularity: Literal["regular", "constipated_hard", "loose_burning", "sluggish_mucus", "irregular"]
     namaste_code: str = Field(default="NAMASTE:AGNI-001")
 
 
@@ -33,6 +33,7 @@ class PrakritiAssessment(BaseModel):
     weather_sensitivity: Literal["intolerant_to_cold", "intolerant_to_heat", "intolerant_to_dampness"]
     sleep_pattern: Literal["light_interrupted", "moderate_sound", "heavy_prolonged"]
     namaste_code: str = Field(default="NAMASTE:PRAKRITI-001")
+    scores: Optional[dict[str, int]] = Field(default_factory=dict, description="Raw dosha scores breakdown")
 
 
 class KoshthaAssessment(BaseModel):
@@ -41,7 +42,7 @@ class KoshthaAssessment(BaseModel):
         description="Krura: Hard/constipated (Vata); Mridu: Loose/easy (Pitta); Madhyama: Moderate (Kapha)"
     )
     bowel_frequency: Literal["once_or_less_daily", "once_daily", "twice_or_more_daily"]
-    stool_consistency: Literal["hard_dry", "soft_formed", "loose_watery"]
+    stool_consistency: Literal["hard_dry", "soft_formed", "soft_loose", "loose_watery"]
     namaste_code: str = Field(default="NAMASTE:KOSHTHA-001")
 
 
@@ -49,10 +50,10 @@ class AharaViharaRecord(BaseModel):
     """Dietary and Lifestyle Causative Factors (Nidana)."""
     diet_primary_taste: list[Literal[
         "madhura", "amla", "lavana", "katu", "tikta", "kashaya"
-    ]] = Field(description="Shadrasas — the six tastes predominant in patient's diet")
-    packaged_junk_frequency: Literal["daily", "weekly", "rarely", "never"]
-    sleep_wake_timing: Literal["brahma_muhurta", "regular_late", "night_shift_divasvapna"]
-    physical_exercise: Literal["vyayama_daily", "occasional_walk", "sedentary"]
+    ]] = Field(default_factory=lambda: ["katu", "lavana"], description="Shadrasas — the six tastes predominant in patient's diet")
+    packaged_junk_frequency: Literal["daily", "weekly", "rarely", "never", "frequent", "occasional"] = "weekly"
+    sleep_wake_timing: Literal["brahma_muhurta", "regular_late", "night_shift_divasvapna", "late_night"] = "regular_late"
+    physical_exercise: Literal["vyayama_daily", "occasional_walk", "sedentary"] = "occasional_walk"
     water_intake: Optional[Literal["adequate", "low", "excessive"]] = None
     addictions: Optional[list[str]] = Field(
         default=None,

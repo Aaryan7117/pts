@@ -187,6 +187,18 @@ class LabRangeChecker:
         elif value > ref["high"]:
             status = "HIGH"
 
+        interpretation = ""
+        if status == "CRITICAL_HIGH":
+            interpretation = f"Critical panic elevation ({value} {ref['unit']}). Immediate physician escalation and bedside reassessment required."
+        elif status == "CRITICAL_LOW":
+            interpretation = f"Critical life-threatening low ({value} {ref['unit']}). Urgent replacement or corrective therapy required."
+        elif status == "HIGH":
+            interpretation = f"Elevated above physiological reference interval ({ref['low']} - {ref['high']} {ref['unit']}). Monitor and correlate clinically."
+        elif status == "LOW":
+            interpretation = f"Below physiological reference interval ({ref['low']} - {ref['high']} {ref['unit']}). Evaluate etiology."
+        else:
+            interpretation = f"Within normal physiological reference interval ({ref['low']} - {ref['high']} {ref['unit']})."
+
         result = {
             "test_name": key,
             "display_name": ref.get("display_name", key),
@@ -194,7 +206,8 @@ class LabRangeChecker:
             "unit": ref["unit"],
             "status": status,
             "reference_interval": f"{ref['low']} - {ref['high']} {ref['unit']}",
-            "requires_urgent_escalation": status in ("CRITICAL_LOW", "CRITICAL_HIGH")
+            "requires_urgent_escalation": status in ("CRITICAL_LOW", "CRITICAL_HIGH"),
+            "interpretation": interpretation
         }
 
         if result["requires_urgent_escalation"]:
@@ -227,6 +240,55 @@ class LabRangeChecker:
             evaluations.append(eval_result)
 
         return evaluations
+
+    @classmethod
+    def extract_lab_values_from_text(cls, raw_text: str) -> list[dict]:
+        """
+        Deterministic regex-based physiological lab value extractor.
+        Scans OCR or notes text for common OPD lab investigations and returns parsed measurements.
+        """
+        import re
+        extracted = []
+        text_lower = raw_text.lower()
+
+        patterns = [
+            ("fasting_blood_glucose", r"(?:fasting\s+(?:blood\s+)?(?:glucose|sugar)|fbs)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("post_prandial_glucose", r"(?:post[\s\-]prandial\s+(?:blood\s+)?(?:glucose|sugar)|ppbs)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("random_blood_glucose", r"(?:random\s+(?:blood\s+)?(?:glucose|sugar)|rbs)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("hba1c", r"(?:hba1c|glycated\s+hemoglobin|a1c)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("serum_creatinine", r"(?:serum\s+)?creatinine[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("blood_urea", r"(?:blood\s+)?urea[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("blood_urea_nitrogen", r"(?:blood\s+urea\s+nitrogen|bun)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("serum_uric_acid", r"(?:serum\s+)?uric\s+acid[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("hemoglobin", r"(?:hemoglobin|haemoglobin|hb)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("total_wbc_count", r"(?:total\s+(?:wbc|leukocyte)\s+count|wbc|tlc)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("platelet_count", r"(?:platelet\s+count|platelets)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("sgpt_alt", r"(?:sgpt|alt)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("sgot_ast", r"(?:sgot|ast)[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("serum_bilirubin", r"(?:total\s+)?bilirubin[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("serum_potassium", r"(?:serum\s+)?potassium[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("serum_sodium", r"(?:serum\s+)?sodium[\s:=]+([0-9]+(?:\.[0-9]+)?)"),
+            ("tsh", r"(?:tsh|thyroid\s+stimulating\s+hormone)[\s:=]+([0-9]+(?:\.[0-9]+)?)")
+        ]
+
+        seen_tests = set()
+        for test_key, pattern in patterns:
+            match = re.search(pattern, text_lower)
+            if match and test_key not in seen_tests:
+                try:
+                    val = float(match.group(1))
+                    ref = cls.TEST_RANGES.get(test_key, {})
+                    extracted.append({
+                        "test_name": test_key,
+                        "display_name": ref.get("display_name", test_key),
+                        "value": val,
+                        "unit": ref.get("unit", "")
+                    })
+                    seen_tests.add(test_key)
+                except (ValueError, TypeError):
+                    continue
+
+        return extracted
 
     @classmethod
     def get_available_tests(cls) -> list[str]:

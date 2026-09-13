@@ -155,7 +155,84 @@ async def _create_tables(db: aiosqlite.Connection):
         );
 
         CREATE INDEX IF NOT EXISTS idx_audit_encounter ON audit_log(encounter_id);
+
+        -- ============================================================
+        -- USERS: Patients and Medical Professionals (Doctors/Clinicians)
+        -- ============================================================
+        CREATE TABLE IF NOT EXISTS users (
+            id                  TEXT PRIMARY KEY,              -- 'pat-001' | 'doc-verma'
+            role                TEXT NOT NULL,                 -- 'patient' | 'doctor'
+            full_name           TEXT NOT NULL,
+            email               TEXT,
+            mobile              TEXT,                          -- '9876543210'
+            abha_id             TEXT UNIQUE,                   -- '91-4821-3910-4819' (for patients)
+            password_hash       TEXT NOT NULL,                 -- hashed password / PIN
+            department          TEXT,                          -- for doctors: 'General Medicine', 'Kayachikitsa'
+            room_number         TEXT,                          -- for doctors: 'Room 102'
+            qualification       TEXT,                          -- for doctors: 'MD (Medicine)', 'MD (Ayu)'
+            hospital_name       TEXT DEFAULT 'All India Institute of Ayurveda (AIIA), New Delhi',
+            hospital_phone      TEXT DEFAULT '+91-11-26950401',
+            created_at          TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_users_abha ON users(abha_id);
+        CREATE INDEX IF NOT EXISTS idx_users_mobile ON users(mobile);
+        CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
     """)
 
+    # Run safe migrations for existing tables
+    await _run_migrations(db)
+
+    # Seed default staff and demo patient
+    await _seed_default_users(db)
+
     await db.commit()
-    logger.info("All database tables created/verified.")
+    logger.info("All database tables and migrations created/verified.")
+
+
+async def _run_migrations(db: aiosqlite.Connection):
+    """Safely apply schema migrations to existing database files."""
+    # Migrations on encounters table
+    cursor = await db.execute("PRAGMA table_info(encounters)")
+    cols = [row[1] for row in await cursor.fetchall()]
+    if "abha_id" not in cols:
+        await db.execute("ALTER TABLE encounters ADD COLUMN abha_id TEXT")
+    if "verified_by_doctor_id" not in cols:
+        await db.execute("ALTER TABLE encounters ADD COLUMN verified_by_doctor_id TEXT")
+    if "doctor_notes" not in cols:
+        await db.execute("ALTER TABLE encounters ADD COLUMN doctor_notes TEXT")
+    if "doctor_reviewed_at" not in cols:
+        await db.execute("ALTER TABLE encounters ADD COLUMN doctor_reviewed_at TEXT")
+    if "ayush_intake" not in cols:
+        await db.execute("ALTER TABLE encounters ADD COLUMN ayush_intake TEXT")
+
+    # Migrations on documents table
+    cursor = await db.execute("PRAGMA table_info(documents)")
+    doc_cols = [row[1] for row in await cursor.fetchall()]
+    if "patient_id" not in doc_cols:
+        await db.execute("ALTER TABLE documents ADD COLUMN patient_id TEXT")
+    if "document_type" not in doc_cols:
+        await db.execute("ALTER TABLE documents ADD COLUMN document_type TEXT DEFAULT 'prescription'")
+    if "document_date" not in doc_cols:
+        await db.execute("ALTER TABLE documents ADD COLUMN document_date TEXT")
+
+
+async def _seed_default_users(db: aiosqlite.Connection):
+    """Seed initial clinical staff and sample patient for instant evaluation."""
+    doctors = [
+        ("doc-verma", "doctor", "Dr. S. Verma", "verma@aiia.gov.in", "9811001101", None, "1234", "General Medicine", "Room 102", "MD (Internal Medicine)", "All India Institute of Ayurveda (AIIA), New Delhi", "+91-11-26950401"),
+        ("doc-sharma", "doctor", "Dr. Ananya Sharma", "sharma@aiia.gov.in", "9811001102", None, "1234", "Kayachikitsa (AYUSH)", "Room 204", "BAMS, MD (Kayachikitsa)", "All India Institute of Ayurveda (AIIA), New Delhi", "+91-11-26950402"),
+        ("doc-gupta", "doctor", "Dr. Rajesh Gupta", "gupta@aiia.gov.in", "9811001103", None, "1234", "Shalya Tantra (Surgery)", "Room 108", "MS (Ayu - Shalya)", "All India Institute of Ayurveda (AIIA), New Delhi", "+91-11-26950403"),
+        ("doc-nair", "doctor", "Dr. Priya Nair", "nair@aiia.gov.in", "9811001104", None, "1234", "Kaumarbhritya (Pediatrics)", "Room 112", "MD (Kaumarbhritya)", "All India Institute of Ayurveda (AIIA), New Delhi", "+91-11-26950404"),
+    ]
+    for d in doctors:
+        await db.execute("""
+            INSERT OR IGNORE INTO users (id, role, full_name, email, mobile, abha_id, password_hash, department, room_number, qualification, hospital_name, hospital_phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, d)
+
+    # Seed sample patient Ramesh Kumar
+    await db.execute("""
+        INSERT OR IGNORE INTO users (id, role, full_name, email, mobile, abha_id, password_hash, department, room_number, qualification, hospital_name, hospital_phone)
+        VALUES ('pat-001', 'patient', 'Ramesh Kumar', 'ramesh@example.com', '9876543210', '91-4821-3910-4819', 'patient123', NULL, NULL, NULL, 'All India Institute of Ayurveda (AIIA), New Delhi', '+91-11-26950401')
+    """)

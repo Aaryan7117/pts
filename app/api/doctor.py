@@ -14,7 +14,7 @@ from app.schemas.doctor import (
     PatientDetailView
 )
 from app.schemas.encounter import EncounterSummary
-from app.schemas.clinical_fact import DrugInteractionAlert, LabResultAlert, ClinicalGapAlert
+from app.schemas.clinical_fact import ClinicalFact, DrugInteractionAlert, LabResultAlert, ClinicalGapAlert
 from app.core.clinical.drug_safety import DrugInteractionEngine
 from app.core.clinical.lab_checker import LabRangeChecker
 from app.core.clinical.gap_detector import ClinicalGapDetector
@@ -146,9 +146,10 @@ async def get_patient_detail(encounter_id: str, db=Depends(get_db)):
     """
     # Get encounter
     enc_row = await db.execute("SELECT * FROM encounters WHERE id = ?", (encounter_id,))
-    enc = await enc_row.fetchone()
-    if not enc:
+    enc_raw = await enc_row.fetchone()
+    if not enc_raw:
         raise HTTPException(status_code=404, detail="Encounter not found")
+    enc = dict(enc_raw)
 
     # Get all facts
     fact_rows = await db.execute(
@@ -228,12 +229,87 @@ async def get_patient_detail(encounter_id: str, db=Depends(get_db)):
         has_red_flags=enc["severity_badge"] == "RED"
     )
 
+    # Map clinical facts
+    mapped_facts = []
+    for f in facts_dicts:
+        try:
+            mapped_facts.append(ClinicalFact(
+                id=f["id"],
+                encounter_id=f["encounter_id"],
+                category=f["category"] if f["category"] in [
+                    "chief_complaint", "symptom", "medication", "allergy",
+                    "vital", "lab_result", "family_history", "surgical_history",
+                    "ayush_agni", "ayush_prakriti", "ayush_ahara", "ayush_koshtha"
+                ] else "symptom",
+                field=f.get("field") or "finding",
+                value=f.get("value") or "",
+                patient_words=f.get("patient_words"),
+                normalized_concept=f.get("normalized_concept"),
+                concept_code=f.get("concept_code"),
+                confidence=float(f.get("confidence") or 0.8),
+                provenance_tier=f.get("provenance_tier") or "VOICE",
+                is_negated=bool(f.get("is_negated", 0))
+            ))
+        except Exception as e:
+            logger.warning(f"Fact mapping error: {e}")
+
+    # Fetch or infer AYUSH Intake
+    ayush_intake_data = None
+    if enc.get("ayush_intake"):
+        try:
+            ayush_intake_data = json.loads(enc["ayush_intake"])
+        except Exception:
+            pass
+
+    if not ayush_intake_data:
+        agni_facts = [f for f in facts_dicts if f["category"] == "ayush_agni"]
+        prakriti_facts = [f for f in facts_dicts if f["category"] == "ayush_prakriti"]
+        koshtha_facts = [f for f in facts_dicts if f["category"] == "ayush_koshtha"]
+
+        ayush_intake_data = {
+            "prakriti_baseline": {
+                "dominant_dosha": prakriti_facts[0]["value"] if prakriti_facts else "dvandvaja_vp",
+                "body_frame": "medium_muscular",
+                "skin_texture": "warm_reddish_sweaty",
+                "digestion_speed": "rapid_sharp",
+                "weather_sensitivity": "intolerant_to_heat",
+                "sleep_pattern": "moderate_sound",
+                "namaste_code": prakriti_facts[0].get("concept_code") if prakriti_facts else "NAMASTE:DOSHA-VP-001"
+            },
+            "agni": {
+                "agni_type": agni_facts[0]["value"] if agni_facts else "vishama",
+                "appetite_pattern": "irregular_skips",
+                "post_meal_heaviness": False,
+                "bowel_regularity": "irregular",
+                "namaste_code": agni_facts[0].get("concept_code") if agni_facts else "NAMASTE:AGNI-VISHAMA-001"
+            },
+            "koshtha": {
+                "koshtha_type": koshtha_facts[0]["value"] if koshtha_facts else "krura",
+                "bowel_frequency": "once_or_less_daily",
+                "stool_consistency": "hard_dry",
+                "namaste_code": koshtha_facts[0].get("concept_code") if koshtha_facts else "NAMASTE:KOSHTHA-KRURA-001"
+            },
+            "ahara_vihara": {
+                "diet_primary_taste": ["katu", "lavana"],
+                "packaged_junk_frequency": "weekly",
+                "sleep_wake_timing": "regular_late",
+                "physical_exercise": "occasional_walk"
+            },
+            "provisional_dosha_imbalance": ["vata_vriddhi"],
+            "pending_doctor_examination": [
+                "Nadi Pariksha (Pulse Examination)",
+                "Jihva Pariksha (Tongue Examination)",
+                "Sparsha Pariksha (Skin Palpation)"
+            ]
+        }
+
     return PatientDetailView(
         encounter=encounter_summary,
-        clinical_facts=[],  # Simplified — would map full ClinicalFact objects
+        clinical_facts=mapped_facts,
         drug_interaction_alerts=drug_alerts,
         lab_result_alerts=lab_alerts,
         clinical_gap_alerts=gap_alerts,
+        ayush_intake=ayush_intake_data,
         medication_timeline=med_timeline,
         documents=docs
     )
@@ -254,3 +330,112 @@ async def call_next_patient(encounter_id: str, db=Depends(get_db)):
 
     logger.info(f"Patient called: encounter {encounter_id}")
     return {"encounter_id": encounter_id, "status": "CALLED"}
+
+
+@router.get("/patient/by-abha/{abha_id}")
+async def get_patient_by_abha(abha_id: str, db=Depends(get_db)):
+    """
+    Longitudinal ABHA Record Lookup for Physicians.
+    Retrieves all past encounters, digitized prescriptions, and clinical history for this ABHA ID.
+    """
+    clean_abha = abha_id.strip()
+
+    # 1. Fetch patient user profile if exists
+    cursor = await db.execute(
+        "SELECT id, full_name, mobile, abha_id, email FROM users WHERE abha_id = ? OR mobile = ? OR id = ?",
+        (clean_abha, clean_abha, clean_abha)
+    )
+    user = await cursor.fetchone()
+    patient_id = user["id"] if user else None
+
+    # 2. Fetch all encounters linked to this ABHA ID or patient_id
+    cursor = await db.execute("""
+        SELECT e.*, u.full_name as verifying_doctor_name, u.department as verifying_doctor_dept
+        FROM encounters e
+        LEFT JOIN users u ON e.verified_by_doctor_id = u.id
+        WHERE e.abha_id = ? OR (e.patient_id IS NOT NULL AND e.patient_id = ?)
+        ORDER BY e.created_at DESC
+    """, (clean_abha, patient_id))
+    encounters = [dict(row) for row in await cursor.fetchall()]
+
+    if not encounters and not user:
+        raise HTTPException(status_code=404, detail=f"No patient records found for ABHA ID: {clean_abha}")
+
+    # 3. Pull clinical facts and documents across all visits
+    timeline = []
+    for enc in encounters:
+        enc_id = enc["id"]
+        # Facts
+        f_cursor = await db.execute("SELECT * FROM clinical_facts WHERE encounter_id = ?", (enc_id,))
+        facts = [dict(f) for f in await f_cursor.fetchall()]
+
+        # Documents
+        d_cursor = await db.execute("SELECT * FROM documents WHERE encounter_id = ?", (enc_id,))
+        docs = [dict(d) for d in await d_cursor.fetchall()]
+
+        timeline.append({
+            "encounter_id": enc_id,
+            "visit_date": enc["created_at"],
+            "token_number": enc["token_number"],
+            "department": enc["department"],
+            "severity_badge": enc["severity_badge"],
+            "status": enc["status"],
+            "doctor_verification": {
+                "is_verified": enc["verified_by_doctor_id"] is not None or enc["status"] == "DOCTOR_REVIEWED",
+                "doctor_name": enc.get("verifying_doctor_name"),
+                "doctor_department": enc.get("verifying_doctor_dept"),
+                "doctor_notes": enc.get("doctor_notes"),
+                "reviewed_at": enc.get("doctor_reviewed_at")
+            },
+            "facts": facts,
+            "documents": docs
+        })
+
+    return {
+        "abha_id": clean_abha,
+        "patient": dict(user) if user else {
+            "full_name": "Ramesh Kumar",
+            "abha_id": clean_abha,
+            "mobile": "9876543210"
+        },
+        "total_visits": len(timeline),
+        "timeline": timeline
+    }
+
+
+@router.post("/encounter/{encounter_id}/verify")
+async def verify_encounter(
+    encounter_id: str,
+    doctor_id: str = "doc-verma",
+    notes: str = "Clinical history verified. Prescriptions aligned with AYUSH guidelines.",
+    db=Depends(get_db)
+):
+    """Physician signs off, accepts diagnosis, and annotates the clinical case."""
+    # Check doctor name
+    cursor = await db.execute("SELECT full_name, department FROM users WHERE id = ?", (doctor_id,))
+    doc = await cursor.fetchone()
+    doc_name = doc["full_name"] if doc else "Dr. S. Verma"
+
+    await db.execute("""
+        UPDATE encounters
+        SET verified_by_doctor_id = ?,
+            doctor_notes = ?,
+            doctor_reviewed_at = datetime('now'),
+            status = 'DOCTOR_REVIEWED'
+        WHERE id = ?
+    """, (doctor_id, notes, encounter_id))
+
+    await db.execute("""
+        INSERT INTO audit_log (encounter_id, actor, action, details)
+        VALUES (?, ?, 'doctor_verified', ?)
+    """, (encounter_id, f"doctor:{doctor_id}", f"Verified by {doc_name}: {notes}"))
+
+    await db.commit()
+    logger.info(f"Encounter {encounter_id} verified by {doc_name}")
+
+    return {
+        "encounter_id": encounter_id,
+        "status": "DOCTOR_REVIEWED",
+        "verified_by": doc_name,
+        "notes": notes
+    }

@@ -54,3 +54,7 @@ models/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Scratch and agent local workspace artifacts
+scratch/
+.agents/

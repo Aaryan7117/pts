@@ -172,3 +172,79 @@ def test_document_upload_pipeline(client):
     assert "document_id" in up_data
     assert "extracted_medications" in up_data
     assert "ocr_status" in up_data
+
+
+def test_auth_and_hospital_directory(client):
+    """Verify unified login and hospital OPD directory."""
+    # 1. Doctor PIN login
+    doc_login = client.post("/api/auth/login", json={
+        "identifier": "doc-verma",
+        "password": "1234",
+        "role": "doctor"
+    })
+    assert doc_login.status_code == 200
+    d_data = doc_login.json()
+    assert d_data["authenticated"] is True
+    assert d_data["user"]["role"] == "doctor"
+    assert d_data["user"]["room_number"] == "Room 102"
+
+    # 2. Patient login via mobile
+    pat_login = client.post("/api/auth/login", json={
+        "identifier": "9876543210",
+        "password": "patient123",
+        "role": "patient"
+    })
+    assert pat_login.status_code == 200
+    p_data = pat_login.json()
+    assert p_data["authenticated"] is True
+    assert p_data["user"]["abha_id"] == "91-4821-3910-4819"
+
+    # 3. Hospital OPD directory
+    dir_res = client.get("/api/auth/directory")
+    assert dir_res.status_code == 200
+    dir_data = dir_res.json()
+    assert "doctors" in dir_data
+    assert len(dir_data["doctors"]) >= 4
+    assert dir_data["opd_reception_phone"] == "+91-11-26950401"
+
+
+def test_doctor_abha_lookup_and_verify(client):
+    """Verify doctor can retrieve longitudinal patient records by ABHA and verify cases."""
+    # 1. Look up patient by ABHA ID
+    abha_res = client.get("/api/doctor/patient/by-abha/91-4821-3910-4819")
+    assert abha_res.status_code == 200
+    abha_data = abha_res.json()
+    assert abha_data["abha_id"] == "91-4821-3910-4819"
+    assert "patient" in abha_data
+
+    # 2. Bootstrap an encounter and verify it
+    b_res = client.post("/api/encounters/bootstrap", json={
+        "patient_name": "Ramesh Kumar",
+        "preferred_language": "hi",
+        "department": "General Medicine"
+    })
+    enc_id = b_res.json()["encounter_id"]
+
+    verify_res = client.post(
+        f"/api/doctor/encounter/{enc_id}/verify",
+        params={
+            "doctor_id": "doc-verma",
+            "notes": "Verified fever & headache intake. Advised Sudarshana Ghanavati and rest."
+        }
+    )
+    assert verify_res.status_code == 200
+    v_data = verify_res.json()
+    assert v_data["status"] == "DOCTOR_REVIEWED"
+    assert "Dr. S. Verma" in v_data["verified_by"]
+
+
+def test_patient_dashboard_endpoint(client):
+    """Verify patient portal dashboard with active token and clinical history."""
+    dash_res = client.get("/api/patient/dashboard/91-4821-3910-4819")
+    assert dash_res.status_code == 200
+    dash = dash_res.json()
+    assert "profile" in dash
+    assert dash["profile"]["abha_id"] == "91-4821-3910-4819"
+    assert "active_token" in dash
+    assert "encounters" in dash
+

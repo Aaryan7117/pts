@@ -96,7 +96,14 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
         ],
       ),
       bottomBar: PrimaryActionButton(
-        label: 'Continue to Intake (आगे बढ़ें)',
+        label: _selectedStream.contains('AYUSH')
+            ? 'Continue with AYUSH Intake (आयुष सेवन शुरू करें)'
+            : (_selectedStream == 'Emergency'
+                ? 'Immediate Emergency Triaging (तत्काल आपातकालीन)'
+                : 'Continue to Intake (आगे बढ़ें)'),
+        backgroundColor: _selectedStream.contains('AYUSH')
+            ? const Color(0xFF2E7D32)
+            : (_selectedStream == 'Emergency' ? const Color(0xFFD32F2F) : null),
         icon: Icons.arrow_forward_rounded,
         onPressed: () {
           encounter.setDepartment(_selectedStream);

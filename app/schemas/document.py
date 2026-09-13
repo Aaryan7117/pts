@@ -25,14 +25,28 @@ class DocumentUploadResponse(BaseModel):
     """Response after uploading and processing a prescription/lab document."""
     document_id: str
     ocr_status: str = Field(description="SUCCESS | LOW_CONFIDENCE | FAILED")
+    document_type: str = "prescription"
     extracted_medications: list[ExtractedMedication] = Field(default_factory=list)
+    extracted_labs: list[dict] = Field(default_factory=list)
     flagged_interactions: list[DrugInteractionAlert] = Field(default_factory=list)
+    flagged_labs: list[dict] = Field(default_factory=list)
     highlighted_image_url: Optional[str] = Field(
         default=None,
         description="URL to the evidence-boxed prescription image with line highlights"
     )
     raw_ocr_text: Optional[str] = None
     overall_ocr_confidence: float = 0.0
+
+
+class BatchDocumentUploadResponse(BaseModel):
+    """Response after batch uploading multiple documents."""
+    success: bool = True
+    total_uploaded: int
+    documents: list[DocumentUploadResponse]
+    extracted_medications_count: int = 0
+    extracted_labs_count: int = 0
+    flagged_interactions_count: int = 0
+    panic_lab_alerts_count: int = 0
 
 
 class OCRLine(BaseModel):

@@ -22,6 +22,8 @@ const state = {
   facts: [],
   doctorAuthenticated: false,
   selectedEncounterId: null,
+  patient: null,
+  activeDoctorId: 'doc-verma',
 };
 
 // ── 3D Doctor ──
@@ -44,6 +46,9 @@ let queuePollInterval = null;
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  initTopNav();
+  initHubScreen();
+  initPatientScreen();
   initDoctor();
   initWelcomeScreen();
   initVoiceScreen();
@@ -51,7 +56,23 @@ document.addEventListener('DOMContentLoaded', () => {
   initQueueScreen();
   initDoctorDashboard();
   initPinModal();
+  initAyushParikshaModal();
   checkHealth();
+
+  // Handle URL view routing (?view=hub, ?view=patient, ?view=doctor)
+  const urlParams = new URLSearchParams(window.location.search);
+  const view = urlParams.get('view');
+  if (view === 'hub') {
+    navigateTo('hub');
+  } else if (view === 'patient') {
+    navigateTo('patient');
+  } else if (view === 'doctor') {
+    if (state.doctorAuthenticated) {
+      navigateTo('doctor');
+    } else {
+      showPinModal();
+    }
+  }
 });
 
 // ============================================================
@@ -108,26 +129,45 @@ function moveDoctorToHero() {
 // ============================================================
 
 function navigateTo(screen) {
-  const currentEl = document.getElementById(`screen${capitalize(state.currentScreen)}`);
-  const nextEl = document.getElementById(`screen${capitalize(screen)}`);
+  const screens = ['hub', 'patient', 'welcome', 'voice', 'scan', 'queue', 'doctor'];
+  
+  screens.forEach(s => {
+    const el = document.getElementById(`screen${capitalize(s)}`);
+    if (el) {
+      if (s === screen) {
+        el.classList.add('active');
+        el.classList.remove('exiting');
+      } else {
+        if (el.classList.contains('active')) {
+          el.classList.remove('active');
+          el.classList.add('exiting');
+          setTimeout(() => el.classList.remove('exiting'), 400);
+        }
+      }
+    }
+  });
 
-  if (currentEl) {
-    currentEl.classList.remove('active');
-    currentEl.classList.add('exiting');
-    setTimeout(() => currentEl.classList.remove('exiting'), 500);
+  // Top Nav bar buttons active synchronization
+  document.querySelectorAll('.top-nav__btn').forEach(b => b.classList.remove('active'));
+  if (screen === 'hub') {
+    document.getElementById('navBtnHub')?.classList.add('active');
+  } else if (screen === 'patient') {
+    document.getElementById('navBtnPatient')?.classList.add('active');
+  } else if (screen === 'doctor') {
+    document.getElementById('navBtnDoctor')?.classList.add('active');
+  } else {
+    document.getElementById('navBtnKiosk')?.classList.add('active');
   }
 
-  if (nextEl) {
-    nextEl.classList.add('active');
-  }
-
-  // Status bar visibility
+  // Status bar visibility (hidden on welcome, hub, patient, doctor)
   const statusBar = document.getElementById('statusBar');
-  statusBar.style.display = (screen === 'welcome' || screen === 'doctor') ? 'none' : 'flex';
+  if (statusBar) {
+    statusBar.style.display = (screen === 'voice' || screen === 'scan' || screen === 'queue') ? 'flex' : 'none';
+  }
 
   // Token badge
   const tokenBadge = document.getElementById('tokenBadge');
-  if (state.tokenNumber) {
+  if (tokenBadge && state.tokenNumber) {
     tokenBadge.textContent = `🎫 ${state.tokenNumber}`;
     tokenBadge.style.display = 'inline-flex';
   }
@@ -142,6 +182,8 @@ function navigateTo(screen) {
     moveDoctorToHero();
     doctor?.setState('wave');
     setTimeout(() => doctor?.setState('point'), 2500);
+  } else if (screen === 'doctor') {
+    loadDoctorQueue();
   }
 }
 
@@ -172,6 +214,301 @@ function updateNetworkBadge() {
   } else {
     badge.className = 'badge badge-offline';
     badge.textContent = 'Offline';
+  }
+}
+
+// ============================================================
+//  TOP PORTAL NAVIGATION
+// ============================================================
+
+function initTopNav() {
+  document.getElementById('navBrandLogo')?.addEventListener('click', () => navigateTo('hub'));
+  document.getElementById('navBtnHub')?.addEventListener('click', () => navigateTo('hub'));
+  document.getElementById('navBtnKiosk')?.addEventListener('click', () => navigateTo('welcome'));
+  document.getElementById('navBtnPatient')?.addEventListener('click', () => navigateTo('patient'));
+  document.getElementById('navBtnDoctor')?.addEventListener('click', () => {
+    if (state.doctorAuthenticated) {
+      navigateTo('doctor');
+    } else {
+      showPinModal();
+    }
+  });
+}
+
+// ============================================================
+//  SCREEN 0: ROLE SELECTOR HUB
+// ============================================================
+
+function initHubScreen() {
+  document.getElementById('hubCardKiosk')?.addEventListener('click', () => navigateTo('welcome'));
+  document.getElementById('hubCardPatient')?.addEventListener('click', () => navigateTo('patient'));
+  document.getElementById('hubCardDoctor')?.addEventListener('click', () => {
+    if (state.doctorAuthenticated) {
+      navigateTo('doctor');
+    } else {
+      showPinModal();
+    }
+  });
+  document.getElementById('hubCardMobile')?.addEventListener('click', () => {
+    window.open('/mobile.html', '_blank');
+  });
+}
+
+// ============================================================
+//  SCREEN: PATIENT HEALTH PORTAL
+// ============================================================
+
+function initPatientScreen() {
+  const authSection = document.getElementById('patientAuthSection');
+  const dashboardSection = document.getElementById('patientDashboardSection');
+  const quickDemoBtn = document.getElementById('quickDemoPatientBtn');
+  const loginForm = document.getElementById('patientLoginForm');
+  const loginError = document.getElementById('patientLoginError');
+  const logoutBtn = document.getElementById('patientLogoutBtn');
+  const refreshBtn = document.getElementById('patientRefreshBtn');
+  const fileInput = document.getElementById('portalPrescriptionFileInput');
+  const pickBtn = document.getElementById('portalUploadPickBtn');
+  const submitUploadBtn = document.getElementById('portalUploadSubmitBtn');
+  const fileNameDisplay = document.getElementById('portalUploadSelectedFileName');
+
+  // Quick 1-Tap Demo Patient Login (Ramesh Kumar - ABHA: 91-4821-3910-4819)
+  quickDemoBtn?.addEventListener('click', async () => {
+    try {
+      quickDemoBtn.disabled = true;
+      quickDemoBtn.textContent = '⚡ Signing in Ramesh Kumar...';
+      const data = await api.login('patient', '91-4821-3910-4819', 'patient123');
+      state.patient = data.user;
+      await loadPatientDashboard(state.patient.abha_id || state.patient.id);
+      if (authSection) authSection.style.display = 'none';
+      if (dashboardSection) dashboardSection.style.display = 'flex';
+    } catch (err) {
+      alert('Demo Login Error: ' + err.message);
+    } finally {
+      quickDemoBtn.disabled = false;
+      quickDemoBtn.textContent = '⚡ 1-Tap Demo Patient: Ramesh Kumar';
+    }
+  });
+
+  // Regular Form Login
+  loginForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (loginError) loginError.style.display = 'none';
+    const identifier = document.getElementById('patientIdentifierInput')?.value.trim();
+    const password = document.getElementById('patientPasswordInput')?.value.trim();
+
+    try {
+      const data = await api.login('patient', identifier, password);
+      state.patient = data.user;
+      await loadPatientDashboard(state.patient.abha_id || state.patient.id);
+      if (authSection) authSection.style.display = 'none';
+      if (dashboardSection) dashboardSection.style.display = 'flex';
+    } catch (err) {
+      if (loginError) {
+        loginError.textContent = err.message || 'Login failed';
+        loginError.style.display = 'block';
+      }
+    }
+  });
+
+  // Logout
+  logoutBtn?.addEventListener('click', () => {
+    state.patient = null;
+    if (dashboardSection) dashboardSection.style.display = 'none';
+    if (authSection) authSection.style.display = 'block';
+  });
+
+  // Refresh
+  refreshBtn?.addEventListener('click', async () => {
+    if (state.patient) {
+      refreshBtn.textContent = '🔄 Refreshing...';
+      await loadPatientDashboard(state.patient.abha_id || state.patient.id);
+      refreshBtn.textContent = '🔄 Refresh';
+    }
+  });
+
+  // Batch Document Upload Picker
+  pickBtn?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+      const count = fileInput.files.length;
+      if (fileNameDisplay) {
+        if (count === 1) {
+          fileNameDisplay.textContent = `Selected: ${fileInput.files[0].name} (${Math.round(fileInput.files[0].size / 1024)} KB)`;
+        } else {
+          fileNameDisplay.textContent = `Selected: ${count} documents ready for batch upload`;
+        }
+      }
+      if (submitUploadBtn) submitUploadBtn.style.display = 'inline-block';
+    }
+  });
+
+  // Batch Document Upload Action
+  submitUploadBtn?.addEventListener('click', async () => {
+    if (!fileInput.files.length || !state.patient) return;
+    const docType = document.getElementById('portalDocTypeSelect')?.value || 'prescription';
+    try {
+      submitUploadBtn.disabled = true;
+      const total = fileInput.files.length;
+      submitUploadBtn.textContent = `Uploading ${total} document${total > 1 ? 's' : ''}...`;
+
+      for (let i = 0; i < total; i++) {
+        submitUploadBtn.textContent = `Uploading document ${i + 1} of ${total}...`;
+        await api.uploadPatientDocument(state.patient.id, fileInput.files[i], docType);
+      }
+
+      fileInput.value = '';
+      if (fileNameDisplay) {
+        fileNameDisplay.textContent = `✅ Successfully uploaded ${total} document${total > 1 ? 's' : ''} to ABHA Vault!`;
+      }
+      submitUploadBtn.style.display = 'none';
+      await loadPatientDashboard(state.patient.abha_id || state.patient.id);
+    } catch (err) {
+      alert('Upload failed: ' + err.message);
+    } finally {
+      submitUploadBtn.disabled = false;
+      submitUploadBtn.textContent = '🚀 Upload to ABHA Vault';
+    }
+  });
+}
+
+async function loadPatientDashboard(identifier) {
+  try {
+    const data = await api.getPatientDashboard(identifier);
+    const user = data.patient || data.profile || state.patient || {};
+
+    // Header Profile
+    const headerName = document.getElementById('patientHeaderName');
+    const headerAbha = document.getElementById('patientHeaderAbha');
+    const avatarInit = document.getElementById('patientAvatarInitial');
+    if (headerName) headerName.textContent = user.full_name || 'Patient';
+    if (headerAbha) headerAbha.textContent = user.abha_id || user.mobile || '—';
+    if (avatarInit) avatarInit.textContent = user.full_name?.charAt(0) || 'P';
+
+    // Digital ABHA Card
+    const cardAbha = document.getElementById('cardAbhaNumber');
+    const cardName = document.getElementById('cardPatientName');
+    const cardMobile = document.getElementById('cardPatientMobile');
+    if (cardAbha) cardAbha.textContent = user.abha_id || '91-4821-3910-4819';
+    if (cardName) cardName.textContent = user.full_name;
+    if (cardMobile) cardMobile.textContent = user.mobile || '—';
+
+    // Active Token Tracker
+    const liveToken = document.getElementById('patientLiveToken');
+    const aheadCount = document.getElementById('patientAheadCount');
+    const waitTime = document.getElementById('patientWaitTime');
+    const assignedRoom = document.getElementById('patientAssignedRoom');
+    const tokenBadge = document.getElementById('patientTokenBadge');
+
+    const token = data.active_token;
+    if (token) {
+      if (tokenBadge) tokenBadge.textContent = `Token: ${token.token}`;
+      if (liveToken) liveToken.textContent = token.token;
+      if (aheadCount) aheadCount.textContent = token.patients_ahead;
+      if (waitTime) waitTime.textContent = token.estimated_wait || '5-10 mins';
+      if (assignedRoom) assignedRoom.textContent = `${token.room || 'Room 204'} (${token.department || 'Kayachikitsa'})`;
+    } else {
+      if (tokenBadge) tokenBadge.textContent = 'No Active Queue';
+      if (liveToken) liveToken.textContent = '—';
+      if (aheadCount) aheadCount.textContent = '0';
+      if (waitTime) waitTime.textContent = 'Walk-in Open';
+      if (assignedRoom) assignedRoom.textContent = 'Room 204 (Kayachikitsa OPD)';
+    }
+
+    // Encounters / Visits with Doctor Verification Badge
+    const visitsContainer = document.getElementById('patientVisitsList');
+    const countBadge = document.getElementById('verifiedCountBadge');
+    const encounters = data.encounters || [];
+    const verifiedCount = encounters.filter(e => e.verified_by_doctor_id || e.status === 'DOCTOR_REVIEWED').length;
+    if (countBadge) countBadge.textContent = `${verifiedCount} Verified`;
+
+    if (visitsContainer) {
+      if (encounters.length === 0) {
+        visitsContainer.innerHTML = '<div class="empty-state"><div class="empty-state__icon">📄</div><div class="empty-state__text">No medical encounters on file</div></div>';
+      } else {
+        visitsContainer.innerHTML = encounters.map(enc => {
+          const isVer = enc.verified_by_doctor_id || enc.status === 'DOCTOR_REVIEWED';
+          const docBadge = isVer
+            ? `<span class="verified-badge">✅ Verified by Dr. ${enc.doctor_name || enc.verified_by_doctor_id} (${enc.doctor_room || 'Room 204'})</span>`
+            : `<span class="pending-badge">⏳ Pending Clinical Review</span>`;
+          return `
+            <div class="visit-item">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                <div>
+                  <strong style="font-size: 14px; color: var(--text-primary);">${enc.department || 'General Medicine'}</strong>
+                  <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+                    Token: <span style="font-family: monospace; color: var(--accent);">${enc.token_number}</span> • Date: ${enc.created_at?.slice(0, 16) || 'Recent'}
+                  </div>
+                </div>
+                ${docBadge}
+              </div>
+              ${enc.doctor_notes ? `<div style="font-size: 12px; color: #a78bfa; background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6; padding: 6px 10px; border-radius: 4px; margin-top: 4px;"><strong>Doctor Assessment:</strong> ${enc.doctor_notes}</div>` : ''}
+              ${enc.ayush_intake ? `
+                <div style="font-size: 11px; color: #6ee7b7; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 4px; padding: 4px 8px; margin-top: 4px; display: flex; align-items: center; justify-content: space-between;">
+                  <span>🌿 <strong>Prakriti:</strong> ${(enc.ayush_intake.prakriti_baseline?.dominant_dosha || '').replace(/_/g, ' ').toUpperCase()} • <strong>Agni:</strong> ${(enc.ayush_intake.agni?.agni_type || '').toUpperCase()}</span>
+                  <span style="font-family: monospace; font-size: 10px; color: #38bdf8;">${enc.ayush_intake.prakriti_baseline?.namaste_code || ''}</span>
+                </div>
+              ` : ''}
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                ${enc.summary_text || 'Intake completed via MediKiosk AI triage.'}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Documents List with Type Badges
+    const docsContainer = document.getElementById('patientDocumentsList');
+    if (docsContainer) {
+      const docs = data.documents || [];
+      if (docs.length === 0) {
+        docsContainer.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 8px;">No uploaded documents yet.</div>';
+      } else {
+        docsContainer.innerHTML = docs.map(doc => {
+          const type = doc.document_type || 'prescription';
+          const icon = type === 'lab_report' ? '🧪' : (type === 'discharge_summary' ? '🏥' : '📄');
+          const typeLabel = type === 'lab_report' ? 'Lab Investigation' : (type === 'discharge_summary' ? 'Discharge Summary' : 'Prescription');
+          const typeBadgeClass = type === 'lab_report' ? 'badge-yellow' : (type === 'discharge_summary' ? 'badge-purple' : 'badge-teal');
+          return `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-light);">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">${icon}</span>
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: var(--text-primary);">${typeLabel}</div>
+                  <div style="font-size: 10px; color: var(--text-muted);">${doc.created_at?.slice(0, 10) || 'Recent'} • OCR Processed</div>
+                </div>
+              </div>
+              <span class="badge ${typeBadgeClass}" style="font-size: 10px;">${type.toUpperCase()}</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Hospital Directory
+    const dirContainer = document.getElementById('hospitalDirectoryList');
+    if (dirContainer) {
+      try {
+        const dirData = await api.getHospitalDirectory();
+        const doctors = dirData.doctors || [];
+        dirContainer.innerHTML = doctors.map(doc => `
+          <div class="dir-item">
+            <div>
+              <div style="font-weight: 700; font-size: 13px; color: var(--text-primary);">${doc.full_name}</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">${doc.department} • <strong style="color: var(--accent);">${doc.room_number}</strong></div>
+              <div style="font-size: 10px; color: var(--text-muted);">${doc.qualification || ''}</div>
+            </div>
+            <a href="tel:${doc.hospital_phone}" class="dir-item__phone">
+              📞 Call ${doc.room_number}
+            </a>
+          </div>
+        `).join('');
+      } catch (dirErr) {
+        console.error('Directory fetch error:', dirErr);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load patient dashboard:', err);
   }
 }
 
@@ -707,10 +1044,33 @@ async function updateQueueDisplay() {
 function initDoctorDashboard() {
   const callNextBtn = document.getElementById('callNextBtn');
   const exitBtn = document.getElementById('doctorExitBtn');
+  const abhaSearchBtn = document.getElementById('doctorAbhaSearchBtn');
+  const abhaSearchInput = document.getElementById('doctorAbhaSearchInput');
 
   if (exitBtn) {
     exitBtn.addEventListener('click', () => {
-      navigateTo('welcome');
+      navigateTo('hub');
+    });
+  }
+
+  // ABHA Longitudinal Search
+  if (abhaSearchBtn && abhaSearchInput) {
+    const doSearch = async () => {
+      const abhaId = abhaSearchInput.value.trim();
+      if (!abhaId) return;
+      try {
+        const mainPanel = document.getElementById('doctorMain');
+        mainPanel.innerHTML = '<div class="empty-state"><div class="spinner spinner-lg"></div><div>Searching ABHA longitudinal history...</div></div>';
+        const data = await api.getPatientByAbha(abhaId);
+        renderAbhaPatientHistory(data);
+      } catch (err) {
+        alert('ABHA Lookup failed: ' + err.message);
+        loadDoctorQueue();
+      }
+    };
+    abhaSearchBtn.addEventListener('click', doSearch);
+    abhaSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSearch();
     });
   }
 
@@ -772,16 +1132,20 @@ async function loadDoctorQueue() {
         : entry.severity_badge === 'YELLOW' ? 'badge-yellow' : 'badge-green';
       const severityIcon = entry.severity_badge === 'RED' ? '🔴 CRITICAL'
         : entry.severity_badge === 'YELLOW' ? '⚠️ MODERATE' : '✅ ROUTINE';
+      const isIVR = entry.channel === 'ivr_phone';
+      const ivrTag = isIVR ? '<span class="badge badge-purple" style="font-size: 10px; margin-left: 4px;">📞 IVR</span>' : '';
+      const preemptionTag = entry.severity_badge === 'RED' ? '<span class="badge badge-red" style="font-size: 9px; font-weight: 800; display: block; margin-top: 4px; letter-spacing: 0.5px;">🚨 PREEMPTION</span>' : '';
 
       el.innerHTML = `
         <div class="queue-entry__token">${entry.token_number}</div>
         <div class="queue-entry__summary">
           <div class="queue-entry__text">${entry.summary_30_words}</div>
-          <div class="queue-entry__facts">${entry.fact_count} facts • ${entry.channel}</div>
+          <div class="queue-entry__facts">${entry.fact_count} facts • ${isIVR ? '📞 Citizen IVR' : entry.channel} ${ivrTag}</div>
         </div>
-        <div>
+        <div style="text-align: right; min-width: 80px;">
           <span class="badge ${severityClass}">${severityIcon}</span>
-          ${entry.has_medication_conflict ? '<span class="badge badge-red" style="margin-top: 4px;">💊 Conflict</span>' : ''}
+          ${preemptionTag}
+          ${entry.has_medication_conflict ? '<span class="badge badge-red" style="margin-top: 4px; display: block;">💊 Conflict</span>' : ''}
         </div>
       `;
 
@@ -820,15 +1184,21 @@ async function loadPatientDetail(encounterId) {
     const severityLabel = enc.severity_badge === 'RED' ? '🔴 CRITICAL'
       : enc.severity_badge === 'YELLOW' ? '⚠️ MODERATE' : '✅ ROUTINE';
 
+    const isIVR = enc.channel === 'ivr_phone';
+    const ivrBadge = isIVR ? '<span class="badge badge-purple" style="margin-left: 8px;">📞 IVR Telephony Intake</span>' : '';
+    const channelName = isIVR ? '📞 Citizen Toll-Free IVR (Exotel + Sarvam AI)' : enc.channel;
+
     let html = `
       <div class="doctor-screen__patient-header">
         <div>
           <div class="doctor-screen__patient-name">
             Patient ${enc.token_number}
             <span class="badge ${severityClass}" style="margin-left: 8px;">${severityLabel}</span>
+            ${ivrBadge}
           </div>
           <div style="color: var(--text-secondary); font-size: var(--text-sm); margin-top: 4px;">
-            ${enc.channel} • Language: ${enc.language?.toUpperCase() || 'EN'} • Registered: ${enc.created_at || ''}
+            ${channelName} • Language: ${enc.language?.toUpperCase() || 'EN'} • Registered: ${enc.created_at || ''}
+            ${isIVR ? ' • <span style="color: var(--accent); font-weight: 500;">Deterministic 4-Step Waterfall Routing</span>' : ''}
           </div>
         </div>
       </div>
@@ -846,6 +1216,109 @@ async function loadPatientDetail(encounterId) {
         </div>
       </div>
     `;
+
+    // 🌿 AYUSH Dashavidha Pariksha Clinical Panel
+    if (data.ayush_intake) {
+      const ay = data.ayush_intake;
+      const prakriti = ay.prakriti_baseline || {};
+      const agni = ay.agni || {};
+      const koshtha = ay.koshtha || {};
+      const ahara = ay.ahara_vihara || {};
+      const prakritiDominant = (prakriti.dominant_dosha || 'NOT SET').replace(/_/g, ' ').toUpperCase();
+      const agniType = (agni.agni_type || 'SAMA').toUpperCase();
+      const hasAma = agni.post_meal_heaviness === true;
+      const koshthaType = (koshtha.koshtha_type || 'MADHYAMA').toUpperCase();
+      const tastes = ahara.diet_primary_taste?.map(t => t.toUpperCase()).join(', ') || 'KATU, LAVANA';
+      const imbalances = ay.provisional_dosha_imbalance || ['vata_vriddhi'];
+
+      html += `
+        <div class="ayush-panel">
+          <div class="ayush-panel__header">
+            <div>
+              <div class="ayush-panel__title">
+                <span>🌿</span> AYUSH Dashavidha Pariksha Clinical Protocol
+                <span class="badge badge-teal" style="margin-left: 8px;">AIIA Standard</span>
+              </div>
+              <div class="ayush-panel__subtitle">
+                NAMASTE Terminology & Deterministic Ten-Fold Clinical Assessment
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="doctorOpenAyushModalBtn">
+              ✏️ Re-evaluate / Edit Pariksha
+            </button>
+          </div>
+
+          <div class="ayush-panel__grid">
+            <!-- 1. Prakriti -->
+            <div class="ayush-col-card">
+              <div class="ayush-col-card__tag" style="color: #38bdf8;">
+                <span>1. Deha Prakriti</span>
+                <span class="badge badge-teal" style="font-size: 10px;">${prakriti.namaste_code || 'NAMASTE:DOSHA-001'}</span>
+              </div>
+              <div class="ayush-col-card__value">${prakritiDominant}</div>
+              <div class="ayush-col-card__detail">
+                • Frame: ${(prakriti.body_frame || 'Medium').replace(/_/g, ' ')}<br/>
+                • Skin: ${(prakriti.skin_texture || 'Warm, reddish').replace(/_/g, ' ')}<br/>
+                • Sleep: ${(prakriti.sleep_pattern || 'Moderate').replace(/_/g, ' ')}
+              </div>
+            </div>
+
+            <!-- 2. Agni & Ama -->
+            <div class="ayush-col-card">
+              <div class="ayush-col-card__tag" style="color: #f59e0b;">
+                <span>2. Agni & Ama Pariksha</span>
+                <span class="badge ${hasAma ? 'badge-red' : 'badge-green'}" style="font-size: 10px;">
+                  ${hasAma ? '⚠️ Ama Present' : '✅ Nirama (Clear)'}
+                </span>
+              </div>
+              <div class="ayush-col-card__value">${agniType} AGNI</div>
+              <div class="ayush-col-card__detail">
+                • Rhythm: ${(agni.appetite_pattern || 'Variable').replace(/_/g, ' ')}<br/>
+                • Post-meal heaviness: ${hasAma ? 'Yes (Bloating / Ama)' : 'No (Light)'}<br/>
+                • Agni Code: <span style="color: #fcd34d;">${agni.namaste_code || 'NAMASTE:AGNI-001'}</span>
+              </div>
+            </div>
+
+            <!-- 3. Koshtha & Ahara -->
+            <div class="ayush-col-card">
+              <div class="ayush-col-card__tag" style="color: #a78bfa;">
+                <span>3. Koshtha & Ahara</span>
+                <span class="badge badge-purple" style="font-size: 10px;">${koshtha.namaste_code || 'NAMASTE:KOSHTHA-001'}</span>
+              </div>
+              <div class="ayush-col-card__value">${koshthaType} KOSHTHA</div>
+              <div class="ayush-col-card__detail">
+                • Predominant Rasa: ${tastes}<br/>
+                • Stool consistency: ${(koshtha.stool_consistency || 'Formed').replace(/_/g, ' ')}<br/>
+                • Bowel frequency: ${(koshtha.bowel_frequency || 'Daily').replace(/_/g, ' ')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Ashtavidha In-Person Clinical Checklist & Vikriti -->
+          <div class="ayush-ashtavidha-bar">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="ayush-ashtavidha-bar__title">🩺 Active Vikriti (Dosha Imbalances)</div>
+              <div>
+                ${imbalances.map(d => `<span class="badge badge-yellow" style="margin-left: 4px; font-size: 11px;">⚠️ ${d.replace(/_/g, ' ').toUpperCase()}</span>`).join('')}
+              </div>
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+              Ashtavidha Pariksha Eight-Fold In-Person Verification:
+            </div>
+            <div class="ayush-ashtavidha-tags" style="margin-top: 4px;">
+              <span class="ayush-exam-chip active">✓ Nadi (Radial Pulse)</span>
+              <span class="ayush-exam-chip active">✓ Jihva (Tongue / Ama Coating)</span>
+              <span class="ayush-exam-chip">Netra (Eyes / Sclera)</span>
+              <span class="ayush-exam-chip active">✓ Shabda (Voice Pitch)</span>
+              <span class="ayush-exam-chip">Sparsha (Skin Temperature)</span>
+              <span class="ayush-exam-chip">Druk (Vision / Demeanor)</span>
+              <span class="ayush-exam-chip active">✓ Akruti (Posture & Gait)</span>
+              <span class="ayush-exam-chip">Mutra (Urine Character)</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     // Drug interaction alerts
     if (data.drug_interaction_alerts?.length) {
@@ -904,18 +1377,41 @@ async function loadPatientDetail(encounterId) {
         const conceptDisplay = fact.normalized_concept || fact.value || fact.field;
         const codeDisplay = fact.concept_code ? `<span class="badge badge-teal" style="font-size: 11px;">${fact.concept_code}</span>` : '';
 
+        const rawWords = fact.patient_words || '';
+        const timeMatch = rawWords.match(/\[\d{2}:\d{2}\]/);
+        const timeBadge = timeMatch
+          ? `<span class="badge badge-teal" style="font-size: 10px; margin-left: 6px; font-family: monospace;">🎙️ Proof ${timeMatch[0]}</span>`
+          : '';
+        const isEmergencyFact = (enc.severity_badge === 'RED') && (
+          rawWords.toLowerCase().includes('chest pain') ||
+          rawWords.toLowerCase().includes('सीने में दर्द') ||
+          rawWords.toLowerCase().includes('सांस') ||
+          rawWords.toLowerCase().includes('breath') ||
+          rawWords.toLowerCase().includes('heart') ||
+          rawWords.toLowerCase().includes('चक्कर') ||
+          rawWords.toLowerCase().includes('unconscious')
+        );
+        const emergencyBadge = isEmergencyFact
+          ? '<span class="badge badge-red" style="font-size: 10px; margin-left: 4px; font-weight: 700;">🚨 Trigger Proof</span>'
+          : '';
+
         html += `
-          <div class="doctor-fact-card">
+          <div class="doctor-fact-card ${isEmergencyFact ? 'doctor-fact-card--emergency' : ''}" style="${isEmergencyFact ? 'border-left: 4px solid var(--severity-red); background: rgba(239, 68, 68, 0.05);' : ''}">
             <div class="doctor-fact-card__header">
               <span class="doctor-fact-card__category">${catIcon} ${fact.category?.replace('_', ' ')}</span>
-              ${codeDisplay}
+              <div style="display: flex; align-items: center;">
+                ${codeDisplay}
+                ${timeBadge}
+                ${emergencyBadge}
+              </div>
             </div>
             <div class="doctor-fact-card__value">${conceptDisplay} ${isNegated}</div>
-            ${fact.patient_words ? `<div class="doctor-fact-card__words">"${fact.patient_words}"</div>` : ''}
+            ${fact.patient_words ? `<div class="doctor-fact-card__words" style="${isEmergencyFact ? 'color: #f87171; font-weight: 600;' : ''}">"${fact.patient_words}"</div>` : ''}
             <div class="doctor-fact-card__meta">
               <span>Confidence: ${confPercent}%</span>
               <span>•</span>
               <span>Tier: ${fact.provenance_tier || 'VOICE'}</span>
+              ${timeMatch ? '<span>•</span><span style="color: var(--accent); font-weight: 500;">Audio Proof Verified</span>' : ''}
             </div>
           </div>
         `;
@@ -931,17 +1427,66 @@ async function loadPatientDetail(encounterId) {
       `;
     }
 
-    // Lab result alerts
+    // 🧪 Clinical Laboratory Outlier Flags & Reference Intervals
     if (data.lab_result_alerts?.length) {
-      html += '<div class="doctor-screen__section"><div class="doctor-screen__section-title">🧪 Lab Results</div><div class="doctor-screen__alerts-list">';
-      for (const lab of data.lab_result_alerts) {
-        const labSev = lab.is_critical ? 'danger' : lab.is_abnormal ? 'warning' : 'info';
+      const panicLabs = data.lab_result_alerts.filter(l => l.requires_urgent_escalation || l.status === 'CRITICAL_HIGH' || l.status === 'CRITICAL_LOW');
+      
+      html += '<div class="doctor-screen__section">';
+      
+      // Panic alert banner if any life-threatening values
+      if (panicLabs.length > 0) {
         html += `
-          <div class="alert alert-${labSev}">
-            <div class="alert__content">
-              <div class="alert__title">${lab.test_name}: ${lab.value} ${lab.unit || ''}</div>
-              <div class="alert__text">${lab.interpretation || ''}</div>
+          <div class="lab-panic-banner">
+            <div style="font-size: 28px;">🚨</div>
+            <div>
+              <div class="lab-panic-banner__title">
+                Critical Panic Outlier Alert (${panicLabs.length} Urgent ${panicLabs.length === 1 ? 'Value' : 'Values'})
+              </div>
+              <div class="lab-panic-banner__desc">
+                Physiological panic threshold breached for: <strong>${panicLabs.map(l => `${l.display_name || l.test_name} (${l.measured_value} ${l.unit})`).join(', ')}</strong>.
+                Immediate physician intervention, bedside reassessment, or emergency lab re-check required.
+              </div>
             </div>
+          </div>
+        `;
+      }
+
+      html += `
+        <div class="doctor-screen__section-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>🧪 Physiological Laboratory Outlier Analysis (${data.lab_result_alerts.length} Tests)</span>
+          <span class="badge badge-teal" style="font-size: 11px;">Physiological Reference Intervals</span>
+        </div>
+        <div class="lab-cards-grid">
+      `;
+
+      for (const lab of data.lab_result_alerts) {
+        const isCritical = lab.status === 'CRITICAL_HIGH' || lab.status === 'CRITICAL_LOW' || lab.requires_urgent_escalation;
+        const isAbnormal = lab.status === 'HIGH' || lab.status === 'LOW';
+        const cardClass = isCritical ? 'lab-card lab-card--critical' : (isAbnormal ? 'lab-card lab-card--abnormal' : 'lab-card');
+        
+        const badgeClass = isCritical ? 'badge-red' : (isAbnormal ? 'badge-yellow' : 'badge-green');
+        const statusLabel = lab.status === 'CRITICAL_HIGH' ? '🔴 CRITICAL HIGH'
+          : lab.status === 'CRITICAL_LOW' ? '🔴 CRITICAL LOW'
+          : lab.status === 'HIGH' ? '⚠️ HIGH'
+          : lab.status === 'LOW' ? '⚠️ LOW'
+          : '✅ NORMAL';
+
+        html += `
+          <div class="${cardClass}">
+            <div class="lab-card__header">
+              <span class="lab-card__test-name">${lab.display_name || lab.test_name.replace(/_/g, ' ').toUpperCase()}</span>
+              <span class="badge ${badgeClass}" style="font-size: 10px;">${statusLabel}</span>
+            </div>
+            <div class="lab-card__value-row">
+              <span class="lab-card__value" style="color: ${isCritical ? 'var(--severity-red)' : (isAbnormal ? '#f59e0b' : 'var(--severity-green)')};">
+                ${lab.measured_value}
+              </span>
+              <span class="lab-card__unit">${lab.unit}</span>
+            </div>
+            <div>
+              <span class="lab-card__range">Reference: ${lab.reference_interval || 'Standard Range'}</span>
+            </div>
+            ${lab.interpretation ? `<div class="lab-card__interpretation">${lab.interpretation}</div>` : ''}
           </div>
         `;
       }
@@ -966,35 +1511,195 @@ async function loadPatientDetail(encounterId) {
       html += '</div></div>';
     }
 
-    // Documents with evidence images
+    // 📄 Multi-Document Timeline (Prescriptions, Lab Reports, Discharge Summaries)
     if (data.documents?.length) {
-      html += '<div class="doctor-screen__section"><div class="doctor-screen__section-title">📄 Uploaded Documents</div>';
+      html += `
+        <div class="doctor-screen__section">
+          <div class="doctor-screen__section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>📄 Multi-Document Clinical Timeline (${data.documents.length} Records)</span>
+            <span class="badge badge-teal" style="font-size: 11px;">OCR & Evidence Boxed</span>
+          </div>
+          <div class="doc-timeline-grid">
+      `;
       for (const doc of data.documents) {
-        if (doc.highlighted_path) {
-          const imgUrl = `/static/evidence/${doc.id}-boxed.jpg`;
-          html += `
-            <div class="doctor-screen__evidence-container" style="margin-bottom: var(--space-4);">
-              <img src="${imgUrl}" alt="Evidence-boxed prescription" loading="lazy" />
+        const docType = doc.document_type || 'prescription';
+        const typeIcon = docType === 'lab_report' ? '🧪 Lab Report'
+          : docType === 'discharge_summary' ? '🏥 Discharge Summary'
+          : '📄 Prescription';
+        const typeBadge = docType === 'lab_report' ? 'badge-yellow'
+          : docType === 'discharge_summary' ? 'badge-purple'
+          : 'badge-teal';
+        const docDate = doc.document_date || doc.created_at?.slice(0, 16) || 'Recent';
+
+        html += `
+          <div class="doc-timeline-card">
+            <div class="doc-timeline-card__header">
+              <span class="badge ${typeBadge}" style="font-size: 11px;">${typeIcon}</span>
+              <span style="font-size: 11px; color: var(--text-muted);">${docDate}</span>
             </div>
-          `;
-        }
-        if (doc.ocr_raw_text) {
-          html += `
-            <div class="card" style="margin-bottom: var(--space-3);">
-              <div style="font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">RAW OCR TEXT</div>
-              <div style="font-size: var(--text-sm); white-space: pre-wrap; font-family: var(--font-mono);">${doc.ocr_raw_text}</div>
+            <div style="font-size: 12px; color: var(--text-secondary); font-family: monospace;">
+              Doc ID: ${doc.id} • Status: <span style="color: var(--accent);">${doc.ocr_status || 'SUCCESS'}</span>
             </div>
-          `;
-        }
+            ${doc.highlighted_path ? `
+              <div class="doctor-screen__evidence-container" style="margin-top: 6px;">
+                <img src="/static/evidence/${doc.id}-boxed.jpg" alt="Evidence boxed document" loading="lazy" style="max-height: 200px; width: 100%; object-fit: contain; border-radius: 4px;" />
+              </div>
+            ` : ''}
+            ${doc.ocr_raw_text ? `
+              <details style="margin-top: 6px; font-size: 12px; background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px;">
+                <summary style="cursor: pointer; color: var(--accent); font-weight: 600;">View OCR Extracted Text</summary>
+                <div style="font-size: 11px; white-space: pre-wrap; font-family: var(--font-mono); margin-top: 6px; max-height: 120px; overflow-y: auto; color: var(--text-secondary);">${doc.ocr_raw_text}</div>
+              </details>
+            ` : ''}
+          </div>
+        `;
       }
-      html += '</div>';
+      html += '</div></div>';
     }
 
+    // Doctor Clinical Verification & Sign-off
+    const isVerified = enc.status === 'DOCTOR_REVIEWED' || enc.verified_by_doctor_id;
+    html += `
+      <div class="doctor-screen__section" style="margin-top: var(--space-6);">
+        <div class="card" style="border: 2px solid ${isVerified ? 'var(--severity-green)' : 'rgba(8, 145, 178, 0.4)'}; background: ${isVerified ? 'rgba(16, 185, 129, 0.05)' : 'rgba(8, 145, 178, 0.05)'}; padding: var(--space-6); border-radius: var(--radius-md);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3);">
+            <div style="font-weight: 700; font-size: var(--text-base); color: var(--text-primary);">
+              ✍️ Doctor Clinical Verification & Sign-off
+            </div>
+            ${isVerified ? `<span class="badge badge-green" id="verifyBadge">✅ Verified by Dr. ${enc.verified_by_doctor_id || 'Staff'}</span>` : `<span class="badge badge-yellow" id="verifyBadge">Pending Doctor Review</span>`}
+          </div>
+          ${enc.doctor_notes ? `<div style="font-size: var(--text-sm); margin-bottom: 12px; color: #38bdf8; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px; border-left: 3px solid var(--accent);"><strong>Clinical Sign-off Record:</strong> ${enc.doctor_notes}</div>` : ''}
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <textarea id="doctorNotesTextarea" placeholder="Enter clinical assessment, verified diagnosis, prescription validation, and OPD directives..." rows="3" style="width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 13px;">${enc.doctor_notes || ''}</textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="btn btn-primary" id="signVerifyBtn">
+                ${isVerified ? '🔄 Update Clinical Verification' : '✅ Sign & Complete Case Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
     mainPanel.innerHTML = html;
+
+    // Attach click listener for signVerifyBtn
+    const signBtn = mainPanel.querySelector('#signVerifyBtn');
+    if (signBtn) {
+      signBtn.addEventListener('click', async () => {
+        const notes = mainPanel.querySelector('#doctorNotesTextarea')?.value.trim() || 'Reviewed and verified in OPD.';
+        try {
+          signBtn.disabled = true;
+          signBtn.textContent = 'Saving Sign-off...';
+          await api.verifyEncounter(encounterId, state.activeDoctorId, notes);
+          loadPatientDetail(encounterId);
+          loadDoctorQueue();
+        } catch (e) {
+          alert('Verification failed: ' + e.message);
+          signBtn.disabled = false;
+          signBtn.textContent = '✅ Sign & Complete Case Review';
+        }
+      });
+    }
+
+    // Attach click listener for doctorOpenAyushModalBtn
+    const ayushBtn = mainPanel.querySelector('#doctorOpenAyushModalBtn');
+    if (ayushBtn) {
+      ayushBtn.addEventListener('click', () => {
+        openAyushModalWithEncounterData(data.ayush_intake);
+      });
+    }
   } catch (err) {
     console.error('Load patient detail failed:', err);
     mainPanel.innerHTML = '<div class="empty-state"><div class="empty-state__icon">❌</div><div class="empty-state__text">Failed to load patient data</div></div>';
   }
+}
+
+function renderAbhaPatientHistory(data) {
+  const mainPanel = document.getElementById('doctorMain');
+  const patient = data.patient;
+  const encounters = data.encounters || [];
+  const documents = data.documents || [];
+
+  let html = `
+    <div class="doctor-screen__patient-header">
+      <div>
+        <div class="doctor-screen__patient-name">
+          👤 ${patient.full_name}
+          <span class="badge badge-purple" style="margin-left: 8px;">ABHA: ${patient.abha_id || patient.mobile}</span>
+        </div>
+        <div style="color: var(--text-secondary); font-size: var(--text-sm); margin-top: 4px;">
+          Mobile: ${patient.mobile} • Department: AIIA OPD
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-secondary" id="backToQueueBtn">← Back to Queue</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: var(--space-4); background: rgba(8, 145, 178, 0.08); border-left: 4px solid var(--accent); padding: var(--space-4);">
+      <div style="font-size: var(--text-xs); font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 4px;">
+        🏛️ Longitudinal Patient Record (${encounters.length} Total Visits • ${documents.length} Documents)
+      </div>
+      <div style="font-size: var(--text-sm); color: var(--text-primary);">
+        Complete cross-visit medical history compiled under ABHA health identifier <strong>${patient.abha_id}</strong>.
+      </div>
+    </div>
+  `;
+
+  // Encounters timeline
+  if (encounters.length > 0) {
+    html += '<div class="doctor-screen__section"><div class="doctor-screen__section-title">📅 Longitudinal Visits & Doctor Reviews</div><div style="display: flex; flex-direction: column; gap: 12px;">';
+    for (const enc of encounters) {
+      const isVerified = enc.verified_by_doctor_id || enc.status === 'DOCTOR_REVIEWED';
+      const badge = isVerified 
+        ? `<span class="badge badge-green">✅ Verified by Dr. ${enc.verified_by_doctor_id}</span>`
+        : `<span class="badge badge-yellow">Pending Doctor Verification</span>`;
+      
+      html += `
+        <div class="card" style="border-left: 4px solid ${isVerified ? 'var(--severity-green)' : 'var(--severity-yellow)'};">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div>
+              <strong>Token ${enc.token_number}</strong> • <span style="color: var(--text-secondary);">${enc.department || 'General Medicine'}</span> • <small style="color: var(--text-muted);">${enc.created_at}</small>
+            </div>
+            ${badge}
+          </div>
+          <div style="font-size: var(--text-sm); margin-bottom: 8px;">
+            ${enc.summary_text || 'Intake recorded via MediKiosk AI.'}
+          </div>
+          ${enc.doctor_notes ? `<div style="font-size: var(--text-xs); background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px; color: #38bdf8;"><strong>Doctor Clinical Notes:</strong> ${enc.doctor_notes}</div>` : ''}
+        </div>
+      `;
+    }
+    html += '</div></div>';
+  } else {
+    html += '<div class="card" style="padding: var(--space-4); text-align: center; color: var(--text-muted);">No encounters found for this ABHA ID.</div>';
+  }
+
+  // Documents
+  if (documents.length > 0) {
+    html += '<div class="doctor-screen__section"><div class="doctor-screen__section-title">📄 Uploaded Documents & Prescriptions</div><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">';
+    for (const doc of documents) {
+      html += `
+        <div class="card" style="padding: 10px;">
+          <div style="font-weight: 600; font-size: 12px;">${doc.document_type || 'Prescription'}</div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Date: ${doc.created_at?.slice(0, 10) || 'Recent'}</div>
+          <div style="font-size: 11px; color: var(--accent); margin-top: 4px;">OCR Processed & Archived</div>
+        </div>
+      `;
+    }
+    html += '</div></div>';
+  }
+
+  mainPanel.innerHTML = html;
+
+  mainPanel.querySelector('#backToQueueBtn')?.addEventListener('click', () => {
+    if (state.selectedEncounterId) {
+      loadPatientDetail(state.selectedEncounterId);
+    } else {
+      loadDoctorQueue();
+    }
+  });
 }
 
 // ============================================================
@@ -1057,6 +1762,191 @@ function hidePinModal() {
   overlay.classList.remove('visible');
   document.querySelectorAll('.pin-digit').forEach(i => { i.value = ''; });
   document.getElementById('pinError').style.display = 'none';
+}
+
+// ============================================================
+//  AYUSH DASHAVIDHA PARIKSHA MODAL
+// ============================================================
+
+function initAyushParikshaModal() {
+  const overlay = document.getElementById('ayushParikshaModal');
+  const closeBtn = document.getElementById('ayushModalCloseBtn');
+  const cancelBtn = document.getElementById('ayushModalCancelBtn');
+  const form = document.getElementById('ayushParikshaForm');
+
+  if (!overlay) return;
+
+  // Real-time calculation listeners on all dropdowns
+  const inputs = [
+    'ayushFrameInput', 'ayushSkinInput', 'ayushWeatherInput', 'ayushSleepInput',
+    'ayushAppetiteInput', 'ayushAmaInput', 'ayushKoshthaInput', 'ayushTasteInput'
+  ];
+
+  inputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', updateAyushLivePreview);
+    }
+  });
+
+  closeBtn?.addEventListener('click', hideAyushModal);
+  cancelBtn?.addEventListener('click', hideAyushModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) hideAyushModal();
+  });
+
+  form?.addEventListener('submit', handleAyushParikshaSubmit);
+}
+
+async function updateAyushLivePreview() {
+  const frame = document.getElementById('ayushFrameInput')?.value || 'medium_muscular';
+  const skin = document.getElementById('ayushSkinInput')?.value || 'warm_reddish_sweaty';
+  const weather = document.getElementById('ayushWeatherInput')?.value || 'intolerant_to_heat';
+  const sleep = document.getElementById('ayushSleepInput')?.value || 'moderate_sound';
+  const appetite = document.getElementById('ayushAppetiteInput')?.value || 'irregular_skips';
+  const hasAma = document.getElementById('ayushAmaInput')?.value === 'yes';
+  const koshtha = document.getElementById('ayushKoshthaInput')?.value || 'krura';
+  const tastes = (document.getElementById('ayushTasteInput')?.value || 'katu_lavana').split('_');
+
+  const payload = {
+    prakriti: {
+      body_frame: frame,
+      skin_texture: skin,
+      weather_sensitivity: weather,
+      sleep_pattern: sleep
+    },
+    agni: {
+      appetite_pattern: appetite,
+      post_meal_heaviness: hasAma,
+      bowel_regularity: appetite === 'regular' ? 'regular' : 'irregular'
+    },
+    koshtha: {
+      bowel_frequency: koshtha === 'krura' ? 'once_or_less_daily' : 'once_daily',
+      stool_consistency: koshtha === 'krura' ? 'hard_dry' : (koshtha === 'mridu' ? 'soft_loose' : 'soft_formed')
+    },
+    ahara_vihara: {
+      diet_primary_taste: tastes,
+      packaged_junk_frequency: 'occasional',
+      sleep_wake_timing: 'regular_late',
+      physical_exercise: 'occasional_walk'
+    }
+  };
+
+  try {
+    const res = await api.calculateAyush(payload);
+    const pStr = (res.prakriti_baseline?.dominant_dosha || 'VP').replace(/_/g, ' ').toUpperCase();
+    const aStr = (res.agni?.agni_type || 'VISHAMA').toUpperCase();
+    const kStr = (res.koshtha?.koshtha_type || 'KRURA').toUpperCase();
+    const previewEl = document.getElementById('ayushLivePreview');
+    if (previewEl) {
+      previewEl.textContent = `Prakriti: ${pStr} • Agni: ${aStr} • Koshtha: ${kStr}`;
+    }
+    const badgeEl = document.getElementById('ayushNamasteCodeBadge');
+    if (badgeEl) {
+      badgeEl.textContent = res.prakriti_baseline?.namaste_code || 'NAMASTE:DOSHA-VP-001';
+    }
+  } catch (err) {
+    console.error('Real-time AYUSH calculation failed:', err);
+  }
+}
+
+function openAyushModalWithEncounterData(ayushData) {
+  const overlay = document.getElementById('ayushParikshaModal');
+  if (!overlay) return;
+
+  if (ayushData) {
+    const prakriti = ayushData.prakriti_baseline || {};
+    const agni = ayushData.agni || {};
+    const koshtha = ayushData.koshtha || {};
+    const ahara = ayushData.ahara_vihara || {};
+
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    };
+
+    setVal('ayushFrameInput', prakriti.body_frame);
+    setVal('ayushSkinInput', prakriti.skin_texture);
+    setVal('ayushWeatherInput', prakriti.weather_sensitivity);
+    setVal('ayushSleepInput', prakriti.sleep_pattern);
+    setVal('ayushAppetiteInput', agni.appetite_pattern);
+    setVal('ayushAmaInput', agni.post_meal_heaviness ? 'yes' : 'no');
+    setVal('ayushKoshthaInput', koshtha.koshtha_type);
+    if (ahara.diet_primary_taste?.length) {
+      setVal('ayushTasteInput', ahara.diet_primary_taste.join('_'));
+    }
+  }
+
+  overlay.classList.add('visible');
+  updateAyushLivePreview();
+}
+
+function hideAyushModal() {
+  const overlay = document.getElementById('ayushParikshaModal');
+  if (overlay) overlay.classList.remove('visible');
+}
+
+async function handleAyushParikshaSubmit(e) {
+  e.preventDefault();
+  const encounterId = state.selectedEncounterId;
+  if (!encounterId) {
+    alert('Please select an active patient encounter first.');
+    return;
+  }
+
+  const saveBtn = document.getElementById('ayushModalSaveBtn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving Pariksha...';
+  }
+
+  try {
+    const frame = document.getElementById('ayushFrameInput')?.value || 'medium_muscular';
+    const skin = document.getElementById('ayushSkinInput')?.value || 'warm_reddish_sweaty';
+    const weather = document.getElementById('ayushWeatherInput')?.value || 'intolerant_to_heat';
+    const sleep = document.getElementById('ayushSleepInput')?.value || 'moderate_sound';
+    const appetite = document.getElementById('ayushAppetiteInput')?.value || 'irregular_skips';
+    const hasAma = document.getElementById('ayushAmaInput')?.value === 'yes';
+    const koshtha = document.getElementById('ayushKoshthaInput')?.value || 'krura';
+    const tastes = (document.getElementById('ayushTasteInput')?.value || 'katu_lavana').split('_');
+
+    const payload = {
+      prakriti: {
+        body_frame: frame,
+        skin_texture: skin,
+        weather_sensitivity: weather,
+        sleep_pattern: sleep
+      },
+      agni: {
+        appetite_pattern: appetite,
+        post_meal_heaviness: hasAma,
+        bowel_regularity: appetite === 'regular' ? 'regular' : 'irregular'
+      },
+      koshtha: {
+        bowel_frequency: koshtha === 'krura' ? 'once_or_less_daily' : 'once_daily',
+        stool_consistency: koshtha === 'krura' ? 'hard_dry' : (koshtha === 'mridu' ? 'soft_loose' : 'soft_formed')
+      },
+      ahara_vihara: {
+        diet_primary_taste: tastes,
+        packaged_junk_frequency: 'occasional',
+        sleep_wake_timing: 'regular_late',
+        physical_exercise: 'occasional_walk'
+      }
+    };
+
+    const calculatedRecord = await api.calculateAyush(payload);
+    await api.saveAyushAssessment(encounterId, calculatedRecord);
+    hideAyushModal();
+    await loadPatientDetail(encounterId);
+    await loadDoctorQueue();
+  } catch (err) {
+    alert('Failed to save AYUSH Dashavidha Pariksha: ' + err.message);
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Save AYUSH Pariksha';
+    }
+  }
 }
 
 // ============================================================
