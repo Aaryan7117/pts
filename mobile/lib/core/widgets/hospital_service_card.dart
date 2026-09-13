@@ -53,13 +53,15 @@ class HospitalServiceCard extends StatelessWidget {
                   style: MediTypography.headlineMedium.copyWith(fontSize: 20),
                 ),
                 const SizedBox(height: MediDimensions.space4),
-                Row(
+                Wrap(
+                  spacing: MediDimensions.space8,
+                  runSpacing: MediDimensions.space4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       floor,
-                      style: MediTypography.bodyMedium.copyWith(fontSize: 16),
+                      style: MediTypography.bodyMedium.copyWith(fontSize: 15),
                     ),
-                    const SizedBox(width: MediDimensions.space12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(

@@ -57,6 +57,9 @@ class IntakeProvider extends ChangeNotifier {
     _activeQuestion = res.openingText;
     _turnCount = 0;
     _isInterviewCompleted = false;
+    _facts.clear();
+    _extractedMedications.clear();
+    _currentTranscript = '';
     notifyListeners();
   }
 
@@ -75,21 +78,26 @@ class IntakeProvider extends ChangeNotifier {
     }
     _isInterviewCompleted = res.isCompleted;
 
-    // Convert summaries to full ClinicalFact objects
+    // Convert summaries to full ClinicalFact objects (deduplicate existing concepts)
     for (var s in res.extractedFacts) {
-      _facts.add(ClinicalFact(
-        id: 'fact-${DateTime.now().millisecondsSinceEpoch}-${_facts.length}',
-        encounterId: 'active-encounter',
-        category: s.category,
-        field: s.field,
-        value: s.concept,
-        normalizedConcept: s.concept,
-        conceptCode: s.conceptCode,
-        patientWords: _currentTranscript,
-        provenanceTier: s.provenance,
-        confidence: s.confidence,
-        status: 'pending',
-      ));
+      final exists = _facts.any((f) =>
+          (f.normalizedConcept != null && f.normalizedConcept!.toLowerCase() == s.concept.toLowerCase()) ||
+          (f.conceptCode != null && s.conceptCode != null && f.conceptCode == s.conceptCode));
+      if (!exists) {
+        _facts.add(ClinicalFact(
+          id: 'fact-${DateTime.now().millisecondsSinceEpoch}-${_facts.length}',
+          encounterId: 'active-encounter',
+          category: s.category,
+          field: s.field,
+          value: s.concept,
+          normalizedConcept: s.concept,
+          conceptCode: s.conceptCode,
+          patientWords: _currentTranscript,
+          provenanceTier: s.provenance,
+          confidence: s.confidence,
+          status: 'pending',
+        ));
+      }
     }
     notifyListeners();
   }

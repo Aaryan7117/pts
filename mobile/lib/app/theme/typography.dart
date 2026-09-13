@@ -54,6 +54,14 @@ abstract class MediTypography {
     fontFamilyFallback: fontFallbacks,
   );
 
+  static const TextStyle bodySmall = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    color: MediColors.textMuted,
+    height: 1.40,
+    fontFamilyFallback: fontFallbacks,
+  );
+
   static const TextStyle buttonLarge = TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.w600,

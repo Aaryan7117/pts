@@ -98,16 +98,18 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
       bottomBar: PrimaryActionButton(
         label: 'Continue to Intake (आगे बढ़ें)',
         icon: Icons.arrow_forward_rounded,
-        onPressed: () {
+        onPressed: () async {
           encounter.setDepartment(_selectedStream);
           if (_selectedStream == 'Emergency') {
             Navigator.of(context).pushNamed('/emergency');
           } else {
-            context.read<IntakeProvider>().startSession(
+            await context.read<IntakeProvider>().startSession(
               encounterId: encounter.encounterId ?? 'enc-001',
               language: lang.currentLanguage,
             );
-            Navigator.of(context).pushNamed('/intake');
+            if (context.mounted) {
+              Navigator.of(context).pushNamed('/intake');
+            }
           }
         },
       ),

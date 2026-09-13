@@ -5,9 +5,10 @@ import '../../app/state/language_provider.dart';
 import '../../app/state/intake_provider.dart';
 import '../../core/widgets/medi_scaffold.dart';
 import '../../core/widgets/active_call_card.dart';
+import '../../core/services/speech_service.dart';
 
 /// Screen A-06B / 06B — Active Conversational Voice Call Interface
-/// Simulates hands-free telephone intake session connected to same backend session
+/// Hands-free telephone intake session connected to live backend session
 /// Ref: MEDIKIOSK_ANDROID_DESIGN_SPEC.md Section 8 (Screen A-06B)
 class CallIntakeScreen extends StatefulWidget {
   const CallIntakeScreen({super.key});
@@ -21,11 +22,30 @@ class _CallIntakeScreenState extends State<CallIntakeScreen> {
   Timer? _timer;
   bool _isMuted = false;
   bool _isSpeaker = true;
+  final SpeechService _speech = SpeechService();
+  String _liveTranscript = '';
 
   @override
   void initState() {
     super.initState();
     _startCallTimer();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startListening();
+    });
+  }
+
+  void _startListening() async {
+    final lang = context.read<LanguageProvider>();
+    await _speech.startListening(
+      languageCode: lang.currentLanguage,
+      onResult: (text) {
+        if (mounted) {
+          setState(() {
+            _liveTranscript = text;
+          });
+        }
+      },
+    );
   }
 
   void _startCallTimer() {
@@ -41,6 +61,7 @@ class _CallIntakeScreenState extends State<CallIntakeScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _speech.stopListening();
     super.dispose();
   }
 
@@ -55,6 +76,12 @@ class _CallIntakeScreenState extends State<CallIntakeScreen> {
     final lang = context.watch<LanguageProvider>();
     final intake = context.watch<IntakeProvider>();
 
+    final displayTranscript = _liveTranscript.isNotEmpty
+        ? 'You: "$_liveTranscript"'
+        : (intake.activeQuestion.isNotEmpty
+            ? 'AI Doctor: "${intake.activeQuestion}"'
+            : 'AI Doctor: "नमस्ते, कृपया अपने लक्षण विस्तार से बताएं..."');
+
     return MediScaffold(
       title: 'Active Intake Call',
       showHeader: false,
@@ -64,19 +91,32 @@ class _CallIntakeScreenState extends State<CallIntakeScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: ActiveCallCard(
             durationText: _formatDuration(_callSeconds),
-            transcript: intake.currentTranscript.isNotEmpty
-                ? intake.currentTranscript
-                : 'AI Intake Doctor: "नमस्ते, कृपया अपने लक्षण विस्तार से बताएं..."',
-            activeSymptoms: const ['Headache', 'Fever', '2 Days'],
-            isListening: true,
+            transcript: displayTranscript,
+            activeSymptoms: _liveTranscript.isNotEmpty
+                ? [_liveTranscript]
+                : const ['Listening for symptoms...'],
+            isListening: !_isMuted,
             isMuted: _isMuted,
             isSpeakerOn: _isSpeaker,
-            onToggleMute: () => setState(() => _isMuted = !_isMuted),
+            onToggleMute: () {
+              setState(() => _isMuted = !_isMuted);
+              if (_isMuted) {
+                _speech.stopListening();
+              } else {
+                _startListening();
+              }
+            },
             onToggleSpeaker: () => setState(() => _isSpeaker = !_isSpeaker),
-            onEndCall: () {
+            onEndCall: () async {
               _timer?.cancel();
-              intake.submitTurn(patientSpeech: 'दो दिन से सिरदर्द और बुखार');
-              Navigator.of(context).pushReplacementNamed('/summary');
+              await _speech.stopListening();
+              final speechToSubmit = _liveTranscript.isNotEmpty
+                  ? _liveTranscript
+                  : 'छाती में दर्द';
+              await intake.submitTurn(patientSpeech: speechToSubmit);
+              if (context.mounted) {
+                Navigator.of(context).pushReplacementNamed('/summary');
+              }
             },
           ),
         ),

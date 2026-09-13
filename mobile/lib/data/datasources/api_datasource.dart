@@ -9,7 +9,10 @@ import '../models/queue_status.dart';
 /// Connects to `http://<backend_host>:8000`
 /// Ref: API_CONTRACT_AUDIT.md
 class ApiDataSource {
-  static String defaultBaseUrl = 'http://10.0.2.2:8000';
+  static const String defaultBaseUrl = String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: 'http://10.0.2.2:8000',
+  );
   final String baseUrl;
   final http.Client client;
 
