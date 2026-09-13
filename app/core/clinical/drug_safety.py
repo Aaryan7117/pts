@@ -132,6 +132,11 @@ class DrugInteractionEngine:
         "thyroid_medication": ["levothyroxine", "thyroxine"],
         "diabetes_medication": ["metformin", "glimepiride", "glipizide", "sitagliptin"],
         "potassium_supplements": ["potassium_chloride", "k_dur"],
+        "licorice_yashtimadhu": ["licorice", "yashtimadhu", "mulethi", "licorice_yashtimadhu"],
+        "ashwagandha": ["ashwagandha", "withania_somnifera"],
+        "guggulu": ["guggulu", "yogaraj_guggulu", "guggul"],
+        "turmeric_haridra": ["turmeric", "haridra", "curcumin"],
+        "triphala": ["triphala", "triphala_churna"],
     }
 
     @classmethod
@@ -155,8 +160,8 @@ class DrugInteractionEngine:
         for na in names_a:
             for nb in names_b:
                 pair = tuple(sorted([na, nb]))
-                if pair in cls.INTERACTION_MATRIX:
-                    rule = cls.INTERACTION_MATRIX[pair]
+                rule = cls.INTERACTION_MATRIX.get(pair) or cls.INTERACTION_MATRIX.get((na, nb)) or cls.INTERACTION_MATRIX.get((nb, na))
+                if rule:
                     return {
                         "drug_a": drug_a,
                         "drug_b": drug_b,

@@ -14,7 +14,14 @@ from app.schemas.doctor import (
     PatientDetailView
 )
 from app.schemas.encounter import EncounterSummary
+<<<<<<< HEAD
 from app.schemas.clinical_fact import ClinicalFact, DrugInteractionAlert, LabResultAlert, ClinicalGapAlert
+=======
+from app.schemas.clinical_fact import (
+    ClinicalFact, SourceReference, ConfidenceBreakdown,
+    DrugInteractionAlert, LabResultAlert, ClinicalGapAlert
+)
+>>>>>>> origin/main
 from app.core.clinical.drug_safety import DrugInteractionEngine
 from app.core.clinical.lab_checker import LabRangeChecker
 from app.core.clinical.gap_detector import ClinicalGapDetector
@@ -229,9 +236,27 @@ async def get_patient_detail(encounter_id: str, db=Depends(get_db)):
         has_red_flags=enc["severity_badge"] == "RED"
     )
 
-    # Map clinical facts
+    # --- Clinical Facts Mapping ---
     mapped_facts = []
     for f in facts_dicts:
+        src_ref = None
+        if f.get("source_reference"):
+            try:
+                src_data = json.loads(f["source_reference"]) if isinstance(f["source_reference"], str) else f["source_reference"]
+                if isinstance(src_data, dict):
+                    src_ref = SourceReference(**src_data)
+            except Exception:
+                pass
+
+        conf_breakdown = None
+        if f.get("confidence_breakdown"):
+            try:
+                cb_data = json.loads(f["confidence_breakdown"]) if isinstance(f["confidence_breakdown"], str) else f["confidence_breakdown"]
+                if isinstance(cb_data, dict):
+                    conf_breakdown = ConfidenceBreakdown(**cb_data)
+            except Exception:
+                pass
+
         try:
             mapped_facts.append(ClinicalFact(
                 id=f["id"],
@@ -243,15 +268,25 @@ async def get_patient_detail(encounter_id: str, db=Depends(get_db)):
                 ] else "symptom",
                 field=f.get("field") or "finding",
                 value=f.get("value") or "",
+                dose=f.get("dose"),
+                frequency=f.get("frequency"),
                 patient_words=f.get("patient_words"),
                 normalized_concept=f.get("normalized_concept"),
                 concept_code=f.get("concept_code"),
-                confidence=float(f.get("confidence") or 0.8),
                 provenance_tier=f.get("provenance_tier") or "VOICE",
-                is_negated=bool(f.get("is_negated", 0))
+                source_type=f.get("source_type"),
+                source_reference=src_ref,
+                confidence=float(f.get("confidence") or 0.8),
+                confidence_breakdown=conf_breakdown,
+                temporal_state=f.get("temporal_state"),
+                valid_from=f.get("valid_from"),
+                valid_until=f.get("valid_until"),
+                is_negated=bool(f.get("is_negated", 0)),
+                status=f.get("status") or "pending",
+                created_at=f.get("created_at")
             ))
         except Exception as e:
-            logger.warning(f"Fact mapping error: {e}")
+            logger.warning(f"Could not map fact {f.get('id')}: {e}")
 
     # Fetch or infer AYUSH Intake
     ayush_intake_data = None
