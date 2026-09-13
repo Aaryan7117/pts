@@ -104,17 +104,19 @@ class IntakeRepository {
   Future<DocumentUploadResponse> uploadDocument(
     String encounterId, {
     List<int>? imageBytes,
+    String filename = 'prescription.jpg',
   }) async {
     if (useMock) {
-      return MockDataSource.getMockDocumentUpload();
+      return MockDataSource.getMockDocumentUpload(filename: filename);
     }
     try {
       return await api.uploadDocument(
         encounterId: encounterId,
         fileBytes: imageBytes,
+        filename: filename,
       );
     } catch (_) {
-      return MockDataSource.getMockDocumentUpload();
+      return MockDataSource.getMockDocumentUpload(filename: filename);
     }
   }
 

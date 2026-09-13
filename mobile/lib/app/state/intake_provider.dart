@@ -145,11 +145,11 @@ class IntakeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> processDocument(String encounterId, {List<int>? imageBytes}) async {
+  Future<void> processDocument(String encounterId, {List<int>? imageBytes, String filename = 'prescription.jpg'}) async {
     _isProcessingTurn = true;
     notifyListeners();
     try {
-      final result = await _repository.uploadDocument(encounterId, imageBytes: imageBytes);
+      final result = await _repository.uploadDocument(encounterId, imageBytes: imageBytes, filename: filename);
       _lastDocumentResult = result;
       _extractedMedications.clear();
       _extractedMedications.addAll(result.extractedMedications);

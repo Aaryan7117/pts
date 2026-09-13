@@ -35,7 +35,15 @@ timeout /t 3 /nobreak >nul
 echo [3/3] Starting MediKiosk Frontend Dev Server (Port 5173)...
 start "MediKiosk Frontend (Port 5173)" cmd /k "npm --prefix frontend run dev -- --port 5173 --host 0.0.0.0"
 
-timeout /t 3 /nobreak >nul
+echo [4/4] Configuring Android USB Port Forwarding (ADB Reverse)...
+if exist "platform-tools\adb.exe" (
+    platform-tools\adb.exe start-server >nul 2>&1
+    platform-tools\adb.exe reverse tcp:8000 tcp:8000 >nul 2>&1
+    platform-tools\adb.exe reverse tcp:5173 tcp:5173 >nul 2>&1
+    echo  ADB reverse port forwarding configured for Port 8000 and Port 5173!
+) else (
+    echo  [Notice] platform-tools\adb.exe not found, skipping ADB forward.
+)
 
 echo.
 echo ==============================================================================
@@ -46,6 +54,8 @@ echo  - Doctor Workstation:      http://localhost:5173/?view=doctor (PIN: 1234)
 echo  - Hospital Kiosk Terminal: http://localhost:5173/
 echo  - Mobile BYOD View:        http://localhost:5173/mobile.html
 echo  - OpenAPI Documentation:   http://localhost:8000/docs
+echo  - Android Device (USB):    http://localhost:8000 & http://localhost:5173
+echo  - Standalone ADB Forward:  run adb_forward.bat
 echo ==============================================================================
 echo.
 echo Launching Web Hub in your default browser...

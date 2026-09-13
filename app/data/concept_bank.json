@@ -1,0 +1,176 @@
+{
+  "version": "2.0.0",
+  "concepts": [
+    {
+      "name": "Nausea and vomiting",
+      "code": "SNOMED:422587007",
+      "category": "symptom",
+      "keywords": [
+        "vomiting", "ulti", "nausea", "ji machlana", "qai", "vomit",
+        "उल्टी", "उलटी", "जी मचलाना", "कै", "वांती", "வாந்தி", "వాంతి", "उलटी"
+      ]
+    },
+    {
+      "name": "Pyrexia / Fever",
+      "code": "SNOMED:386661006",
+      "category": "symptom",
+      "keywords": [
+        "fever", "bukhar", "bukhar hai", "taap", "juram", "high temperature",
+        "बुखार", "तेज बुखार", "ताप", "காய்ச்சல்", "జ్వరం"
+      ]
+    },
+    {
+      "name": "Severe Headache",
+      "code": "SNOMED:25064002",
+      "category": "symptom",
+      "keywords": [
+        "headache", "sir dard", "sar dard", "sir mein dard", "matha dard",
+        "सिरदर्द", "सर दर्द", "सिर में दर्द", "माथा दर्द", "தலைவலி", "తలనొప్పి", "डोकेदुखी"
+      ]
+    },
+    {
+      "name": "Cough",
+      "code": "SNOMED:49727002",
+      "category": "symptom",
+      "keywords": [
+        "cough", "khansi", "khasi", "sukhi khansi", "balgam",
+        "खांसी", "सुखी खांसी", "कफ", "बलगम", "இருமல்", "దగ్గు", "खोकला"
+      ]
+    },
+    {
+      "name": "Chest pain",
+      "code": "SNOMED:29857009",
+      "category": "symptom",
+      "keywords": [
+        "chest pain", "seene mein dard", "chhati mein dard", "chest discomfort", "angina",
+        "छाती में दर्द", "सीने में दर्द", "छाती", "நெஞ்சு வலி", "ఛాతీ నొప్పి", "छातीत दुखणे"
+      ]
+    },
+    {
+      "name": "Abdominal pain",
+      "code": "SNOMED:21522001",
+      "category": "symptom",
+      "keywords": [
+        "stomach pain", "pet dard", "pet mein dard", "abdominal pain", "cramps",
+        "पेट दर्द", "पेट में दर्द", "मरोड़", "வயிற்று வலி", "కడుపు నొప్పి", "पोटदुखी"
+      ]
+    },
+    {
+      "name": "Knee joint pain",
+      "code": "SNOMED:202446002",
+      "category": "symptom",
+      "keywords": [
+        "knee pain", "ghutne mein dard", "ghutna dard", "joint pain", "sandhivata",
+        "घुटने में दर्द", "घुटनों का दर्द", "जोड़ों का दर्द", "மூட்டு வலி", "మోకాలి నొప్పి", "गुडघेदुखी"
+      ]
+    },
+    {
+      "name": "Lower back pain",
+      "code": "SNOMED:161891005",
+      "category": "symptom",
+      "keywords": [
+        "back pain", "kamar dard", "peeth dard", "spine pain", "katishula",
+        "कमर दर्द", "पीठ दर्द", "कमर में दर्द", "முதுகு வலி", "నడుము నొప్పి", "पाठदुखी"
+      ]
+    },
+    {
+      "name": "Difficulty breathing / Breathlessness",
+      "code": "SNOMED:267036007",
+      "category": "symptom",
+      "keywords": [
+        "breathing difficulty", "saans phoolna", "saans lene mein taklif", "dyspnea", "breathlessness",
+        "सांस फूलना", "सांस लेने में तकलीफ", "दम घुटना", "மூச்சுத் திணறல்", "శ్వాస ఇబ్బంది", "श्वास घेण्यास त्रास"
+      ]
+    },
+    {
+      "name": "Diarrhea",
+      "code": "SNOMED:62315008",
+      "category": "symptom",
+      "keywords": [
+        "diarrhea", "loose motion", "dast", "pet kharab", "atisara",
+        "दस्त", "लूज मोशन", "पेट खराब", "வயிற்றுப்போக்கு", "విరేచనాలు", "जुलाब"
+      ]
+    },
+    {
+      "name": "Dizziness / Vertigo",
+      "code": "SNOMED:404640003",
+      "category": "symptom",
+      "keywords": [
+        "dizziness", "chakkar", "sir ghoomna", "lightheaded", "bhrama",
+        "चक्कर", "चक्कर आना", "सिर घूमना", "தலைச்சுற்றல்", "తలతిరుగుడు", "चक्कर"
+      ]
+    },
+    {
+      "name": "Fatigue / Generalized Weakness",
+      "code": "SNOMED:84229001",
+      "category": "symptom",
+      "keywords": [
+        "fatigue", "weakness", "kamzori", "thakan", "tired", "shrama",
+        "कमजोरी", "थकान", "सुस्ती", "சோர்வு", "అలసట", "थकवा"
+      ]
+    },
+    {
+      "name": "Burning Sensation / Acidity",
+      "code": "SNOMED:30789004",
+      "category": "symptom",
+      "keywords": [
+        "acidity", "pet mein jalan", "gastric", "heartburn", "burning sensation", "amlapitta",
+        "एसिडिटी", "पेट में जलन", "सीने में जलन", "गैस", "நெஞ்சு எரிச்சல்", "గుండెల్లో మంట", "छातीत जळजळ"
+      ]
+    },
+    {
+      "name": "Skin Rash / Itching",
+      "code": "SNOMED:271807003",
+      "category": "symptom",
+      "keywords": [
+        "rash", "skin rash", "khujli", "daane", "kandu", "itching",
+        "खुजली", "दाने", "त्वचा पर दाने", "खार", "சொறி", "దద్దుర్లు"
+      ]
+    },
+    {
+      "name": "Urinary Burning / Frequency",
+      "code": "SNOMED:249274008",
+      "category": "symptom",
+      "keywords": [
+        "urination problem", "peshab mein jalan", "frequent urination", "mutrakrichhra",
+        "पेशाब में जलन", "पेशाब बार बार आना", "சிறுநீர் எரிச்சல்", "మూత్ర సమస్య"
+      ]
+    },
+    {
+      "name": "Body Swelling / Edema",
+      "code": "SNOMED:267038008",
+      "category": "symptom",
+      "keywords": [
+        "swelling", "sujan", "soojan", "edema", "shotha",
+        "सूजन", "पैरों में सूजन", "चेहरे पर सूजन", "வீக்கம்", "వాపు", "सूज"
+      ]
+    },
+    {
+      "name": "Insomnia / Sleep Disturbance",
+      "code": "SNOMED:193462001",
+      "category": "symptom",
+      "keywords": [
+        "insomnia", "neend nahi aati", "sleep problem", "anidra",
+        "नींद न आना", "नींद की परेशानी", "தூக்கமின்மை", "నిద్రలేమి", "झोप न लागणे"
+      ]
+    },
+    {
+      "name": "Vata Imbalance",
+      "code": "NAMASTE:DOSHA-VATA-001",
+      "category": "ayush",
+      "keywords": ["vata", "vayu", "gas", "bloating", "constipation", "dry skin", "वात", "वायु"]
+    },
+    {
+      "name": "Pitta Imbalance",
+      "code": "NAMASTE:DOSHA-PITTA-001",
+      "category": "ayush",
+      "keywords": ["pitta", "acidity", "burning", "heat intolerance", "पित्त", "अम्लपित्त"]
+    },
+    {
+      "name": "Kapha Imbalance",
+      "code": "NAMASTE:DOSHA-KAPHA-001",
+      "category": "ayush",
+      "keywords": ["kapha", "heaviness", "congestion", "lethargy", "कफ", "भारीपन"]
+    }
+  ]
+}

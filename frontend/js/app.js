@@ -57,15 +57,18 @@ document.addEventListener('DOMContentLoaded', () => {
   initDoctorDashboard();
   initPinModal();
   initAyushParikshaModal();
+  initIvrStudio();
   checkHealth();
 
-  // Handle URL view routing (?view=hub, ?view=patient, ?view=doctor)
+  // Handle URL view routing (?view=hub, ?view=patient, ?view=doctor, ?view=ivr)
   const urlParams = new URLSearchParams(window.location.search);
   const view = urlParams.get('view');
   if (view === 'hub') {
     navigateTo('hub');
   } else if (view === 'patient') {
     navigateTo('patient');
+  } else if (view === 'ivr') {
+    navigateTo('ivr');
   } else if (view === 'doctor') {
     if (state.doctorAuthenticated) {
       navigateTo('doctor');
@@ -129,7 +132,7 @@ function moveDoctorToHero() {
 // ============================================================
 
 function navigateTo(screen) {
-  const screens = ['hub', 'patient', 'welcome', 'voice', 'scan', 'queue', 'doctor'];
+  const screens = ['hub', 'patient', 'welcome', 'voice', 'scan', 'queue', 'doctor', 'ivr'];
   
   screens.forEach(s => {
     const el = document.getElementById(`screen${capitalize(s)}`);
@@ -155,11 +158,13 @@ function navigateTo(screen) {
     document.getElementById('navBtnPatient')?.classList.add('active');
   } else if (screen === 'doctor') {
     document.getElementById('navBtnDoctor')?.classList.add('active');
+  } else if (screen === 'ivr') {
+    document.getElementById('navBtnIvr')?.classList.add('active');
   } else {
     document.getElementById('navBtnKiosk')?.classList.add('active');
   }
 
-  // Status bar visibility (hidden on welcome, hub, patient, doctor)
+  // Status bar visibility (hidden on welcome, hub, patient, doctor, ivr)
   const statusBar = document.getElementById('statusBar');
   if (statusBar) {
     statusBar.style.display = (screen === 'voice' || screen === 'scan' || screen === 'queue') ? 'flex' : 'none';
@@ -184,6 +189,9 @@ function navigateTo(screen) {
     setTimeout(() => doctor?.setState('point'), 2500);
   } else if (screen === 'doctor') {
     loadDoctorQueue();
+  } else if (screen === 'ivr') {
+    const currentPhone = document.getElementById('ivrPhoneInput')?.value || '9876543210';
+    testIvrResolution(currentPhone);
   }
 }
 
@@ -226,6 +234,7 @@ function initTopNav() {
   document.getElementById('navBtnHub')?.addEventListener('click', () => navigateTo('hub'));
   document.getElementById('navBtnKiosk')?.addEventListener('click', () => navigateTo('welcome'));
   document.getElementById('navBtnPatient')?.addEventListener('click', () => navigateTo('patient'));
+  document.getElementById('navBtnIvr')?.addEventListener('click', () => navigateTo('ivr'));
   document.getElementById('navBtnDoctor')?.addEventListener('click', () => {
     if (state.doctorAuthenticated) {
       navigateTo('doctor');
@@ -249,6 +258,7 @@ function initHubScreen() {
       showPinModal();
     }
   });
+  document.getElementById('hubCardIvr')?.addEventListener('click', () => navigateTo('ivr'));
   document.getElementById('hubCardMobile')?.addEventListener('click', () => {
     window.open('/mobile.html', '_blank');
   });
@@ -1133,16 +1143,33 @@ async function loadDoctorQueue() {
       const severityIcon = entry.severity_badge === 'RED' ? '🔴 CRITICAL'
         : entry.severity_badge === 'YELLOW' ? '⚠️ MODERATE' : '✅ ROUTINE';
       const isIVR = entry.channel === 'ivr_phone';
-      const ivrTag = isIVR ? '<span class="badge badge-purple" style="font-size: 10px; margin-left: 4px;">📞 IVR</span>' : '';
+      const isBYOD = entry.channel === 'android_byod';
+      const channelLabel = isIVR ? '📞 Citizen IVR' : (isBYOD ? '📱 BYOD' : '🏥 Kiosk');
       const preemptionTag = entry.severity_badge === 'RED' ? '<span class="badge badge-red" style="font-size: 9px; font-weight: 800; display: block; margin-top: 4px; letter-spacing: 0.5px;">🚨 PREEMPTION</span>' : '';
 
+      const displayName = entry.patient_name || `Patient ${entry.token_number}`;
+      const demogStr = (entry.patient_age && entry.patient_gender && entry.patient_gender !== 'unspecified')
+        ? `(${entry.patient_age} ${entry.patient_gender.charAt(0).toUpperCase()})`
+        : '';
+      const deptStr = entry.department || 'General Medicine';
+
       el.innerHTML = `
-        <div class="queue-entry__token">${entry.token_number}</div>
-        <div class="queue-entry__summary">
-          <div class="queue-entry__text">${entry.summary_30_words}</div>
-          <div class="queue-entry__facts">${entry.fact_count} facts • ${isIVR ? '📞 Citizen IVR' : entry.channel} ${ivrTag}</div>
+        <div class="queue-entry__token-col">
+          <div class="queue-entry__token">${entry.token_number}</div>
+          <span style="font-size: 10px; color: #64748b; font-weight: 700;">${channelLabel}</span>
         </div>
-        <div style="text-align: right; min-width: 80px;">
+        <div class="queue-entry__body">
+          <div class="queue-entry__title-row">
+            <div class="queue-entry__name">
+              ${displayName} <span class="queue-entry__demog">${demogStr}</span>
+            </div>
+          </div>
+          <div class="queue-entry__summary-text">${entry.summary_30_words}</div>
+          <div class="queue-entry__meta">
+            <span>${entry.fact_count} clinical facts</span> • <span>${deptStr}</span>
+          </div>
+        </div>
+        <div class="queue-entry__status-col">
           <span class="badge ${severityClass}">${severityIcon}</span>
           ${preemptionTag}
           ${entry.has_medication_conflict ? '<span class="badge badge-red" style="margin-top: 4px; display: block;">💊 Conflict</span>' : ''}
@@ -1186,32 +1213,44 @@ async function loadPatientDetail(encounterId) {
 
     const isIVR = enc.channel === 'ivr_phone';
     const ivrBadge = isIVR ? '<span class="badge badge-purple" style="margin-left: 8px;">📞 IVR Telephony Intake</span>' : '';
-    const channelName = isIVR ? '📞 Citizen Toll-Free IVR (Exotel + Sarvam AI)' : enc.channel;
+    const channelName = isIVR ? '📞 Citizen Toll-Free IVR (Exotel + Sarvam AI)' : (enc.channel === 'android_byod' ? '📱 Mobile BYOD Waiting Area' : '🏥 Physical OPD Kiosk');
+
+    const patientName = enc.patient_name || `Patient ${enc.token_number}`;
+    const demog = (enc.patient_age && enc.patient_gender && enc.patient_gender !== 'unspecified')
+      ? `${enc.patient_age} yrs • ${enc.patient_gender.toUpperCase()}`
+      : '';
+    const abhaTag = enc.abha_id ? `ABHA: <span style="font-family: monospace; color: #0891b2; font-weight: 700;">${enc.abha_id}</span>` : '';
 
     let html = `
       <div class="doctor-screen__patient-header">
         <div>
-          <div class="doctor-screen__patient-name">
-            Patient ${enc.token_number}
-            <span class="badge ${severityClass}" style="margin-left: 8px;">${severityLabel}</span>
+          <div class="doctor-screen__patient-name" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span>${patientName}</span>
+            <span class="badge badge-teal" style="font-size: 14px; font-weight: 800; letter-spacing: 0.5px;">Token ${enc.token_number}</span>
+            <span class="badge ${severityClass}">${severityLabel}</span>
             ${ivrBadge}
           </div>
-          <div style="color: var(--text-secondary); font-size: var(--text-sm); margin-top: 4px;">
-            ${channelName} • Language: ${enc.language?.toUpperCase() || 'EN'} • Registered: ${enc.created_at || ''}
-            ${isIVR ? ' • <span style="color: var(--accent); font-weight: 500;">Deterministic 4-Step Waterfall Routing</span>' : ''}
+          <div style="color: var(--text-secondary); font-size: var(--text-sm); margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+            ${demog ? `<span>👤 <strong>${demog}</strong></span> • ` : ''}
+            ${abhaTag ? `<span>💳 ${abhaTag}</span> • ` : ''}
+            <span>🏥 <strong>${enc.department || 'General Medicine'}</strong></span> •
+            <span>🌐 Language: ${enc.language?.toUpperCase() || 'EN'}</span> •
+            <span>📅 Registered: ${enc.created_at || 'Today'}</span>
+            ${isIVR ? ' • <span style="color: var(--accent); font-weight: 600;">Deterministic 4-Step Waterfall Routing</span>' : ''}
           </div>
         </div>
       </div>
     `;
 
-    // Clinical Summary Banner
-    const summaryText = enc.summary_text || enc.summary_30_words || 'Intake in progress via Kiosk.';
+    // High-Contrast Clinical Summary Banner (WCAG AAA)
+    const summaryText = enc.summary_text || enc.summary_30_words || 'Clinical intake completed — awaiting physician review.';
     html += `
-      <div class="card" style="margin-bottom: var(--space-4); background: var(--accent-light); border-left: 4px solid var(--accent); padding: var(--space-4);">
-        <div style="font-size: var(--text-xs); font-weight: 700; color: var(--accent-dark); text-transform: uppercase; margin-bottom: 4px;">
-          📋 30-Second Clinical Triage Summary
+      <div class="card" style="margin-bottom: var(--space-5); background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%); border: 1.5px solid #0891b2; border-left: 6px solid #0891b2; border-radius: var(--radius-md); padding: 18px 22px; box-shadow: var(--shadow-sm);">
+        <div style="font-size: 11px; font-weight: 800; color: #0891b2; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+          <span>⚡ 30-SECOND CLINICAL TRIAGE SYNTHESIS</span>
+          <span class="badge badge-teal" style="font-size: 9px; padding: 2px 6px;">AI Generated • Doctor Reviewed</span>
         </div>
-        <div style="font-size: var(--text-base); color: var(--text-primary); font-weight: 500;">
+        <div style="font-size: 15px; color: #0f172a; font-weight: 600; line-height: 1.6;">
           ${summaryText}
         </div>
       </div>
@@ -1969,4 +2008,156 @@ function resetState() {
   document.getElementById('tokenBadge').style.display = 'none';
   document.getElementById('scanResults').style.display = 'none';
   document.getElementById('scanDoneBtn').style.display = 'none';
+}
+
+// ============================================================
+//  SCREEN: IVR TELEPHONY STUDIO & LIVE SIMULATOR
+// ============================================================
+
+function initIvrStudio() {
+  const phoneInput = document.getElementById('ivrPhoneInput');
+  const resolveBtn = document.getElementById('ivrResolveBtn');
+  const startCallBtn = document.getElementById('ivrStartCallBtn');
+  const backToHubBtn = document.getElementById('ivrBackToHubBtn');
+  const openDoctorBtn = document.getElementById('ivrOpenDoctorBtn');
+  const presets = document.querySelectorAll('.ivr-preset-btn');
+  const langSelect = document.getElementById('ivrLanguageSelect');
+  const sevSelect = document.getElementById('ivrSeveritySelect');
+
+  backToHubBtn?.addEventListener('click', () => navigateTo('hub'));
+  openDoctorBtn?.addEventListener('click', () => {
+    if (state.doctorAuthenticated) {
+      navigateTo('doctor');
+    } else {
+      showPinModal();
+    }
+  });
+
+  // Preset clicks
+  presets.forEach(btn => {
+    btn.addEventListener('click', () => {
+      presets.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const phone = btn.dataset.phone;
+      const lang = btn.dataset.lang;
+      if (phoneInput && phone) phoneInput.value = phone;
+      if (langSelect && lang) langSelect.value = lang;
+      testIvrResolution(phone);
+    });
+  });
+
+  // Manual resolve click
+  resolveBtn?.addEventListener('click', () => {
+    const phone = phoneInput?.value?.trim() || '9876543210';
+    testIvrResolution(phone);
+  });
+
+  // Simulate call click
+  startCallBtn?.addEventListener('click', async () => {
+    const phone = phoneInput?.value?.trim() || '9876543210';
+    const lang = langSelect?.value || 'hi';
+    const severity = sevSelect?.value || 'RED';
+
+    startCallBtn.disabled = true;
+    startCallBtn.textContent = '⏳ Connecting Voice Trunk (Exotel SIP)...';
+
+    try {
+      // Call Exotel incoming call webhook
+      const res = await fetch('/api/ivr/exotel/incoming-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          From: phone,
+          caller_phone: phone,
+          language: lang,
+          severity: severity
+        })
+      });
+      const data = await res.json();
+
+      const callBox = document.getElementById('ivrCallBox');
+      const speechBox = document.getElementById('ivrCallSpeech');
+      const statusText = document.getElementById('ivrCallStatusText');
+      const preemptionBanner = document.getElementById('ivrPreemptionBanner');
+      const sessionBadge = document.getElementById('ivrSessionBadge');
+
+      if (callBox) callBox.style.display = 'flex';
+      if (sessionBadge) sessionBadge.textContent = `Token: ${data.token_number || 'IVR-PREEMPT'}`;
+      if (statusText) statusText.textContent = `📞 Voice Call Connected • Assigned: ${data.clinic?.name || 'AIIA'}`;
+      if (speechBox) speechBox.textContent = `"${data.opening_speech || data.spoken_greeting || 'Welcome to MediKiosk AYUSH Helpline...'}"`;
+
+      if (severity === 'RED' && preemptionBanner) {
+        preemptionBanner.style.display = 'block';
+      }
+
+      startCallBtn.textContent = '✓ Call Ingested & Preempted to Queue!';
+      setTimeout(() => {
+        startCallBtn.disabled = false;
+        startCallBtn.textContent = '📞 Simulate Inbound Call & Inject to Queue';
+      }, 3000);
+
+      // Auto-update waterfall visualizer for this phone
+      testIvrResolution(phone);
+    } catch (err) {
+      console.error('Simulate IVR call failed:', err);
+      startCallBtn.disabled = false;
+      startCallBtn.textContent = '📞 Simulate Inbound Call & Inject to Queue';
+    }
+  });
+
+  // Run initial resolution on default preset
+  testIvrResolution('9876543210');
+}
+
+async function testIvrResolution(phone) {
+  try {
+    const res = await fetch(`/api/ivr/resolve-location?caller_phone=${encodeURIComponent(phone)}`);
+    const data = await res.json();
+
+    const step = data.waterfall_step || 1;
+    const clinic = data.clinic || {};
+
+    // Update step highlight
+    for (let i = 1; i <= 4; i++) {
+      const stepEl = document.getElementById(`wfStep${i}`);
+      const badgeEl = document.getElementById(`wfBadge${i}`);
+      if (!stepEl || !badgeEl) continue;
+
+      if (i === step) {
+        stepEl.className = 'waterfall-step active';
+        badgeEl.className = 'waterfall-step__badge waterfall-step__badge--matched';
+        badgeEl.textContent = `MATCHED (${Math.round((data.confidence || 1.0) * 100)}%)`;
+      } else if (i < step) {
+        stepEl.className = 'waterfall-step bypassed';
+        badgeEl.className = 'waterfall-step__badge waterfall-step__badge--skipped';
+        badgeEl.textContent = 'NO MATCH';
+      } else {
+        stepEl.className = 'waterfall-step bypassed';
+        badgeEl.className = 'waterfall-step__badge waterfall-step__badge--skipped';
+        badgeEl.textContent = 'SKIPPED';
+      }
+    }
+
+    const activeBadge = document.getElementById('waterfallActiveBadge');
+    if (activeBadge) activeBadge.textContent = `Step ${step} Matched: ${data.resolution_type}`;
+
+    // Update clinic resolution card
+    const nameEl = document.getElementById('resClinicName');
+    const roomEl = document.getElementById('resRoomNumber');
+    const sysEl = document.getElementById('resSystem');
+    const locEl = document.getElementById('resLocation');
+    const langEl = document.getElementById('resLanguage');
+    const ratEl = document.getElementById('resRationale');
+    const confEl = document.getElementById('resConfidenceBadge');
+
+    if (nameEl) nameEl.textContent = clinic.name || 'All India Institute of Ayurveda (AIIA)';
+    if (roomEl) roomEl.textContent = clinic.room_number || 'Room 102 (Kayachikitsa OPD)';
+    if (sysEl) sysEl.textContent = clinic.system || 'Ayurveda';
+    if (locEl) locEl.textContent = `${clinic.district || 'Delhi'}, ${clinic.state || 'Delhi'}`;
+    if (langEl) langEl.textContent = `${clinic.primary_language?.toUpperCase() || 'HI'} (${clinic.telecom_circle || 'National'})`;
+    if (ratEl) ratEl.textContent = data.rationale || 'Resolved via deterministic 4-step waterfall.';
+    if (confEl) confEl.textContent = `Confidence: ${Math.round((data.confidence || 1.0) * 100)}%`;
+  } catch (err) {
+    console.error('Resolve location failed:', err);
+  }
 }

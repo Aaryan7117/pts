@@ -191,30 +191,40 @@ class SemanticConceptNormalizer:
                 is_negated=True
             )
 
-        # Step 2: Try sentence-transformer vector embedding match
-        if self._embedding_model is not None and self._concept_embeddings is not None:
-            return self._embedding_match(text)
+        # Step 2: High-precision deterministic clinical keyword match
+        kw_match = self._keyword_match(text, lang)
+        if kw_match.concept and kw_match.score >= 0.85:
+            return kw_match
 
-        # Step 3: Fallback — keyword-based matching
-        return self._keyword_match(text, lang)
+        # Step 3: Try sentence-transformer vector embedding match
+        if self._embedding_model is not None and self._concept_embeddings is not None:
+            emb_match = self._embedding_match(text)
+            if emb_match.concept and emb_match.score >= 0.70:
+                return emb_match
+
+        # Step 4: Return keyword match or raw match
+        return kw_match
 
     def _keyword_match(self, text: str, lang: str) -> ConceptMatch:
         """
-        Fallback substring matching when the embedding model is unavailable.
-        Uses the multi-language keyword lists in the concept bank.
+        High-precision substring and token matching against multi-language clinical keywords.
         """
-        text_lower = text.lower()
+        text_lower = text.lower().strip()
         best_match = None
         best_score = 0.0
 
         for concept in (self._concept_metadata or []):
             keywords = concept.get("keywords", [])
             for keyword in keywords:
-                if keyword.lower() in text_lower:
-                    # Score based on keyword coverage
-                    score = len(keyword) / max(len(text_lower), 1)
-                    score = min(score * 1.5, 0.90)  # Cap and boost
-
+                kw = keyword.lower().strip()
+                if not kw:
+                    continue
+                if kw == text_lower:
+                    # Exact whole-phrase match
+                    return ConceptMatch(concept=concept, score=0.98, status="CONFIRMED_MATCH")
+                elif kw in text_lower:
+                    # Substring match (e.g. "मुझे उल्टी हो रही है" contains "उल्टी")
+                    score = 0.93 + min(len(kw) / 100.0, 0.04)
                     if score > best_score:
                         best_score = score
                         best_match = concept
@@ -272,7 +282,7 @@ class SemanticConceptNormalizer:
             {"name": "Difficulty breathing", "code": "SNOMED:267036007", "category": "symptom",
              "keywords": ["breathing difficulty", "saans lene mein taklif", "dyspnea", "breathlessness", "மூச்சுத் திணறல்", "శ్వాస ఇబ్బంది", "श्वास घेण्यास त्रास"]},
             {"name": "Nausea and vomiting", "code": "SNOMED:422587007", "category": "symptom",
-             "keywords": ["vomiting", "ulti", "nausea", "ji machlana", "வாந்தி", "వాంతి", "उलटी"]},
+             "keywords": ["vomiting", "ulti", "nausea", "ji machlana", "उल्टी", "उलटी", "जी मचलाना", "वाந்தி", "వాంతి", "வாந்தி"]},
             {"name": "Diarrhea", "code": "SNOMED:62315008", "category": "symptom",
              "keywords": ["diarrhea", "loose motion", "dast", "pet kharab", "வயிற்றுப்போக்கு", "విరేచనాలు", "जुलाब"]},
             {"name": "Fatigue / Weakness", "code": "SNOMED:84229001", "category": "symptom",

@@ -27,8 +27,17 @@
   /* ── Text ── */
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-muted: #64748b;
   --text-inverse: #ffffff;
+
+  /* ── Dark Surface High-Contrast Text (for dark panels, chips, and overlays) ── */
+  --text-dark-title: #f8fafc;
+  --text-dark-body: #e2e8f0;
+  --text-dark-secondary: #cbd5e1;
+  --text-dark-muted: #94a3b8;
+  --text-dark-teal: #6ee7b7;
+  --text-dark-amber: #fcd34d;
+  --text-dark-sky: #38bdf8;
 
   /* ── Severity (always paired with icon + text for color-blind safety) ── */
   --severity-red: #dc2626;

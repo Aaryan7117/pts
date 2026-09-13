@@ -27,6 +27,7 @@
         <button class="top-nav__btn active" id="navBtnKiosk">🏥 OPD Kiosk</button>
         <button class="top-nav__btn" id="navBtnPatient">👤 Patient Portal</button>
         <button class="top-nav__btn" id="navBtnDoctor">🩺 Doctor Station</button>
+        <button class="top-nav__btn" id="navBtnIvr">📞 IVR Studio</button>
         <a href="/mobile.html" class="top-nav__btn" target="_blank" style="text-decoration: none;">📱 Mobile App ↗</a>
       </div>
     </nav>
@@ -128,6 +129,24 @@
             <span class="badge badge-online">BYOD Waiting Area</span>
           </div>
         </div>
+
+        <!-- Card 5: IVR Telephony Studio -->
+        <div class="hub-card" id="hubCardIvr">
+          <div class="hub-card__icon-wrap">📞</div>
+          <div>
+            <h3 class="hub-card__title">
+              Citizen IVR Telephony Studio
+              <span class="hub-card__badge hub-card__badge-new">Toll-Free Helpline</span>
+            </h3>
+            <p class="hub-card__desc">
+              Interactive 4-step waterfall location routing testbed, phone intake simulator, and live emergency queue preemption with Exotel &amp; Sarvam AI.
+            </p>
+          </div>
+          <div class="hub-card__footer">
+            <span class="hub-card__action-text">Launch Telephony Studio →</span>
+            <span class="badge badge-purple">Exotel + Sarvam AI</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -145,7 +164,7 @@
         <!-- Quick Demo Login Button -->
         <div style="background: rgba(8, 145, 178, 0.1); border: 1px dashed rgba(8, 145, 178, 0.4); border-radius: var(--radius-md); padding: 12px; margin-bottom: 20px; text-align: center;">
           <div style="font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 6px;">QUICK EVALUATION DEMO</div>
-          <button class="btn btn-primary" id="quickDemoPatientBtn" style="width: 100%; font-size: 13px;">
+          <button class="btn btn-primary" id="quickDemoPatientBtn" style="width: 100%; font-size: 12px; padding: 10px 8px; white-space: normal; line-height: 1.3;">
             ⚡ 1-Tap Demo Patient: Ramesh Kumar
           </button>
           <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">ABHA: 91-4821-3910-4819 | Mobile: 9876543210</div>
@@ -322,6 +341,9 @@
         </button>
         <span class="welcome-screen__mic-label" id="welcomeMicLabel">Tap to speak in English</span>
       </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 12px auto; padding: 6px 16px; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: var(--radius-full); font-size: 12px; color: var(--text-secondary); width: fit-content;">
+        <span>📞 <strong>Channel 3 Telephony:</strong> Dial Toll-Free <strong style="color: #60a5fa; font-family: monospace; font-size: 13px;">1800-890-AYUSH</strong> (1800-890-2987) for basic 2G feature phones</span>
+      </div>
       <div class="welcome-screen__footer">
         <button class="btn btn-ghost" id="welcomeTypeBtn">⌨️ Type Instead</button>
         <button class="btn btn-ghost" id="doctorLoginBtn">🔒 Doctor Login</button>
@@ -447,6 +469,233 @@
         <div class="empty-state" style="height: 100%;">
           <div class="empty-state__icon">👈</div>
           <div class="empty-state__text">Select a patient from the queue</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 6: IVR Telephony Studio -->
+    <div class="screen ivr-screen" id="screenIvr" style="display: none;">
+      <div class="ivr-container">
+        <!-- Header -->
+        <div class="ivr-header">
+          <div>
+            <div class="ivr-header__title">
+              <span>📞</span> Citizen IVR Telephony Studio &amp; Live Simulator
+              <span class="badge badge-teal" style="font-size: 11px;">DPDP Act Compliant</span>
+            </div>
+            <div class="ivr-header__subtitle">
+              Deterministic 4-Step Waterfall Location Resolver • Exotel Voice Ingestion • Sarvam AI Multilingual STT
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" id="ivrBackToHubBtn">← Role Hub</button>
+            <button class="btn btn-primary" id="ivrOpenDoctorBtn">🩺 View Doctor Queue ➔</button>
+          </div>
+        </div>
+
+        <!-- Studio Grid -->
+        <div class="ivr-studio-grid">
+          <!-- Left Column: Interactive Telephony Caller -->
+          <div class="ivr-card">
+            <div class="ivr-card__title">
+              <span>1. Caller Terminal</span>
+              <span class="badge badge-online">Ready to Dial</span>
+            </div>
+
+            <!-- Quick Presets -->
+            <div>
+              <label style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block;">
+                Quick Evaluation Presets (Click to Test)
+              </label>
+              <div class="ivr-presets">
+                <button class="ivr-preset-btn active" data-phone="9876543210" data-lang="hi" data-label="Ramesh Kumar">
+                  <div>
+                    <div class="ivr-preset-btn__name">👤 Ramesh Kumar (9876543210)</div>
+                    <div class="ivr-preset-btn__meta">Step 1: ABDM Registered Citizen • Delhi NCR • AIIA Delhi</div>
+                  </div>
+                  <span class="badge badge-teal">Step 1</span>
+                </button>
+                <button class="ivr-preset-btn" data-phone="9841023456" data-lang="ta" data-label="Lakshmi Devi">
+                  <div>
+                    <div class="ivr-preset-btn__name">👤 Lakshmi Devi (9841023456)</div>
+                    <div class="ivr-preset-btn__meta">Step 3: Tamil Nadu Telecom Circle • National Inst. of Siddha (NIS)</div>
+                  </div>
+                  <span class="badge badge-purple">Step 3</span>
+                </button>
+                <button class="ivr-preset-btn" data-phone="9420012345" data-lang="mr" data-label="Maharashtra Caller">
+                  <div>
+                    <div class="ivr-preset-btn__name">👤 Maharashtra Citizen (9420012345)</div>
+                    <div class="ivr-preset-btn__meta">Step 3: Maharashtra Circle • AIIA Apex Network</div>
+                  </div>
+                  <span class="badge badge-purple">Step 3</span>
+                </button>
+                <button class="ivr-preset-btn" data-phone="9123456789" data-lang="en" data-label="Unknown Citizen">
+                  <div>
+                    <div class="ivr-preset-btn__name">👤 Unregistered Rural Caller (9123456789)</div>
+                    <div class="ivr-preset-btn__meta">Step 4: National Apex Institute Fallback (AIIA Delhi)</div>
+                  </div>
+                  <span class="badge badge-yellow">Step 4</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Custom Phone Input -->
+            <div>
+              <label style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: block;">
+                Or Enter Custom Phone Number / DID
+              </label>
+              <div class="ivr-dialer-row">
+                <input type="text" id="ivrPhoneInput" class="ivr-input" value="9876543210" placeholder="10-digit mobile number" />
+                <button class="btn btn-secondary" id="ivrResolveBtn">⚡ Test Resolver</button>
+              </div>
+            </div>
+
+            <!-- Language & Emergency Clinical Scenario -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <label style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: block;">
+                  Caller Language
+                </label>
+                <select id="ivrLanguageSelect" class="ivr-input" style="width: 100%; padding: 8px 10px; font-size: 12px;">
+                  <option value="hi" selected>🇮🇳 Hindi (हिन्दी)</option>
+                  <option value="ta">🇮🇳 Tamil (தமிழ்)</option>
+                  <option value="mr">🇮🇳 Marathi (मराठी)</option>
+                  <option value="te">🇮🇳 Telugu (తెలుగు)</option>
+                  <option value="en">🇬🇧 English</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: block;">
+                  Emergency Triage Mode
+                </label>
+                <select id="ivrSeveritySelect" class="ivr-input" style="width: 100%; padding: 8px 10px; font-size: 12px;">
+                  <option value="RED" selected>🚨 Critical (Triggers Preemption)</option>
+                  <option value="YELLOW">⚠️ Moderate (Herb-Drug Alert)</option>
+                  <option value="GREEN">✅ Routine Consultation</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Call Trigger Action -->
+            <button class="btn btn-primary btn-lg" id="ivrStartCallBtn" style="width: 100%; font-size: 15px; padding: 14px; background: linear-gradient(135deg, #059669, #0d9488); border: none; box-shadow: 0 4px 16px rgba(5, 150, 105, 0.4);">
+              📞 Simulate Inbound Call &amp; Inject to Queue
+            </button>
+
+            <!-- Call Simulator Live Feedback -->
+            <div class="ivr-call-box" id="ivrCallBox" style="display: none;">
+              <div class="ivr-call-box__status">
+                <span id="ivrCallStatusText">📞 Call In Progress • Sarvam AI Active</span>
+                <span class="badge badge-teal" id="ivrSessionBadge">Session Active</span>
+              </div>
+              <div class="ivr-call-box__speech" id="ivrCallSpeech">
+                "Welcome to MediKiosk AYUSH Helpline..."
+              </div>
+              <div id="ivrPreemptionBanner" style="display: none; background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; border-radius: var(--radius-sm); padding: 10px; font-size: 12px; color: #fca5a5;">
+                🚨 <strong>LIVE PREEMPTION TRIGGERED!</strong> Token generated with RED priority and queued ahead of routine walk-ins.
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: 4-Step Waterfall Routing Visualizer & Telemetry -->
+          <div class="ivr-card">
+            <div class="ivr-card__title">
+              <span>2. 4-Step Waterfall Pipeline Visualizer</span>
+              <span class="badge badge-teal" id="waterfallActiveBadge">Step 1 Matched</span>
+            </div>
+
+            <!-- Waterfall Steps -->
+            <div class="waterfall-steps">
+              <!-- Step 1 -->
+              <div class="waterfall-step active" id="wfStep1">
+                <div class="waterfall-step__num">1</div>
+                <div class="waterfall-step__content">
+                  <div class="waterfall-step__title">
+                    <span>Step 1: ABDM Registered Citizen Profile Lookup</span>
+                    <span class="waterfall-step__badge waterfall-step__badge--matched" id="wfBadge1">MATCHED (1.0)</span>
+                  </div>
+                  <div class="waterfall-step__desc">
+                    Checks national ABDM registry link between caller phone and ABHA health ID. Highest confidence, restores longitudinal medical records.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 2 -->
+              <div class="waterfall-step bypassed" id="wfStep2">
+                <div class="waterfall-step__num">2</div>
+                <div class="waterfall-step__content">
+                  <div class="waterfall-step__title">
+                    <span>Step 2: Dialed Inbound DID / Virtual Hospital Number</span>
+                    <span class="waterfall-step__badge waterfall-step__badge--skipped" id="wfBadge2">SKIPPED</span>
+                  </div>
+                  <div class="waterfall-step__desc">
+                    Routes directly to regional institute if caller dialed local DID (e.g. 011-26950401 Delhi vs 044-22237254 Chennai).
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 3 -->
+              <div class="waterfall-step bypassed" id="wfStep3">
+                <div class="waterfall-step__num">3</div>
+                <div class="waterfall-step__content">
+                  <div class="waterfall-step__title">
+                    <span>Step 3: DoT Telecom Circle &amp; Cell Tower Triangulation</span>
+                    <span class="waterfall-step__badge waterfall-step__badge--skipped" id="wfBadge3">SKIPPED</span>
+                  </div>
+                  <div class="waterfall-step__desc">
+                    Uses Department of Telecom National Destination Code (NDC) series prefix. Zero GPS needed, compliant with DPDP Act 2023.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 4 -->
+              <div class="waterfall-step bypassed" id="wfStep4">
+                <div class="waterfall-step__num">4</div>
+                <div class="waterfall-step__content">
+                  <div class="waterfall-step__title">
+                    <span>Step 4: National Apex Institute Fallback</span>
+                    <span class="waterfall-step__badge waterfall-step__badge--skipped" id="wfBadge4">SKIPPED</span>
+                  </div>
+                  <div class="waterfall-step__desc">
+                    Guaranteed fallback to All India Institute of Ayurveda (AIIA), New Delhi for any unclassified or roaming callers.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Assigned Hospital & Chamber Details Card -->
+            <div class="clinic-resolution-card" id="clinicResolutionCard">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">
+                  Assigned Healthcare Facility
+                </div>
+                <span class="badge badge-online" id="resConfidenceBadge">Confidence: 100%</span>
+              </div>
+              <div class="clinic-resolution-card__name" id="resClinicName">
+                All India Institute of Ayurveda (AIIA)
+              </div>
+              <div class="clinic-resolution-grid">
+                <div>
+                  <span>Assigned Chamber</span>
+                  <strong id="resRoomNumber">Room 102 (Kayachikitsa OPD)</strong>
+                </div>
+                <div>
+                  <span>Medical System</span>
+                  <strong id="resSystem">Ayurveda</strong>
+                </div>
+                <div>
+                  <span>Location</span>
+                  <strong id="resLocation">South East Delhi, Delhi</strong>
+                </div>
+                <div>
+                  <span>Primary Language</span>
+                  <strong id="resLanguage">Hindi (hi)</strong>
+                </div>
+              </div>
+              <div style="font-size: 12px; color: #cbd5e1; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 8px;" id="resRationale">
+                Resolved via registered ABDM health profile for Ramesh Kumar (ABHA: 91-4821-3910-4819).
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

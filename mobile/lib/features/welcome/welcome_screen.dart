@@ -116,6 +116,57 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: MediDimensions.space12),
+
+            // 2G Basic Phone Toll-Free Helpline Card (Channel 3 Reference)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(MediDimensions.space16),
+              decoration: BoxDecoration(
+                color: MediColors.blue50,
+                borderRadius: MediDimensions.borderLg,
+                border: Border.all(color: MediColors.blue200, width: 1.5),
+                boxShadow: MediDimensions.elevation1,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: MediColors.brandPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.phone_in_talk, color: MediColors.white, size: 24),
+                  ),
+                  const SizedBox(width: MediDimensions.space16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '2G Toll-Free Phone Intake (कॉल सुविधा)',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: MediColors.brandPrimary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'For family with basic keypad phones: Dial 1800-890-AYUSH (Toll-Free, zero internet)',
+                          style: MediTypography.bodySmall.copyWith(color: MediColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: MediColors.blue100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text('1800-890-2987', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: MediColors.brandPrimary)),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: MediDimensions.space16),
           ],
         ),
