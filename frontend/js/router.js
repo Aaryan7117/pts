@@ -25,6 +25,7 @@ import { renderDoctorPatient, initDoctorPatient } from './pages/doctor/doctor-pa
 import { renderPatientLogin, initPatientLogin } from './pages/patient/patient-login.js';
 import { renderPatientDashboard, initPatientDashboard } from './pages/patient/patient-dashboard.js';
 import { renderIvrSimulator, initIvrSimulator } from './pages/ivr/ivr-simulator.js';
+import { renderKioskAvatarPreview, initKioskAvatarPreview, destroyKioskAvatarPreview } from './pages/kiosk/kiosk-avatar-preview.js';
 
 let currentDestroyFn = null;
 
@@ -80,6 +81,9 @@ export class Router {
       // Kiosk Walk-in Flow
       case '/kiosk/welcome':
         this._renderView(path, renderKioskWelcome, initKioskWelcome, destroyKioskWelcome);
+        break;
+      case '/kiosk/avatar-preview':
+        this._renderView(path, renderKioskAvatarPreview, initKioskAvatarPreview, destroyKioskAvatarPreview);
         break;
       case '/kiosk/language':
         this._renderView(path, renderKioskLanguage, initKioskLanguage);

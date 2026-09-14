@@ -6,6 +6,7 @@
 import { store } from '../../store.js';
 import { DoctorAvatar } from '../../components/avatar-3d.js';
 import { kioskApi } from '../../api/kiosk.api.js';
+import { tts } from '../../audio/tts-reader.js';
 import { i18n } from '../../i18n.js';
 
 let avatarInstance = null;
@@ -47,10 +48,10 @@ export function renderKioskWelcome() {
 
           <!-- Doctor Station Shortcut & Attendant Help -->
           <div style="display:flex; flex-direction:column; gap:var(--space-3);">
-            <div class="kiosk-audio-help-box">
+            <div id="btnKioskAudioHelp" class="kiosk-audio-help-box" style="cursor:pointer;" role="button" tabindex="0" title="Tap to hear Dr. Verma welcome you">
               <span style="font-size:24px;">🔊</span>
               <div style="font-size:13px; color:var(--text-primary);">
-                <strong>Voice-Guided:</strong> You can speak naturally in your mother tongue.
+                <strong>Voice-Guided:</strong> Tap to hear Dr. Verma welcome you.
               </div>
             </div>
 
@@ -92,9 +93,24 @@ export function initKioskWelcome() {
   avatarInstance = new DoctorAvatar('kioskAvatarContainer');
   avatarInstance.mount();
 
+  const audioHelpBtn = document.getElementById('btnKioskAudioHelp');
+  if (audioHelpBtn) {
+    audioHelpBtn.addEventListener('click', () => {
+      const state = store.getState();
+      const lang = state.kiosk.language || 'hi';
+      const greeting = lang === 'en'
+        ? "Hello and welcome to All India Institute of Ayurveda. I am Dr. Verma, your clinical assistant. I will prepare your case history and queue token today. Tap the primary blue button to begin."
+        : "नमस्ते! अखिल भारतीय आयुर्वेद संस्थान में आपका स्वागत है। मैं डॉक्टर वर्मा हूँ। मैं आपकी केस हिस्ट्री और ओपीडी टोकन तैयार करने में मदद करूँगा। शुरू करने के लिए नीचे दिए गए बटन को दबाएं।";
+      tts.speak(greeting, lang);
+    });
+  }
+
   const startBtn = document.getElementById('btnKioskStart');
   if (startBtn) {
     startBtn.addEventListener('click', async () => {
+      // Stop speech when navigating
+      tts.stop();
+
       // Bootstrap encounter with backend
       try {
         startBtn.disabled = true;
@@ -122,6 +138,7 @@ export function initKioskWelcome() {
 }
 
 export function destroyKioskWelcome() {
+  tts.stop();
   if (avatarInstance) {
     avatarInstance.destroy();
     avatarInstance = null;

@@ -8,12 +8,14 @@ import { sounds } from '../../audio/sound-effects.js';
 import { AudioVisualizer } from '../../audio/audio-visualizer.js';
 import { kioskApi } from '../../api/kiosk.api.js';
 import { tts } from '../../audio/tts-reader.js';
+import { DoctorAvatar } from '../../components/avatar-3d.js';
 import { i18n } from '../../i18n.js';
 
 let visualizer = null;
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
+let avatarInstance = null;
 
 export function renderKioskVoiceIntake() {
   const lang = store.getState().kiosk.language || 'hi';
@@ -34,6 +36,9 @@ export function renderKioskVoiceIntake() {
               Speak your symptoms freely. Our clinical intelligence extracts normalized medical concepts without form complexity.
             </p>
           </div>
+
+          <!-- Doctor Avatar Attendant -->
+          <div id="kioskVoiceAvatarContainer" style="margin:var(--space-4) 0; display:flex; justify-content:center;"></div>
 
           <div style="display:flex; flex-direction:column; gap:var(--space-3);">
             <button id="btnHearIntakeQuestion" class="btn btn-secondary btn-md" style="justify-content:center;">
@@ -101,6 +106,8 @@ export function renderKioskVoiceIntake() {
   `;
 }
 
+let autoPlayTimer = null;
+
 export async function initKioskVoiceIntake() {
   const lang = store.getState().kiosk.language || 'hi';
   const micBtn = document.getElementById('btnKioskMic');
@@ -109,14 +116,29 @@ export async function initKioskVoiceIntake() {
   const doneBtn = document.getElementById('btnVoiceDone');
   const canvas = document.getElementById('kioskWaveformCanvas');
 
+  // Mount Doctor Avatar
+  avatarInstance = new DoctorAvatar('kioskVoiceAvatarContainer');
+  avatarInstance.mount();
+
   visualizer = new AudioVisualizer(canvas);
+
+  // Function to ask intake question with doctor voice
+  const askIntakeQuestion = () => {
+    const prompt = i18n.t('voice_prompt', lang);
+    const sub = i18n.t('voice_sub', lang);
+    tts.speak(`${prompt} ${sub}`, lang);
+  };
+
+  // Automatically ask the question aloud upon arrival
+  autoPlayTimer = setTimeout(() => {
+    askIntakeQuestion();
+  }, 400);
 
   // Read question button
   const hearBtn = document.getElementById('btnHearIntakeQuestion');
   if (hearBtn) {
     hearBtn.addEventListener('click', () => {
-      const text = i18n.t('voice_prompt', lang);
-      tts.speak(text, lang);
+      askIntakeQuestion();
     });
   }
 
@@ -140,6 +162,9 @@ export async function initKioskVoiceIntake() {
   if (micBtn) {
     micBtn.addEventListener('click', async () => {
       if (!isRecording) {
+        // Stop any active TTS prompt
+        tts.stop();
+
         // START RECORDING
         isRecording = true;
         micBtn.classList.add('active');
@@ -147,6 +172,10 @@ export async function initKioskVoiceIntake() {
         statusText.style.color = 'var(--status-danger)';
         sounds.playStartListening();
         visualizer.start();
+
+        if (avatarInstance) {
+          avatarInstance.setListening(true);
+        }
 
         // Browser MediaRecorder setup
         try {
@@ -190,6 +219,10 @@ export async function initKioskVoiceIntake() {
         sounds.playStopListening();
         visualizer.stop();
 
+        if (avatarInstance) {
+          avatarInstance.setListening(false);
+        }
+
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
           mediaRecorder.stop();
         }
@@ -204,6 +237,7 @@ export async function initKioskVoiceIntake() {
   // Done button: transition to explain back
   if (doneBtn) {
     doneBtn.addEventListener('click', async () => {
+      tts.stop();
       const patientWords = transcriptCard.textContent.trim() || i18n.t('sample_transcript', lang);
       store.updateKioskIntake({
         patientWords,
@@ -246,6 +280,15 @@ export async function initKioskVoiceIntake() {
 }
 
 export function destroyKioskVoiceIntake() {
+  if (autoPlayTimer) {
+    clearTimeout(autoPlayTimer);
+    autoPlayTimer = null;
+  }
+  tts.stop();
+  if (avatarInstance) {
+    avatarInstance.destroy();
+    avatarInstance = null;
+  }
   if (visualizer) {
     visualizer.stop();
     visualizer = null;
