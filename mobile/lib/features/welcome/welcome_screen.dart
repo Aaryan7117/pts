@@ -25,7 +25,10 @@ class WelcomeScreen extends StatelessWidget {
       showHeader: true,
       showBack: false,
       currentLanguage: lang.currentLanguage,
-      onLanguageChanged: (l) => lang.setLanguage(l),
+      onLanguageChanged: (l) {
+        lang.setLanguage(l);
+        encounter.updateLanguage(l);
+      },
       onEmergencyTap: () => Navigator.of(context).pushNamed('/emergency'),
       body: SingleChildScrollView(
         child: Column(
@@ -99,13 +102,13 @@ class WelcomeScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '1-Tap AI Voice Call (सीधा फोन कॉल)',
-                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: MediColors.emerald900),
+                          Text(
+                            lang.translate('voice_call_fast_track_title'),
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: MediColors.emerald900),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Skip forms and speak symptoms directly to AI',
+                            lang.translate('voice_call_fast_track_sub'),
                             style: MediTypography.bodySmall.copyWith(color: MediColors.emerald800),
                           ),
                         ],
@@ -192,7 +195,7 @@ class WelcomeScreen extends StatelessWidget {
             onPressed: () => Navigator.of(context).pushNamed('/emergency'),
             icon: const Icon(Icons.emergency, color: MediColors.triageRed, size: 22),
             label: Text(
-              'Emergency? Tap for immediate assistance',
+              lang.translate('emergency_assistance_btn'),
               style: MediTypography.bodyMedium.copyWith(
                 color: MediColors.triageRed,
                 fontWeight: FontWeight.w700,

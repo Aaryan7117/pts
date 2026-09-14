@@ -5,11 +5,13 @@
 
 import { store } from '../../store.js';
 import { queueApi } from '../../api/queue.api.js';
+import { i18n } from '../../i18n.js';
 
 let countdownInterval = null;
 
 export function renderKioskQueueToken() {
   const kioskState = store.getState().kiosk;
+  const lang = kioskState.language || 'hi';
   const token = kioskState.tokenNumber || 'A-261';
 
   return `
@@ -19,24 +21,24 @@ export function renderKioskQueueToken() {
         <div class="kiosk-left-pane">
           <div class="kiosk-brand-card">
             <div class="kiosk-step-indicator" style="background:var(--status-success-tint); color:var(--status-success);">
-              ✓ Intake Completed
+              ${i18n.t('intake_completed', lang)}
             </div>
-            <h2 class="text-h2" style="margin-top:var(--space-4);">Your Case is Ready</h2>
+            <h2 class="text-h2" style="margin-top:var(--space-4);">${i18n.t('case_ready', lang)}</h2>
             <p style="font-size:14px; color:var(--text-secondary); margin-top:var(--space-2);">
-              Your clinical intake has been transmitted directly to Dr. S. Verma's workstation desk.
+              ${i18n.t('case_ready_sub', lang)}
             </p>
           </div>
 
           <!-- Automated Privacy Reset Box -->
           <div style="background:var(--status-danger-tint); border:1.5px solid var(--status-danger); border-radius:var(--radius-xl); padding:var(--space-4); text-align:center;">
             <div style="font-size:11px; font-weight:700; color:var(--status-danger); text-transform:uppercase;">
-              🔒 Patient Privacy Protection
+              ${i18n.t('privacy_protection', lang)}
             </div>
             <div style="font-size:24px; font-weight:800; color:var(--status-danger); margin:6px 0;" id="kioskResetTimer">
               10s
             </div>
             <div style="font-size:12px; color:var(--pr-slate-800);">
-              Screen will automatically wipe all records for the next patient.
+              ${i18n.t('privacy_wipe_desc', lang)}
             </div>
           </div>
         </div>
@@ -46,35 +48,35 @@ export function renderKioskQueueToken() {
           <div class="kiosk-task-canvas" style="align-items:center; justify-content:center;">
             <div class="queue-ticket">
               <div class="queue-ticket__header">All India Institute of Ayurveda · OPD Ticket</div>
-              <div style="font-size:14px; color:var(--text-muted);">Department: General Medicine (Kayachikitsa)</div>
+              <div style="font-size:14px; color:var(--text-muted);">${i18n.t('dept_general', lang)}</div>
               
               <div class="queue-ticket__token" id="ticketTokenDisplay">${token}</div>
               
               <div class="queue-ticket__meta-grid">
                 <div>
-                  <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; display:block;">Consulting Doctor</span>
+                  <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; display:block;">${i18n.t('consulting_doctor', lang)}</span>
                   <strong style="font-size:15px; color:var(--text-primary);">Dr. S. Verma</strong>
                 </div>
                 <div>
-                  <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; display:block;">Chamber Room</span>
+                  <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; display:block;">${i18n.t('chamber_room', lang)}</span>
                   <strong style="font-size:15px; color:var(--brand-primary);">Cabin 102 (1st Floor)</strong>
                 </div>
                 <div style="margin-top:8px;">
-                  <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; display:block;">Estimated Wait</span>
+                  <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; display:block;">${i18n.t('est_wait', lang)}</span>
                   <strong style="font-size:15px; color:var(--status-success);">~12 Minutes</strong>
                 </div>
                 <div style="margin-top:8px;">
-                  <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; display:block;">Patients Ahead</span>
+                  <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; display:block;">${i18n.t('patients_ahead', lang)}</span>
                   <strong style="font-size:15px; color:var(--status-warning);">2 Patients</strong>
                 </div>
               </div>
 
               <div style="display:flex; flex-direction:column; gap:var(--space-3);">
                 <button class="btn btn-secondary btn-lg" onclick="window.print()">
-                  🖨 Print Paper Token Slip
+                  ${i18n.t('print_ticket', lang)}
                 </button>
                 <button id="btnResetKioskNow" class="btn btn-danger btn-lg">
-                  Wipe & Exit Now / स्क्रीन रीसेट करें
+                  ${i18n.t('wipe_exit_now', lang)}
                 </button>
               </div>
             </div>
@@ -82,7 +84,7 @@ export function renderKioskQueueToken() {
 
           <div class="kiosk-footer-bar">
             <span style="font-size:13px; color:var(--text-muted);">
-              Please proceed to Waiting Area A outside Cabin 102.
+              ${i18n.t('proceed_waiting', lang)}
             </span>
             <a href="#/doctor/queue" class="btn btn-ghost btn-sm" style="color:var(--brand-primary); font-weight:700;">
               Open Dr. Verma's Desk (Window 2) →

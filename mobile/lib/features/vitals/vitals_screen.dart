@@ -22,11 +22,11 @@ class VitalsScreen extends StatelessWidget {
     final encounter = context.read<EncounterProvider>();
 
     final vitalsList = [
-      {'name': 'Blood Pressure', 'val': intake.vitals['Blood Pressure'] ?? '120/80 mmHg', 'icon': Icons.favorite_rounded, 'status': 'NORMAL'},
-      {'name': 'Heart Rate (Pulse)', 'val': intake.vitals['Heart Rate'] ?? '72 bpm', 'icon': Icons.monitor_heart_rounded, 'status': 'NORMAL'},
-      {'name': 'SpO2 (Oxygen)', 'val': intake.vitals['SpO2'] ?? '98%', 'icon': Icons.air_rounded, 'status': 'NORMAL'},
-      {'name': 'Body Temperature', 'val': intake.vitals['Temperature'] ?? '98.6 °F', 'icon': Icons.thermostat_rounded, 'status': 'NORMAL'},
-      {'name': 'Blood Sugar (Random)', 'val': intake.vitals['Blood Sugar'] ?? '110 mg/dL', 'icon': Icons.bloodtype_rounded, 'status': 'NORMAL'},
+      {'name': lang.translate('bp_label'), 'val': intake.vitals['Blood Pressure'] ?? '120/80 mmHg', 'icon': Icons.favorite_rounded, 'status': lang.translate('normal_status')},
+      {'name': lang.translate('hr_label'), 'val': intake.vitals['Heart Rate'] ?? '72 bpm', 'icon': Icons.monitor_heart_rounded, 'status': lang.translate('normal_status')},
+      {'name': lang.translate('spo2_label'), 'val': intake.vitals['SpO2'] ?? '98%', 'icon': Icons.air_rounded, 'status': lang.translate('normal_status')},
+      {'name': lang.translate('temp_label'), 'val': intake.vitals['Temperature'] ?? '98.6 °F', 'icon': Icons.thermostat_rounded, 'status': lang.translate('normal_status')},
+      {'name': lang.translate('sugar_label'), 'val': intake.vitals['Blood Sugar'] ?? '110 mg/dL', 'icon': Icons.bloodtype_rounded, 'status': lang.translate('normal_status')},
     ];
 
     return MediScaffold(
@@ -41,9 +41,9 @@ class VitalsScreen extends StatelessWidget {
             style: MediTypography.headlineLarge,
           ),
           const SizedBox(height: MediDimensions.space8),
-          const Text(
-            'Recorded from kiosk IoT sensors or verified by OPD nursing station.',
-            style: TextStyle(fontSize: 16, color: MediColors.textMuted),
+          Text(
+            lang.translate('vitals_sub'),
+            style: const TextStyle(fontSize: 16, color: MediColors.textMuted),
           ),
           const SizedBox(height: MediDimensions.space20),
           Expanded(
@@ -108,7 +108,7 @@ class VitalsScreen extends StatelessWidget {
         ],
       ),
       bottomBar: PrimaryActionButton(
-        label: 'Confirm Vitals & Next (आगे बढ़ें)',
+        label: lang.translate('confirm_vitals_next'),
         icon: Icons.arrow_forward_rounded,
         onPressed: () {
           if (encounter.department.contains('AYUSH')) {

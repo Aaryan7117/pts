@@ -19,7 +19,7 @@ class DocumentIntroScreen extends StatelessWidget {
     final lang = context.watch<LanguageProvider>();
 
     return MediScaffold(
-      title: 'Scan Medical Documents',
+      title: lang.translate('doc_scan_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
@@ -47,7 +47,7 @@ class DocumentIntroScreen extends StatelessWidget {
           ),
           const SizedBox(height: MediDimensions.space12),
           Text(
-            'Scanning your previous prescriptions allows our AI to extract medication history and alert your doctor of drug interactions.',
+            lang.translate('doc_scan_sub'),
             style: MediTypography.bodyMedium,
             textAlign: TextAlign.center,
           ),
@@ -59,37 +59,37 @@ class DocumentIntroScreen extends StatelessWidget {
               borderRadius: MediDimensions.borderLg,
               border: Border.all(color: MediColors.border),
             ),
-            child: const Column(
+            child: Column(
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.check, color: MediColors.emerald800),
-                    SizedBox(width: 8),
+                    const Icon(Icons.check, color: MediColors.emerald800),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text('Doctor prescriptions (डॉक्टर की पर्ची)', style: TextStyle(fontWeight: FontWeight.w600)),
+                      child: Text(lang.translate('doc_prescription_check'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.check, color: MediColors.emerald800),
-                    SizedBox(width: 8),
+                    const Icon(Icons.check, color: MediColors.emerald800),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text('Blood & urine lab reports (जाँच रिपोर्ट)', style: TextStyle(fontWeight: FontWeight.w600)),
+                      child: Text(lang.translate('doc_lab_check'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.check, color: MediColors.emerald800),
-                    SizedBox(width: 8),
+                    const Icon(Icons.check, color: MediColors.emerald800),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text('Hospital discharge summaries (डिस्चार्ज समरी)', style: TextStyle(fontWeight: FontWeight.w600)),
+                      child: Text(lang.translate('doc_discharge_check'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
@@ -103,13 +103,13 @@ class DocumentIntroScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryActionButton(
-            label: 'Scan Document (पर्ची स्कैन करें)',
+            label: lang.translate('scan_doc_btn'),
             icon: Icons.camera_alt_rounded,
             onPressed: () => Navigator.of(context).pushNamed('/doc_camera'),
           ),
           const SizedBox(height: MediDimensions.space12),
           SecondaryActionButton(
-            label: "I Don't Have Documents (पर्ची नहीं है / आगे बढ़ें)",
+            label: lang.translate('no_doc_btn'),
             onPressed: () => Navigator.of(context).pushNamed('/vitals'),
           ),
         ],

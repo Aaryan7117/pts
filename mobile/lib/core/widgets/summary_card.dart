@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../app/state/language_provider.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -21,6 +23,7 @@ class SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
     final isConfirmed = fact.status == 'patient_confirmed' || fact.status == 'explain_back_verified';
 
     return Container(
@@ -59,13 +62,13 @@ class SummaryCard extends StatelessWidget {
               ),
               const Spacer(),
               if (isConfirmed)
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.check_circle, color: MediColors.emerald800, size: 20),
-                    SizedBox(width: 4),
+                    const Icon(Icons.check_circle, color: MediColors.emerald800, size: 20),
+                    const SizedBox(width: 4),
                     Text(
-                      'Verified',
-                      style: TextStyle(
+                      lang.translate('verified_badge'),
+                      style: const TextStyle(
                         color: MediColors.emerald800,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
@@ -83,7 +86,7 @@ class SummaryCard extends StatelessWidget {
           if (fact.patientWords != null && fact.patientWords!.isNotEmpty) ...[
             const SizedBox(height: MediDimensions.space8),
             Text(
-              'Patient said: "${fact.patientWords}"',
+              '${lang.translate('patient_said')} "${fact.patientWords}"',
               style: MediTypography.bodyMedium.copyWith(fontStyle: FontStyle.italic),
             ),
           ],
@@ -96,7 +99,7 @@ class SummaryCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onConfirm,
                     icon: const Icon(Icons.check, size: 22),
-                    label: const Text('Correct (हाँ)'),
+                    label: Text(lang.translate('confirm_yes')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isConfirmed ? MediColors.emerald800 : MediColors.brandPrimary,
                       foregroundColor: MediColors.white,
@@ -113,7 +116,7 @@ class SummaryCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onReject,
                     icon: const Icon(Icons.close, size: 22),
-                    label: const Text('Wrong (नहीं)'),
+                    label: Text(lang.translate('confirm_no')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: MediColors.triageRed,
                       side: const BorderSide(color: MediColors.triageRed, width: 1.5),

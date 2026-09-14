@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../app/state/language_provider.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -13,9 +15,13 @@ class AmbulanceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return MediScaffold(
-      title: 'Ambulance Dispatch Tracker',
+      title: lang.translate('ambulance_dispatched_title'),
       backgroundColor: MediColors.red50,
+      currentLanguage: lang.currentLanguage,
+      onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,13 +39,13 @@ class AmbulanceScreen extends StatelessWidget {
           ),
           const SizedBox(height: MediDimensions.space12),
           Text(
-            'Ambulance Dispatched',
+            lang.translate('ambulance_dispatched_title'),
             style: MediTypography.headlineLarge.copyWith(color: MediColors.red900),
           ),
           const SizedBox(height: MediDimensions.space8),
-          const Text(
-            'Unit is en route to hospital emergency drop-off gate.',
-            style: TextStyle(fontSize: 16),
+          Text(
+            lang.translate('ambulance_dispatched_sub'),
+            style: const TextStyle(fontSize: 16),
           ),
           const SizedBox(height: MediDimensions.space24),
 
@@ -57,7 +63,7 @@ class AmbulanceScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.airport_shuttle_rounded, color: MediColors.red800, size: 56),
                 const SizedBox(height: 12),
-                const Text('ESTIMATED ARRIVAL', style: TextStyle(fontSize: 14, color: MediColors.textMuted, letterSpacing: 1.2)),
+                Text(lang.translate('estimated_arrival'), style: const TextStyle(fontSize: 14, color: MediColors.textMuted, letterSpacing: 1.2)),
                 const SizedBox(height: 4),
                 const Text(
                   '~6 Minutes',
@@ -103,7 +109,7 @@ class AmbulanceScreen extends StatelessWidget {
       ),
     ),
     bottomBar: PrimaryActionButton(
-        label: 'Return to Main Menu (वापस जाएं)',
+        label: lang.translate('return_to_intake'),
         onPressed: () => Navigator.of(context).pop(),
       ),
     );

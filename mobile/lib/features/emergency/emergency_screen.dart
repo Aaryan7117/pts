@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../app/state/language_provider.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -14,9 +16,13 @@ class EmergencyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return MediScaffold(
-      title: 'Emergency Medical Care',
+      title: lang.translate('emergency_title'),
       backgroundColor: MediColors.red50,
+      currentLanguage: lang.currentLanguage,
+      onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -55,14 +61,14 @@ class EmergencyScreen extends StatelessWidget {
             ),
             const SizedBox(height: MediDimensions.space24),
             Text(
-              'Immediate Emergency Assistance',
+              lang.translate('immediate_emergency_help'),
               style: MediTypography.headlineLarge.copyWith(color: MediColors.red900),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: MediDimensions.space12),
-            const Text(
-              'If you are having severe chest pain, loss of consciousness, or severe trauma, tap above or call emergency services immediately.',
-              style: TextStyle(fontSize: 16, color: MediColors.textPrimary),
+            Text(
+              lang.translate('immediate_emergency_sub'),
+              style: const TextStyle(fontSize: 16, color: MediColors.textPrimary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: MediDimensions.space20),
@@ -73,15 +79,15 @@ class EmergencyScreen extends StatelessWidget {
                 borderRadius: MediDimensions.borderMd,
                 border: Border.all(color: MediColors.red200),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.phone_in_talk_rounded, color: MediColors.red800, size: 28),
-                  SizedBox(width: 12),
+                  const Icon(Icons.phone_in_talk_rounded, color: MediColors.red800, size: 28),
+                  const SizedBox(width: 12),
                   Flexible(
                     child: Text(
-                      'Hospital Casualty Line: 011-2999-4444 (Dial 108)',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: MediColors.red900),
+                      lang.translate('casualty_line'),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: MediColors.red900),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -96,14 +102,14 @@ class EmergencyScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryActionButton(
-            label: 'Request Ambulance Dispatch (एम्बुलेंस)',
+            label: lang.translate('ambulance_dispatch_btn'),
             backgroundColor: MediColors.red800,
             icon: Icons.airport_shuttle_rounded,
             onPressed: () => Navigator.of(context).pushNamed('/ambulance'),
           ),
           const SizedBox(height: MediDimensions.space12),
           SecondaryActionButton(
-            label: 'Return to OPD Intake (वापस जाएं)',
+            label: lang.translate('return_to_intake'),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],

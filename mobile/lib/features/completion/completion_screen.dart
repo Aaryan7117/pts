@@ -28,7 +28,7 @@ class CompletionScreen extends StatelessWidget {
     final encounter = context.watch<EncounterProvider>();
 
     return MediScaffold(
-      title: 'Intake Completed',
+      title: lang.translate('completion_title'),
       showBack: false,
       currentLanguage: lang.currentLanguage,
       body: SingleChildScrollView(
@@ -53,7 +53,7 @@ class CompletionScreen extends StatelessWidget {
             ),
             const SizedBox(height: MediDimensions.space8),
             Text(
-              'Your summary and prescription data have been forwarded to Doctor Room 102.',
+              lang.translate('completion_sub'),
               style: MediTypography.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -71,7 +71,7 @@ class CompletionScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  const Text('OPD TICKET ISSUED', style: TextStyle(fontSize: 13, color: MediColors.textMuted, fontWeight: FontWeight.bold)),
+                  Text(lang.translate('opd_ticket_issued'), style: const TextStyle(fontSize: 13, color: MediColors.textMuted, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Text(
                     encounter.tokenNumber ?? 'A-104',
@@ -98,7 +98,7 @@ class CompletionScreen extends StatelessWidget {
         ),
       ),
       bottomBar: PrimaryActionButton(
-        label: 'Finish & Reset Screen Now (समाप्त)',
+        label: lang.translate('reset_button'),
         icon: Icons.power_settings_new_rounded,
         onPressed: () => _wipeAndReturn(context),
       ),

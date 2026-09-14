@@ -145,6 +145,7 @@ async def get_doctor_queue(db=Depends(get_db)):
             has_medication_conflict=has_med_conflict,
             has_red_flags=has_red_flags,
             created_at=enc["created_at"],
+            language=enc["language"] if "language" in enc.keys() and enc["language"] else "hi",
             patient_name=enc["patient_name"],
             patient_age=enc["patient_age"],
             patient_gender=enc["patient_gender"],

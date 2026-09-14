@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../app/state/language_provider.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -13,13 +15,17 @@ class MapScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     return MediScaffold(
-      title: 'Hospital OPD Map',
+      title: lang.translate('hospital_map_title'),
+      currentLanguage: lang.currentLanguage,
+      onLanguageChanged: (l) => lang.setLanguage(l),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Indoor OPD Wayfinding',
+            lang.translate('hospital_map_title'),
             style: MediTypography.headlineLarge,
           ),
           const SizedBox(height: MediDimensions.space8),
@@ -117,7 +123,7 @@ class MapScreen extends StatelessWidget {
         ],
       ),
       bottomBar: PrimaryActionButton(
-        label: 'Back to Queue (वापस जाएं)',
+        label: lang.translate('return_to_intake'),
         icon: Icons.arrow_back_rounded,
         onPressed: () => Navigator.of(context).pop(),
       ),

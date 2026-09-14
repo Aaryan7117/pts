@@ -45,7 +45,7 @@ class _IdentityScreenState extends State<IdentityScreen> {
             ),
             const SizedBox(height: MediDimensions.space8),
             Text(
-              'Link your ABHA ID or enter phone number to fetch previous hospital records.',
+              lang.translate('identify_sub'),
               style: MediTypography.bodyMedium,
             ),
             const SizedBox(height: MediDimensions.space24),
@@ -81,9 +81,9 @@ class _IdentityScreenState extends State<IdentityScreen> {
                               lang.translate('scan_abha'),
                               style: MediTypography.headlineMedium.copyWith(fontSize: 19),
                             ),
-                            const Text(
-                              'Hold health card or phone under camera',
-                              style: TextStyle(fontSize: 14, color: MediColors.textMuted),
+                            Text(
+                              lang.translate('hold_card_camera'),
+                              style: const TextStyle(fontSize: 14, color: MediColors.textMuted),
                             ),
                           ],
                         ),
@@ -102,7 +102,7 @@ class _IdentityScreenState extends State<IdentityScreen> {
                         Navigator.of(context).pushNamed('/care_stream');
                       },
                       icon: const Icon(Icons.camera_alt),
-                      label: const Text('Open QR Scanner (स्कैन करें)'),
+                      label: Text(lang.translate('open_qr_scanner')),
                     ),
                   ),
                 ],
@@ -147,7 +147,7 @@ class _IdentityScreenState extends State<IdentityScreen> {
                   ),
                   const SizedBox(height: MediDimensions.space8),
                   PrimaryActionButton(
-                    label: 'Verify Phone (सत्यापित करें)',
+                    label: lang.translate('verify_phone'),
                     height: 54,
                     onPressed: () => Navigator.of(context).pushNamed('/care_stream'),
                   ),

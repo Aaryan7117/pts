@@ -67,7 +67,7 @@ class _QueueScreenState extends State<QueueScreen> {
     final queueData = _queueData ?? MockDataSource.getMockQueueStatus();
 
     return MediScaffold(
-      title: 'OPD Queue Ticket',
+      title: lang.translate('queue_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
@@ -118,9 +118,9 @@ class _QueueScreenState extends State<QueueScreen> {
                     ],
                   ),
                   const SizedBox(height: MediDimensions.space16),
-                  const Text(
-                    'YOUR QUEUE TOKEN',
-                    style: TextStyle(
+                  Text(
+                    lang.translate('your_queue_token'),
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: MediColors.textMuted,
@@ -148,9 +148,9 @@ class _QueueScreenState extends State<QueueScreen> {
                     children: [
                       Column(
                         children: [
-                          const Text(
-                            'Patients Ahead',
-                            style: TextStyle(fontSize: 14, color: MediColors.textMuted),
+                          Text(
+                            lang.translate('patients_ahead'),
+                            style: const TextStyle(fontSize: 14, color: MediColors.textMuted),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -166,9 +166,9 @@ class _QueueScreenState extends State<QueueScreen> {
                       Container(height: 40, width: 1, color: MediColors.border),
                       Column(
                         children: [
-                          const Text(
-                            'Estimated Wait',
-                            style: TextStyle(fontSize: 14, color: MediColors.textMuted),
+                          Text(
+                            lang.translate('est_wait'),
+                            style: const TextStyle(fontSize: 14, color: MediColors.textMuted),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -192,7 +192,7 @@ class _QueueScreenState extends State<QueueScreen> {
               children: [
                 Expanded(
                   child: SecondaryActionButton(
-                    label: 'Hospital Services',
+                    label: lang.translate('hospital_services'),
                     icon: Icons.local_pharmacy_rounded,
                     onPressed: () => Navigator.of(context).pushNamed('/services'),
                   ),
@@ -200,7 +200,7 @@ class _QueueScreenState extends State<QueueScreen> {
                 const SizedBox(width: MediDimensions.space12),
                 Expanded(
                   child: SecondaryActionButton(
-                    label: 'Hospital Map',
+                    label: lang.translate('hospital_map'),
                     icon: Icons.map_rounded,
                     onPressed: () => Navigator.of(context).pushNamed('/map'),
                   ),
@@ -211,7 +211,7 @@ class _QueueScreenState extends State<QueueScreen> {
         ),
       ),
       bottomBar: PrimaryActionButton(
-        label: 'Finish Intake & Print Ticket (समाप्त करें)',
+        label: lang.translate('finish_print_ticket'),
         icon: Icons.print_rounded,
         onPressed: () => Navigator.of(context).pushNamed('/completion'),
       ),

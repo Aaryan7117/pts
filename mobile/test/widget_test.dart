@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/app/app.dart';
+import 'package:mobile/core/widgets/primary_button.dart';
 
 void main() {
   testWidgets('MediKiosk Welcome Screen smoke test', (WidgetTester tester) async {
@@ -9,6 +10,7 @@ void main() {
 
     // Verify Welcome title and Start Button are present
     expect(find.textContaining('MediKiosk'), findsWidgets);
-    expect(find.textContaining('START INTAKE'), findsOneWidget);
+    expect(find.byType(PrimaryActionButton), findsOneWidget);
+    expect(find.textContaining('शुरू करें'), findsOneWidget);
   });
 }

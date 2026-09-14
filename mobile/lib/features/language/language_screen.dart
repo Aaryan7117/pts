@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../app/state/encounter_provider.dart';
+import '../../app/state/intake_provider.dart';
 import '../../app/state/language_provider.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -21,7 +23,11 @@ class LanguageScreen extends StatelessWidget {
     return MediScaffold(
       title: lang.translate('select_language'),
       currentLanguage: lang.currentLanguage,
-      onLanguageChanged: (l) => lang.setLanguage(l),
+      onLanguageChanged: (l) {
+        lang.setLanguage(l);
+        context.read<EncounterProvider>().updateLanguage(l);
+        context.read<IntakeProvider>().setLanguage(l);
+      },
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -31,7 +37,7 @@ class LanguageScreen extends StatelessWidget {
           ),
           const SizedBox(height: MediDimensions.space8),
           Text(
-            'अपनी भाषा चुनें / உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்',
+            lang.translate('choose_language_sub'),
             style: MediTypography.bodyMedium,
           ),
           const SizedBox(height: MediDimensions.space24),
@@ -48,7 +54,11 @@ class LanguageScreen extends StatelessWidget {
                   subtitle: item.code.toUpperCase(),
                   icon: Icons.language,
                   isSelected: isSelected,
-                  onTap: () => lang.setLanguage(item.code),
+                  onTap: () {
+                    lang.setLanguage(item.code);
+                    context.read<EncounterProvider>().updateLanguage(item.code);
+                    context.read<IntakeProvider>().setLanguage(item.code);
+                  },
                 );
               },
             ),
@@ -58,7 +68,11 @@ class LanguageScreen extends StatelessWidget {
       bottomBar: PrimaryActionButton(
         label: lang.translate('agree_continue'),
         icon: Icons.arrow_forward_rounded,
-        onPressed: () => Navigator.of(context).pushNamed('/consent'),
+        onPressed: () {
+          context.read<EncounterProvider>().updateLanguage(lang.currentLanguage);
+          context.read<IntakeProvider>().setLanguage(lang.currentLanguage);
+          Navigator.of(context).pushNamed('/consent');
+        },
       ),
     );
   }

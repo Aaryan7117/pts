@@ -248,3 +248,41 @@ def test_patient_dashboard_endpoint(client):
     assert "active_token" in dash
     assert "encounters" in dash
 
+
+def test_encounter_language_update_and_multilingual_call(client):
+    """Verify encounter language update and multilingual call start across all 5 languages."""
+    # 1. Bootstrap with default Hindi
+    b_res = client.post("/api/encounters/bootstrap", json={"language": "hi"})
+    assert b_res.status_code == 200
+    enc_id = b_res.json()["encounter_id"]
+
+    # 2. Update language to Tamil
+    patch_res = client.patch(f"/api/encounters/{enc_id}/language", json={"language": "ta"})
+    assert patch_res.status_code == 200
+    assert patch_res.json()["language"] == "ta"
+
+    # Verify encounter fetch reflects new language
+    get_res = client.get(f"/api/encounters/{enc_id}")
+    assert get_res.status_code == 200
+    assert get_res.json()["language"] == "ta"
+
+    # 3. Reject invalid language code
+    invalid_patch = client.patch(f"/api/encounters/{enc_id}/language", json={"language": "french"})
+    assert invalid_patch.status_code == 422
+
+    # 4. Start call session with Tamil and verify native opening text
+    call_res = client.post("/api/call/session/start", json={"encounter_id": enc_id, "language": "ta"})
+    assert call_res.status_code == 200
+    call_data = call_res.json()
+    assert "வணக்கம்" in call_data["opening_text"]
+
+    # 5. Start call session with Telugu and Marathi
+    call_te = client.post("/api/call/session/start", json={"encounter_id": enc_id, "language": "te"})
+    assert call_te.status_code == 200
+    assert "నమస్కారం" in call_te.json()["opening_text"]
+
+    call_mr = client.post("/api/call/session/start", json={"encounter_id": enc_id, "language": "mr"})
+    assert call_mr.status_code == 200
+    assert "नमस्कार" in call_mr.json()["opening_text"]
+
+

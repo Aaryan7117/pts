@@ -31,6 +31,7 @@ class PatientQueueEntry(BaseModel):
     has_medication_conflict: bool = False
     has_red_flags: bool = False
     created_at: Optional[str] = None
+    language: Optional[str] = Field(default="hi", description="Patient selected language: en, hi, ta, te, mr")
     patient_name: Optional[str] = None
     patient_age: Optional[int] = None
     patient_gender: Optional[str] = None

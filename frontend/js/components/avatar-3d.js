@@ -1,194 +1,309 @@
 /**
- * MediKiosk Web — Interactive AI Doctor Avatar
- * Renders a warm, reassuring clinical physician avatar for rural/elderly OPD patients.
- * Fully self-contained on Canvas/SVG with organic breathing and listening animations.
+ * MediKiosk Web — Photorealistic 2D Frame-by-Frame Doctor Avatar
+ *
+ * Implements smooth 25 FPS clinical physician animation driven by high-fidelity
+ * 6-second video sequences (150 idle frames and 150 speaking frames).
+ * Synchronized with browser TTS and audio playback lifecycle.
  */
 
+import { tts } from '../audio/tts-reader.js';
+
 export class DoctorAvatar {
-  constructor(containerId) {
-    this.container = document.getElementById(containerId);
+  /**
+   * @param {string|HTMLElement} container - Container ID or HTMLElement
+   * @param {Object} options - Configuration options
+   */
+  constructor(container, options = {}) {
+    this.container = typeof container === 'string' ? document.getElementById(container) : container;
+    this.options = Object.assign({
+      fps: 25, // 150 frames / 6.0 seconds = 25 FPS
+      totalFrames: 150,
+      idlePath: '/avatar/idle',
+      speakingPath: '/avatar/speaking',
+      autoSyncAudio: true,
+    }, options);
+
+    this.state = 'idle'; // 'idle' | 'speaking'
     this.canvas = null;
     this.ctx = null;
     this.animId = null;
-    this.isSpeaking = false;
-    this.isListening = false;
-    this.breathCycle = 0;
-    this.blinkTimer = 0;
-    this.isBlinking = false;
+
+    // Frame storage
+    this.idleFrames = new Array(this.options.totalFrames);
+    this.speakingFrames = new Array(this.options.totalFrames);
+    this.idleLoadedCount = 0;
+    this.speakingLoadedCount = 0;
+    this.isPreloaded = false;
+
+    // Playback state
+    this.currentFrameIdx = 0;
+    this.lastFrameTime = 0;
+    this.frameDuration = 1000 / this.options.fps; // 40.0 ms
+
+    // Event handlers bound to this
+    this._onTtsStart = this._onTtsStart.bind(this);
+    this._onTtsEnd = this._onTtsEnd.bind(this);
+    this._onSpeechStart = this._onSpeechStart.bind(this);
+    this._onSpeechEnd = this._onSpeechEnd.bind(this);
   }
 
+  /**
+   * Mount the avatar into the container element and start the animation loop.
+   */
   mount() {
-    if (!this.container) return;
+    if (!this.container) {
+      console.warn('DoctorAvatar: target container not found');
+      return;
+    }
 
     this.container.innerHTML = `
-      <div style="display:flex; flex-direction:column; align-items:center; position:relative;">
-        <canvas id="doctorAvatarCanvas" width="280" height="300" style="width:240px; height:260px; filter:drop-shadow(0 12px 24px rgba(16,35,62,0.12));"></canvas>
-        <div id="avatarStatusPill" class="badge badge-teal" style="margin-top:-8px; z-index:2;">
+      <div class="doctor-avatar-wrapper" style="display:flex; flex-direction:column; align-items:center; position:relative; width:100%; max-width:440px; margin:0 auto;">
+        <div class="doctor-avatar-frame" style="position:relative; width:100%; aspect-ratio:16/9; border-radius:18px; overflow:hidden; box-shadow:0 16px 36px rgba(16,35,62,0.14), 0 0 0 1px rgba(2,132,199,0.15); background:#0f172a;">
+          <canvas id="doctorAvatarCanvas" width="960" height="540" style="width:100%; height:100%; display:block; object-fit:contain;"></canvas>
+          <div id="avatarLoadingOverlay" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#0f172a; transition:opacity 0.3s ease; pointer-events:none;">
+            <div style="color:var(--brand-primary, #0284c7); font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px;">
+              <span class="pulse-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#0284c7;"></span>
+              Loading AI Physician...
+            </div>
+          </div>
+        </div>
+        <div id="avatarStatusPill" class="badge badge-teal" style="margin-top:12px; z-index:2; font-weight:600; font-size:13px; padding:6px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); transition:all 0.2s ease;">
           ● AI Clinical Attendant Ready
         </div>
       </div>
     `;
 
-    this.canvas = document.getElementById('doctorAvatarCanvas');
+    this.canvas = this.container.querySelector('#doctorAvatarCanvas');
     if (this.canvas) {
-      this.ctx = this.canvas.getContext('2d');
-      this._startLoop();
+      this.ctx = this.canvas.getContext('2d', { alpha: false });
     }
+
+    // Preload frames and begin rendering
+    this._preloadFrames();
+    this._attachAudioListeners();
+    this._startLoop();
   }
 
+  /**
+   * Set explicit avatar state ('idle' or 'speaking')
+   * @param {'idle'|'speaking'} nextState
+   */
+  setState(nextState) {
+    if (nextState !== 'idle' && nextState !== 'speaking') return;
+    if (this.state === nextState) return;
+
+    this.state = nextState;
+
+    // Reset frame index on speaking start for natural speech onset
+    if (nextState === 'speaking') {
+      this.currentFrameIdx = 0;
+    }
+
+    this._updateStatusPill();
+  }
+
+  /**
+   * Compatibility method
+   * @param {boolean} speaking
+   */
   setSpeaking(speaking) {
-    this.isSpeaking = speaking;
-    const pill = document.getElementById('avatarStatusPill');
-    if (pill) {
-      pill.className = speaking ? 'badge badge-blue' : 'badge badge-teal';
-      pill.innerHTML = speaking ? '🔊 AI Attendant Speaking...' : '● AI Clinical Attendant Ready';
+    this.setState(speaking ? 'speaking' : 'idle');
+  }
+
+  /**
+   * Compatibility method
+   * @param {boolean} listening
+   */
+  setListening(listening) {
+    // Listening is idle state (attentive listening posture)
+    if (listening) {
+      this.setState('idle');
+      const pill = this.container ? this.container.querySelector('#avatarStatusPill') : null;
+      if (pill) {
+        pill.className = 'badge badge-red';
+        pill.innerHTML = '🎙 Listening to Your Voice...';
+      }
+    } else {
+      this._updateStatusPill();
     }
   }
 
-  setListening(listening) {
-    this.isListening = listening;
-    const pill = document.getElementById('avatarStatusPill');
-    if (pill) {
-      pill.className = listening ? 'badge badge-red' : 'badge badge-teal';
-      pill.innerHTML = listening ? '🎙 Listening to Your Voice...' : '● AI Clinical Attendant Ready';
+  _updateStatusPill() {
+    const pill = this.container ? this.container.querySelector('#avatarStatusPill') : null;
+    if (!pill) return;
+
+    if (this.state === 'speaking') {
+      pill.className = 'badge badge-blue';
+      pill.innerHTML = '🔊 AI Attendant Speaking...';
+    } else {
+      pill.className = 'badge badge-teal';
+      pill.innerHTML = '● AI Clinical Attendant Ready';
+    }
+  }
+
+  _attachAudioListeners() {
+    if (!this.options.autoSyncAudio) return;
+
+    // Global custom events from TTSReader & Audio utility
+    window.addEventListener('medikiosk-tts-start', this._onTtsStart);
+    window.addEventListener('medikiosk-tts-end', this._onTtsEnd);
+    window.addEventListener('medikiosk-speech-start', this._onSpeechStart);
+    window.addEventListener('medikiosk-speech-end', this._onSpeechEnd);
+
+    // Also check if TTS is currently active
+    if (tts && tts.isSpeaking) {
+      this.setState('speaking');
+    }
+  }
+
+  _detachAudioListeners() {
+    window.removeEventListener('medikiosk-tts-start', this._onTtsStart);
+    window.removeEventListener('medikiosk-tts-end', this._onTtsEnd);
+    window.removeEventListener('medikiosk-speech-start', this._onSpeechStart);
+    window.removeEventListener('medikiosk-speech-end', this._onSpeechEnd);
+  }
+
+  _onTtsStart() {
+    this.setState('speaking');
+  }
+
+  _onTtsEnd() {
+    this.setState('idle');
+  }
+
+  _onSpeechStart() {
+    this.setState('speaking');
+  }
+
+  _onSpeechEnd() {
+    this.setState('idle');
+  }
+
+  /**
+   * Intelligent asynchronous preloader:
+   * First loads initial idle frame to display immediately, then idle sequence, then speaking sequence.
+   */
+  _preloadFrames() {
+    const total = this.options.totalFrames;
+
+    const pad = (num) => String(num).padStart(3, '0');
+
+    // 1. Load first idle frame with high priority for instant first paint
+    const firstIdle = new Image();
+    firstIdle.src = `${this.options.idlePath}/frame-001.webp`;
+    firstIdle.onload = () => {
+      this.idleFrames[0] = firstIdle;
+      this.idleLoadedCount++;
+      // Render immediate preview
+      this._drawFrame(firstIdle);
+      const overlay = this.container ? this.container.querySelector('#avatarLoadingOverlay') : null;
+      if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 300);
+      }
+    };
+
+    // 2. Load the remaining idle frames
+    for (let i = 1; i < total; i++) {
+      const img = new Image();
+      img.src = `${this.options.idlePath}/frame-${pad(i + 1)}.webp`;
+      img.onload = () => {
+        this.idleFrames[i] = img;
+        this.idleLoadedCount++;
+      };
+    }
+
+    // 3. Load speaking frames concurrently
+    for (let i = 0; i < total; i++) {
+      const img = new Image();
+      img.src = `${this.options.speakingPath}/frame-${pad(i + 1)}.webp`;
+      img.onload = () => {
+        this.speakingFrames[i] = img;
+        this.speakingLoadedCount++;
+      };
     }
   }
 
   _startLoop() {
-    const render = () => {
-      this._draw();
-      this.animId = requestAnimationFrame(render);
-    };
-    this.animId = requestAnimationFrame(render);
-  }
+    this.lastFrameTime = performance.now();
 
-  _draw() {
-    if (!this.ctx || !this.canvas) return;
-    const ctx = this.ctx;
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const loop = (timestamp) => {
+      this.animId = requestAnimationFrame(loop);
 
-    this.breathCycle += 0.04;
-    const breathOffset = Math.sin(this.breathCycle) * 3;
+      const elapsed = timestamp - this.lastFrameTime;
+      if (elapsed >= this.frameDuration) {
+        const framesToAdvance = Math.floor(elapsed / this.frameDuration);
+        this.lastFrameTime = timestamp - (elapsed % this.frameDuration);
 
-    // Blinking logic
-    this.blinkTimer += 1;
-    if (this.blinkTimer > 180) {
-      this.isBlinking = true;
-      if (this.blinkTimer > 192) {
-        this.isBlinking = false;
-        this.blinkTimer = 0;
+        // Advance frames based on actual elapsed time (drop frames smoothly if CPU is slow)
+        const total = this.options.totalFrames;
+        this.currentFrameIdx = (this.currentFrameIdx + framesToAdvance) % total;
+
+        this._render();
       }
-    }
+    };
 
-    const centerX = 140;
-    const headY = 95 + breathOffset;
+    this.animId = requestAnimationFrame(loop);
+  }
 
-    // 1. Soft Circular Halo Glow
-    const haloGrad = ctx.createRadialGradient(centerX, headY + 30, 40, centerX, headY + 30, 130);
-    haloGrad.addColorStop(0, 'rgba(234, 243, 255, 0.9)');
-    haloGrad.addColorStop(1, 'rgba(234, 243, 255, 0)');
-    ctx.fillStyle = haloGrad;
-    ctx.beginPath();
-    ctx.arc(centerX, headY + 30, 130, 0, Math.PI * 2);
-    ctx.fill();
+  _render() {
+    if (!this.ctx || !this.canvas) return;
 
-    // 2. Doctor Shoulders & White Coat
-    ctx.fillStyle = '#FFFFFF';
-    ctx.strokeStyle = '#DCE5F0';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(centerX - 95, 290);
-    ctx.bezierCurveTo(centerX - 80, 200 + breathOffset, centerX - 40, 180 + breathOffset, centerX, 185 + breathOffset);
-    ctx.bezierCurveTo(centerX + 40, 180 + breathOffset, centerX + 80, 200 + breathOffset, centerX + 95, 290);
-    ctx.fill();
-    ctx.stroke();
+    const activeFrames = this.state === 'speaking' ? this.speakingFrames : this.idleFrames;
+    const fallbackFrames = this.idleFrames;
+    const total = this.options.totalFrames;
 
-    // 3. Inner Scrub Shirt (Clinical Teal #0B8F87)
-    ctx.fillStyle = '#0B8F87';
-    ctx.beginPath();
-    ctx.moveTo(centerX - 32, 195 + breathOffset);
-    ctx.lineTo(centerX + 32, 195 + breathOffset);
-    ctx.lineTo(centerX, 250 + breathOffset);
-    ctx.closePath();
-    ctx.fill();
+    // Get current frame or fallback to first frame if still loading
+    const currentImg = activeFrames[this.currentFrameIdx] || fallbackFrames[0];
+    if (!currentImg || !currentImg.complete) return;
 
-    // 4. Stethoscope
-    ctx.strokeStyle = '#10233E';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(centerX, 205 + breathOffset, 42, 0.2 * Math.PI, 0.8 * Math.PI);
-    ctx.stroke();
+    // Seamless loop smoothing:
+    // When reaching the last 2 frames (148, 149), perform a gentle 2-frame crossfade
+    // into frame 0 to eliminate any visible jump between repetitions.
+    const isLoopBoundary = this.currentFrameIdx >= total - 2;
+    const targetFirstImg = activeFrames[0] || fallbackFrames[0];
 
-    // Stethoscope Bell
-    ctx.fillStyle = '#CBD5E1';
-    ctx.beginPath();
-    ctx.arc(centerX, 252 + breathOffset, 8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // 5. Neck
-    ctx.fillStyle = '#F8D7B8';
-    ctx.fillRect(centerX - 16, headY + 45, 32, 35);
-
-    // 6. Head
-    ctx.fillStyle = '#F8D7B8';
-    ctx.beginPath();
-    ctx.ellipse(centerX, headY, 52, 60, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 7. Hair (Professional Styled Hair)
-    ctx.fillStyle = '#1E293B';
-    ctx.beginPath();
-    ctx.arc(centerX, headY - 8, 55, Math.PI * 0.8, Math.PI * 2.2);
-    ctx.fill();
-
-    // 8. Eyes (with blinking)
-    ctx.fillStyle = '#0F172A';
-    if (this.isBlinking) {
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(centerX - 24, headY);
-      ctx.lineTo(centerX - 10, headY);
-      ctx.moveTo(centerX + 10, headY);
-      ctx.lineTo(centerX + 24, headY);
-      ctx.stroke();
+    if (isLoopBoundary && targetFirstImg && targetFirstImg.complete) {
+      const crossfadeAlpha = (this.currentFrameIdx - (total - 3)) / 3; // 0.33, 0.66
+      this.ctx.drawImage(currentImg, 0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.save();
+      this.ctx.globalAlpha = crossfadeAlpha;
+      this.ctx.drawImage(targetFirstImg, 0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.restore();
     } else {
-      ctx.beginPath();
-      ctx.arc(centerX - 17, headY, 5, 0, Math.PI * 2);
-      ctx.arc(centerX + 17, headY, 5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Eye glimmer
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(centerX - 19, headY - 2, 2, 0, Math.PI * 2);
-      ctx.arc(centerX + 15, headY - 2, 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // 9. Welcoming Smile / Speaking Mouth
-    ctx.strokeStyle = '#991B1B';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    if (this.isSpeaking) {
-      const mouthOpen = 4 + Math.sin(this.breathCycle * 5) * 4;
-      ctx.fillStyle = '#991B1B';
-      ctx.ellipse(centerX, headY + 28, 9, mouthOpen, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.arc(centerX, headY + 22, 12, 0.15 * Math.PI, 0.85 * Math.PI);
-      ctx.stroke();
+      this.ctx.drawImage(currentImg, 0, 0, this.canvas.width, this.canvas.height);
     }
   }
 
+  _drawFrame(img) {
+    if (!this.ctx || !this.canvas || !img || !img.complete) return;
+    this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  /**
+   * Stop animations, detach audio events, and clean up container.
+   */
   destroy() {
     if (this.animId) {
       cancelAnimationFrame(this.animId);
       this.animId = null;
     }
+
+    this._detachAudioListeners();
+
+    if (this.canvas) {
+      this.canvas.width = 1;
+      this.canvas.height = 1;
+      this.canvas = null;
+      this.ctx = null;
+    }
+
     if (this.container) {
       this.container.innerHTML = '';
     }
+
+    // Clear frame references to assist garbage collection
+    this.idleFrames.length = 0;
+    this.speakingFrames.length = 0;
   }
 }

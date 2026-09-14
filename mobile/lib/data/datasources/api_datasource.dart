@@ -60,6 +60,16 @@ class ApiDataSource {
     }
   }
 
+  /// Update Encounter Preferred Language
+  Future<bool> updateEncounterLanguage(String encounterId, String language) async {
+    final response = await client.patch(
+      _uri('/api/encounters/$encounterId/language'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'language': language}),
+    );
+    return response.statusCode == 200;
+  }
+
   /// Start Voice Call Session
   Future<CallSessionStartResponse> startCallSession(
       CallSessionStartRequest request) async {

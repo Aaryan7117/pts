@@ -20,7 +20,7 @@ class TriageScreen extends StatelessWidget {
     final lang = context.watch<LanguageProvider>();
 
     return MediScaffold(
-      title: 'Emergency Triage Alert',
+      title: lang.translate('triage_alert_title'),
       backgroundColor: MediColors.red50,
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
@@ -29,8 +29,7 @@ class TriageScreen extends StatelessWidget {
           children: [
             EmergencyBanner(
               title: lang.translate('emergency_title'),
-              message:
-                  'Our safety engine detected symptoms requiring prompt medical assessment. Do not wait in the normal queue. Please notify the nearest OPD triage nurse immediately.',
+              message: lang.translate('triage_alert_sub'),
               onAlertStaff: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -51,14 +50,14 @@ class TriageScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'What to do right now (अभी क्या करें):',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: MediColors.triageRed),
+                  Text(
+                    lang.translate('triage_steps_title'),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: MediColors.triageRed),
                   ),
                   const SizedBox(height: MediDimensions.space12),
-                  _buildTriageStep('1', 'Sit down calmly and do not exert yourself.'),
-                  _buildTriageStep('2', 'Show this screen to Room 1 (Emergency Triage).'),
-                  _buildTriageStep('3', 'Your token has been elevated to Priority Status (RED).'),
+                  _buildTriageStep('1', lang.translate('triage_step_1')),
+                  _buildTriageStep('2', lang.translate('triage_step_2')),
+                  _buildTriageStep('3', lang.translate('triage_step_3')),
                 ],
               ),
             ),
@@ -69,14 +68,14 @@ class TriageScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryActionButton(
-            label: 'Go Directly to Emergency Room (आपातकालीन कक्ष)',
+            label: lang.translate('go_emergency_room'),
             backgroundColor: MediColors.triageRed,
             icon: Icons.local_hospital_rounded,
             onPressed: () => Navigator.of(context).pushNamed('/emergency'),
           ),
           const SizedBox(height: MediDimensions.space12),
           SecondaryActionButton(
-            label: 'Continue Routine Intake (सामान्य प्रक्रिया जारी रखें)',
+            label: lang.translate('continue_routine_intake'),
             onPressed: () => Navigator.of(context).pushNamed('/doc_intro'),
           ),
         ],

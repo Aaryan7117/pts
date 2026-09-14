@@ -8,9 +8,19 @@ export function playAudioBase64(base64, format = 'wav') {
   return new Promise((resolve, reject) => {
     if (!base64) { resolve(); return; }
     const audio = new Audio(`data:audio/${format};base64,${base64}`);
-    audio.onended = resolve;
-    audio.onerror = reject;
-    audio.play().catch(reject);
+    window.dispatchEvent(new CustomEvent('medikiosk-speech-start'));
+    audio.onended = () => {
+      window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+      resolve();
+    };
+    audio.onerror = (err) => {
+      window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+      reject(err);
+    };
+    audio.play().catch((err) => {
+      window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+      reject(err);
+    });
   });
 }
 

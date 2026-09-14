@@ -191,15 +191,19 @@ class SemanticConceptNormalizer:
                 is_negated=True
             )
 
-        # Step 2: High-precision deterministic clinical keyword match
+        # Step 2: Check high-precision multi-language keyword match first
         kw_match = self._keyword_match(text, lang)
-        if kw_match.concept and kw_match.score >= 0.85:
+        if kw_match.status == "CONFIRMED_MATCH" or (kw_match.concept and kw_match.score >= 0.85):
             return kw_match
 
         # Step 3: Try sentence-transformer vector embedding match
         if self._embedding_model is not None and self._concept_embeddings is not None:
             emb_match = self._embedding_match(text)
-            if emb_match.concept and emb_match.score >= 0.70:
+            if emb_match.concept and emb_match.score >= 0.70 and emb_match.score >= kw_match.score:
+                return emb_match
+            if kw_match.concept is not None and kw_match.score >= 0.55:
+                return kw_match
+            if emb_match.concept:
                 return emb_match
 
         # Step 4: Return keyword match or raw match

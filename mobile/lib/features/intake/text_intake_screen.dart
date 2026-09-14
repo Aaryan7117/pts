@@ -23,17 +23,6 @@ class _TextIntakeScreenState extends State<TextIntakeScreen> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
-  final List<String> _quickChips = [
-    'बुखार (Fever)',
-    'सिरदर्द (Headache)',
-    'खांसी और जुकाम (Cough & Cold)',
-    'पेट दर्द (Stomach Pain)',
-    'कमजोरी (Fatigue)',
-    'उल्टी / जी मिचलाना (Nausea)',
-    'सांस लेने में तकलीफ (Breathlessness)',
-    'जोड़ों में दर्द (Joint Pain)',
-  ];
-
   @override
   void dispose() {
     _textController.dispose();
@@ -79,7 +68,7 @@ class _TextIntakeScreenState extends State<TextIntakeScreen> {
     final intake = context.watch<IntakeProvider>();
 
     return MediScaffold(
-      title: 'Type Symptoms',
+      title: lang.translate('describe_symptoms_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
@@ -89,13 +78,13 @@ class _TextIntakeScreenState extends State<TextIntakeScreen> {
           children: [
             const SizedBox(height: MediDimensions.space12),
             Text(
-              'Describe Your Symptoms (लक्षण लिखें)',
+              lang.translate('describe_symptoms_title'),
               style: MediTypography.headlineLarge,
             ),
             const SizedBox(height: MediDimensions.space8),
-            const Text(
-              'Type your health complaints below or tap the quick symptom chips.',
-              style: TextStyle(fontSize: 16, color: MediColors.textMuted),
+            Text(
+              lang.translate('describe_symptoms_sub'),
+              style: const TextStyle(fontSize: 16, color: MediColors.textMuted),
             ),
             const SizedBox(height: MediDimensions.space16),
 
@@ -150,7 +139,7 @@ class _TextIntakeScreenState extends State<TextIntakeScreen> {
                     ),
                     decoration: InputDecoration(
                       contentPadding: const EdgeInsets.all(MediDimensions.space16),
-                      hintText: 'उदा. मुझे दो दिन से तेज सिरदर्द और बुखार है... (Describe your symptoms here)',
+                      hintText: lang.translate('describe_symptoms_hint'),
                       hintStyle: const TextStyle(color: MediColors.slate400, fontSize: 16),
                       border: InputBorder.none,
                       suffixIcon: _textController.text.isNotEmpty
@@ -185,7 +174,7 @@ class _TextIntakeScreenState extends State<TextIntakeScreen> {
                               setState(() {});
                             },
                             icon: const Icon(Icons.delete_outline, size: 16),
-                            label: const Text('Clear (हटाएं)', style: TextStyle(fontSize: 12)),
+                            label: const Text('Clear', style: TextStyle(fontSize: 12)),
                           ),
                       ],
                     ),
@@ -198,21 +187,30 @@ class _TextIntakeScreenState extends State<TextIntakeScreen> {
 
             // Quick Symptom Chips
             Text(
-              'Quick Add Symptoms (सामान्य लक्षण जोड़ें):',
+              lang.translate('tap_symptom_chip_prompt'),
               style: MediTypography.caption.copyWith(fontWeight: FontWeight.w700, fontSize: 14),
             ),
             const SizedBox(height: MediDimensions.space8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _quickChips.map((chip) {
+              children: [
+                'chip_fever',
+                'chip_headache',
+                'chip_cough',
+                'chip_stomach_pain',
+                'chip_joint_pain',
+                'chip_vomiting',
+                'chip_breathlessness',
+              ].map((chipKey) {
+                final label = lang.translate(chipKey);
                 return ActionChip(
                   avatar: const Icon(Icons.add, size: 16, color: MediColors.brandPrimary),
-                  label: Text(chip, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  label: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   backgroundColor: MediColors.blue50,
                   side: const BorderSide(color: MediColors.blue200),
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  onPressed: () => _appendChip(chip),
+                  onPressed: () => _appendChip(label),
                 );
               }).toList(),
             ),
@@ -223,13 +221,13 @@ class _TextIntakeScreenState extends State<TextIntakeScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryActionButton(
-            label: 'Submit Symptoms & Analyze (लक्षण दर्ज करें)',
+            label: lang.translate('submit_and_analyze'),
             icon: Icons.check_circle_rounded,
             onPressed: _submitSymptoms,
           ),
           const SizedBox(height: MediDimensions.space8),
           SecondaryActionButton(
-            label: 'Switch to Voice Intake (बोलकर बताएं)',
+            label: lang.translate('switch_to_voice'),
             icon: Icons.mic_rounded,
             onPressed: () => Navigator.of(context).pop(),
           ),

@@ -12,6 +12,7 @@ from app.schemas.encounter import (
     EncounterBootstrapResponse,
     EncounterSummary,
     EncounterStatusUpdate,
+    EncounterLanguageUpdate,
     SUPPORTED_LANGUAGES
 )
 
@@ -141,3 +142,29 @@ async def update_encounter_status(
     await db.commit()
 
     return {"encounter_id": encounter_id, "status": update.status}
+
+
+@router.patch("/{encounter_id}/language")
+async def update_encounter_language(
+    encounter_id: str,
+    update: EncounterLanguageUpdate,
+    db=Depends(get_db)
+):
+    """Update encounter preferred language."""
+    cursor = await db.execute("SELECT 1 FROM encounters WHERE id = ?", (encounter_id,))
+    if not await cursor.fetchone():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Encounter not found")
+
+    await db.execute(
+        "UPDATE encounters SET language = ?, updated_at = datetime('now') WHERE id = ?",
+        (update.language, encounter_id)
+    )
+    await db.execute(
+        "INSERT INTO audit_log (encounter_id, actor, action, details) VALUES (?, 'system', 'language_updated', ?)",
+        (encounter_id, f'{{"new_language": "{update.language}"}}')
+    )
+    await db.commit()
+
+    return {"encounter_id": encounter_id, "language": update.language}
+
