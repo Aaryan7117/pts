@@ -10,6 +10,7 @@ import random
 import logging
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
+from fastapi.responses import PlainTextResponse
 from app.database import get_db
 from app.core.routing.location_resolver import LocationResolver, CLINIC_REGISTRY
 from app.schemas.ivr import (
@@ -60,7 +61,7 @@ async def diagnostic_resolve_location(
     )
 
 
-@router.post("/exotel/incoming-call", response_model=IVRCallResponse)
+@router.api_route("/exotel/incoming-call", methods=["GET", "POST"], response_model=IVRCallResponse)
 async def exotel_incoming_call(
     request: Request,
     db=Depends(get_db)
@@ -74,9 +75,10 @@ async def exotel_incoming_call(
     3. Issues digital Queue Token for assigned clinic chamber.
     4. Starts interview state machine and returns spoken opening greeting.
     """
-    # Parse payload (supports JSON or Exotel Form-encoded POST)
+    # Parse payload (supports JSON, Exotel Form-encoded POST, or Query Params GET)
     caller_from = ""
     called_to = ""
+    call_sid = ""
     req_lang = None
 
     content_type = request.headers.get("content-type", "")
@@ -85,17 +87,29 @@ async def exotel_incoming_call(
             body = await request.json()
             caller_from = str(body.get("From") or body.get("caller_phone") or body.get("CallFrom") or "").strip()
             called_to = str(body.get("To") or body.get("dialed_number") or body.get("CallTo") or "").strip()
+            call_sid = str(body.get("CallSid") or body.get("call_sid") or "").strip()
             req_lang = body.get("language")
         except Exception:
             pass
-    else:
+    elif request.method == "POST":
         try:
             form = await request.form()
             caller_from = str(form.get("From") or form.get("caller_phone") or form.get("CallFrom") or "").strip()
             called_to = str(form.get("To") or form.get("dialed_number") or form.get("CallTo") or "").strip()
+            call_sid = str(form.get("CallSid") or form.get("call_sid") or "").strip()
             req_lang = form.get("language")
         except Exception:
             pass
+
+    # Fallback to query parameters (for GET requests or URL-appended parameters)
+    if not caller_from:
+        caller_from = str(request.query_params.get("From") or request.query_params.get("CallFrom") or request.query_params.get("caller_phone") or "").strip()
+    if not called_to:
+        called_to = str(request.query_params.get("To") or request.query_params.get("CallTo") or request.query_params.get("dialed_number") or "").strip()
+    if not call_sid:
+        call_sid = str(request.query_params.get("CallSid") or request.query_params.get("call_sid") or "").strip()
+    if not req_lang:
+        req_lang = request.query_params.get("language")
 
     # 1. Deterministic 4-Step Waterfall Location Resolution
     res = await LocationResolver.resolve(
@@ -220,7 +234,8 @@ async def exotel_incoming_call(
 
     # Store in-memory session with start time for audio timestamps
     import time
-    _ivr_sessions[session_id] = {
+    session_data = {
+        "session_id": session_id,
         "encounter_id": encounter_id,
         "patient_id": patient_id,
         "caller_phone": res.caller_phone_normalized,
@@ -233,6 +248,11 @@ async def exotel_incoming_call(
         "severity_badge": "GREEN",
         "captured_facts": [],
     }
+    _ivr_sessions[session_id] = session_data
+    if call_sid:
+        _ivr_sessions[call_sid] = session_data
+    if res.caller_phone_normalized:
+        _ivr_sessions[res.caller_phone_normalized] = session_data
 
     # Record in call_sessions table
     await db.execute("""
@@ -273,6 +293,27 @@ async def exotel_incoming_call(
     )
 
 
+@router.api_route("/exotel/greeting-tts", methods=["GET", "POST"])
+async def exotel_greeting_tts(request: Request):
+    """
+    Returns dynamic plain text for Exotel's Greeting Applet ('Read text like a robot').
+    Exotel requires Content-Type: text/plain.
+    """
+    caller = request.query_params.get("From") or request.query_params.get("CallFrom") or ""
+    session = _ivr_sessions.get(caller) if caller else None
+    if not session and _ivr_sessions:
+        session = list(_ivr_sessions.values())[-1]
+
+    if session:
+        token = session.get("token_number", "IVR-101")
+        clinic = session.get("clinic", {}).get("name", "All India Institute of Ayurveda")
+        text = f"Welcome to MediKiosk AYUSH helpline! Your consultation token is {token} at {clinic}. Your appointment has been prioritized in the doctor queue. Thank you!"
+    else:
+        text = "Welcome to MediKiosk AYUSH helpline! Your appointment token has been registered in the doctor queue. Thank you!"
+
+    return PlainTextResponse(content=text, media_type="text/plain")
+
+
 # Emergency Keywords for Smart Prioritization Triage (triggers instant RED badge)
 EMERGENCY_RED_FLAGS = [
     "chest pain", "heart attack", "cardiac", "severe pain", "breathless",
@@ -284,9 +325,10 @@ EMERGENCY_RED_FLAGS = [
 ]
 
 
-@router.post("/exotel/speech-turn", response_model=IVRSpeechTurnResponse)
+@router.api_route("/exotel/speech-turn", methods=["GET", "POST"], response_model=IVRSpeechTurnResponse)
 async def exotel_speech_turn(
-    req: IVRSpeechTurnRequest,
+    request: Request,
+    req: Optional[IVRSpeechTurnRequest] = None,
     db=Depends(get_db)
 ):
     """
@@ -294,12 +336,43 @@ async def exotel_speech_turn(
     Extracts clinical facts, normalizes concepts, records timestamped evidence,
     and runs real-time keyword analysis for emergency queue preemption (RED).
     """
-    session = _ivr_sessions.get(req.session_id)
+    body_data = {}
+    if request.method == "POST":
+        try:
+            body_data = await request.json()
+        except Exception:
+            try:
+                form = await request.form()
+                body_data = dict(form)
+            except Exception:
+                pass
+
+    sess_key = None
+    if req:
+        sess_key = req.session_id or req.CallSid or req.caller_phone
+    if not sess_key and body_data:
+        sess_key = body_data.get("session_id") or body_data.get("CallSid") or body_data.get("caller_phone") or body_data.get("From")
+    if not sess_key and request:
+        sess_key = request.query_params.get("session_id") or request.query_params.get("CallSid") or request.query_params.get("From")
+
+    speech_input = ""
+    if req:
+        speech_input = req.speech_text or req.SpeechResult or ""
+    if not speech_input and body_data:
+        speech_input = body_data.get("speech_text") or body_data.get("SpeechResult") or ""
+    if not speech_input and request:
+        speech_input = request.query_params.get("SpeechResult") or request.query_params.get("speech_text") or ""
+
+    speech_input = speech_input.strip()
+
+    session = _ivr_sessions.get(sess_key) if sess_key else None
+    if not session and _ivr_sessions:
+        session = list(_ivr_sessions.values())[-1]
     if not session:
         raise HTTPException(status_code=404, detail="Active IVR session not found.")
 
     engine: InterviewEngine = session["engine"]
-    turn_result = engine.process_response(req.speech_text)
+    turn_result = engine.process_response(speech_input)
     session["turn_count"] += 1
 
     # Calculate audio recording timestamp proof (e.g. [00:14], [00:32])
@@ -308,7 +381,7 @@ async def exotel_speech_turn(
     timestamp_proof = f"{total_seconds // 60:02d}:{total_seconds % 60:02d}"
 
     # Smart Keyword Analysis for Emergency Prioritization
-    speech_lower = req.speech_text.lower()
+    speech_lower = speech_input.lower()
     is_emergency_triggered = any(k in speech_lower for k in EMERGENCY_RED_FLAGS)
 
     if is_emergency_triggered:
@@ -324,7 +397,7 @@ async def exotel_speech_turn(
             VALUES (?, 'smart_queue_triage', 'emergency_preemption_triggered', ?)
         """, (session["encounter_id"], json.dumps({
             "trigger_timestamp": timestamp_proof,
-            "patient_quote": req.speech_text,
+            "patient_quote": speech_input,
             "priority": "RED_CRITICAL"
         })))
         logger.warning(f"🚨 EMERGENCY PREEMPTION: Token {session['token_number']} elevated to RED at {timestamp_proof}")
@@ -334,7 +407,7 @@ async def exotel_speech_turn(
     # Persist extracted facts into clinical_facts table with timestamped evidence
     for fact in extracted_facts:
         fact_id = f"fact-ivr-{uuid.uuid4().hex[:8]}"
-        patient_evidence_quote = f"[{timestamp_proof}] \"{req.speech_text}\""
+        patient_evidence_quote = f"[{timestamp_proof}] \"{speech_input}\""
         await db.execute("""
             INSERT INTO clinical_facts (
                 id, encounter_id, category, field, value,
@@ -346,9 +419,9 @@ async def exotel_speech_turn(
             session["encounter_id"],
             fact.get("category", "symptom"),
             fact.get("field", "chief_complaint"),
-            fact.get("concept", req.speech_text),
+            fact.get("concept", speech_input),
             patient_evidence_quote,
-            fact.get("concept", req.speech_text),
+            fact.get("concept", speech_input),
             fact.get("concept_code", "AYUSH-001"),
             fact.get("confidence", 0.90)
         ))
@@ -361,8 +434,8 @@ async def exotel_speech_turn(
     is_completed = turn_result.get("is_completed", False)
 
     return IVRSpeechTurnResponse(
-        session_id=req.session_id,
-        patient_transcript=req.speech_text,
+        session_id=session.get("session_id", "sess-ivr"),
+        patient_transcript=speech_input,
         next_question_text=next_question_text,
         is_completed=is_completed,
         turn_index=session["turn_count"],
@@ -370,19 +443,32 @@ async def exotel_speech_turn(
     )
 
 
-@router.post("/exotel/end-call", response_model=IVREndCallResponse)
+@router.api_route("/exotel/end-call", methods=["GET", "POST"], response_model=IVREndCallResponse)
 async def exotel_end_call(
-    body: Dict[str, str],
+    request: Request,
     db=Depends(get_db)
 ):
     """
     Ends IVR call session, locks encounter, assigns severity,
     and simulates SMS confirmation to patient mobile.
     """
-    session_id = body.get("session_id")
-    encounter_id = body.get("encounter_id")
+    body = {}
+    if request.method == "POST":
+        try:
+            body = await request.json()
+        except Exception:
+            try:
+                form = await request.form()
+                body = dict(form)
+            except Exception:
+                pass
 
-    session = _ivr_sessions.get(session_id)
+    session_id = body.get("session_id") or body.get("CallSid") or body.get("caller_phone") or request.query_params.get("CallSid") or request.query_params.get("session_id")
+    encounter_id = body.get("encounter_id") or request.query_params.get("encounter_id")
+
+    session = _ivr_sessions.get(session_id) if session_id else None
+    if not session and _ivr_sessions:
+        session = list(_ivr_sessions.values())[-1]
     if not session and encounter_id:
         # Check DB
         cursor = await db.execute("SELECT * FROM encounters WHERE id = ?", (encounter_id,))

@@ -19,9 +19,11 @@ class ExotelIncomingCallRequest(BaseModel):
 
 class IVRSpeechTurnRequest(BaseModel):
     """Patient speech turn captured by Exotel / Voice recognition."""
-    session_id: str = Field(..., description="Active IVR call session ID")
+    session_id: Optional[str] = Field(None, description="Active IVR call session ID")
+    CallSid: Optional[str] = Field(None, description="Exotel Call ID alias")
     caller_phone: Optional[str] = Field(None, description="Caller mobile number")
-    speech_text: str = Field(..., description="Transcribed patient speech")
+    speech_text: Optional[str] = Field(None, description="Transcribed patient speech")
+    SpeechResult: Optional[str] = Field(None, description="Exotel speech transcript alias")
     turn_index: Optional[int] = Field(0, description="Zero-indexed turn count")
 
 
