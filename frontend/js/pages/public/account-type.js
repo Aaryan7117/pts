@@ -77,7 +77,7 @@ export function renderAccountTypePage() {
           </div>
         </a>
 
-        <!-- Card 4: 2G IVR Telephony Simulator -->
+        <!-- Card 4: 2G IVR Telephony Studio -->
         <a href="#/ivr" class="card card-interactive" style="text-decoration:none; display:flex; flex-direction:column; justify-content:space-between; min-height:280px;">
           <div>
             <div style="width:52px; height:52px; border-radius:var(--radius-lg); background:var(--status-success-tint); color:var(--status-success); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:var(--space-4);">
@@ -85,18 +85,39 @@ export function renderAccountTypePage() {
             </div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-2);">
               <h3 class="text-h3" style="color:var(--text-primary);">2G IVR Studio</h3>
-              <span class="badge badge-green">Toll-Free 1800</span>
+              <span class="badge badge-green">Exotel 040-4189-7954</span>
             </div>
             <p style="font-size:14px; color:var(--text-secondary); line-height:1.5;">
-              Phone call intake simulator for rural citizens without internet. Tests 4-step location waterfall routing and conversational speech turns.
+              Phone call intake for rural citizens without internet. Supports live domestic ExoPhone calling and 4-step location waterfall routing.
             </p>
           </div>
           <div style="margin-top:var(--space-6); display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-weight:700; color:var(--status-success); font-size:14px;">Open IVR Simulator ↗</span>
+            <span style="font-weight:700; color:var(--status-success); font-size:14px;">Open IVR Studio ↗</span>
             <span class="badge badge-green">Zero Internet</span>
+          </div>
+        </a>
+
+        <!-- Card 5: Mobile BYOD Companion -->
+        <a href="/mobile.html" target="_blank" class="card card-interactive" style="text-decoration:none; display:flex; flex-direction:column; justify-content:space-between; min-height:280px;">
+          <div>
+            <div style="width:52px; height:52px; border-radius:var(--radius-lg); background:#EFF6FF; color:#1D4ED8; display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:var(--space-4);">
+              📱
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-2);">
+              <h3 class="text-h3" style="color:var(--text-primary);">Mobile BYOD App</h3>
+              <span class="badge badge-blue">QR / Flutter</span>
+            </div>
+            <p style="font-size:14px; color:var(--text-secondary); line-height:1.5;">
+              Smartphone companion for patients waiting in OPD lobby seats. 1-tap AI voice call and prescription upload from personal phones.
+            </p>
+          </div>
+          <div style="margin-top:var(--space-6); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700; color:#1D4ED8; font-size:14px;">Open Mobile Preview ↗</span>
+            <span class="badge badge-purple">BYOD Waiting Area</span>
           </div>
         </a>
       </div>
     </div>
   `;
 }
+

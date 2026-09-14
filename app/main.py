@@ -163,3 +163,9 @@ async def health_check():
             "doctor_patient": "/api/doctor/patient/{encounter_id}"
         }
     }
+
+
+# === Mount Frontend Web App ===
+# Serves the OPD Kiosk, Doctor Workstation, and Patient Portal directly on port 8000
+if Path("./frontend").exists():
+    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
