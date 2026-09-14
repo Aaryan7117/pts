@@ -6,7 +6,49 @@
  * - 2G IVR: Audio timestamp quotes with verbatim speech playback
  */
 
-export function renderEvidenceViewer(channel, evidenceData) {
+export function renderEvidenceViewer(channel, evidenceData, facts = [], enc = {}) {
+  // --- CHANNEL 3: 2G IVR TELEPHONY ---
+  if (channel === 'ivr_phone') {
+    const asrFacts = facts.filter(f => f.patient_words || f.provenance_tier === 'TELEPHONY_ASR');
+
+    return `
+      <div style="display:flex; flex-direction:column; gap:var(--space-4);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:var(--space-2);">
+            <span class="badge badge-amber">Channel 3 · Citizen Telephony IVR</span>
+            <span class="badge ${asrFacts.length > 0 ? 'badge-red' : 'badge-teal'}">${asrFacts.length > 0 ? 'TELEPHONY_ASR · VERIFIED' : 'CALL_LOG · INCOMING'}</span>
+          </div>
+          <span style="font-size:12px; color:var(--text-muted);">4-Step Location Waterfall Verified</span>
+        </div>
+
+        <div style="background:var(--bg-surface-soft); padding:var(--space-4); border-radius:var(--radius-xl); border:1px solid var(--border-default); display:flex; flex-direction:column; gap:var(--space-3);">
+          ${asrFacts.length > 0 ? asrFacts.map(fact => `
+            <div style="background:var(--bg-surface); padding:var(--space-3) var(--space-4); border-radius:var(--radius-lg); border-left:4px solid var(--status-danger); border:1px solid var(--border-subtle);">
+              <div style="font-size:11px; font-weight:700; color:var(--status-danger); text-transform:uppercase; margin-bottom:2px;">Verbatim Audio Turn Evidence</div>
+              <div style="font-size:14px; font-weight:600; color:var(--text-primary); font-style:italic;">
+                ${fact.patient_words || `"${fact.value}"`}
+              </div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                Extracted Concept: <strong style="color:var(--brand-primary);">${fact.normalized_concept || fact.value}</strong> (${fact.concept_code || 'SNOMED/AYUSH'}) · Confidence: ${Math.round((fact.confidence || 0.95) * 100)}%
+              </div>
+            </div>
+          `).join('') : `
+            <div style="background:var(--bg-surface); padding:var(--space-4); border-radius:var(--radius-lg); border-left:4px solid var(--brand-primary); border:1px solid var(--border-subtle);">
+              <div style="font-size:11px; font-weight:700; color:var(--brand-primary); text-transform:uppercase; margin-bottom:4px;">📡 Live Inbound Telephony Metadata</div>
+              <div style="font-size:13px; color:var(--text-primary); line-height:1.6;">
+                <div>• <strong>Caller Number:</strong> <code>${enc.caller_phone || '09182445210'}</code> (Verified Co-worker / Admin)</div>
+                <div>• <strong>ExoPhone Inbound DID:</strong> <code>040-4189-7954</code> (Hyderabad Landline)</div>
+                <div>• <strong>Assigned OPD Clinic:</strong> ${enc.department || 'All India Institute of Ayurveda (AIIA)'}</div>
+                <div>• <strong>Queue Allocation:</strong> Token <strong style="color:var(--brand-primary);">${enc.token_number || 'IVR'}</strong></div>
+                <div>• <strong>Waterfall Resolution:</strong> Step 4 (National Apex Institute Hub)</div>
+              </div>
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  }
+
   if (!evidenceData) {
     return `
       <div style="padding:var(--space-8); text-align:center; color:var(--text-muted);">
@@ -76,57 +118,27 @@ export function renderEvidenceViewer(channel, evidenceData) {
   }
 
   // --- CHANNEL 2: MOBILE BYOD ---
-  if (channel === 'android_byod' || channel === 'mobile') {
-    return `
-      <div style="display:flex; flex-direction:column; gap:var(--space-4);">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; align-items:center; gap:var(--space-2);">
-            <span class="badge badge-purple">Channel 2 · Mobile BYOD</span>
-            <span class="badge badge-blue">PATIENT_CONFIRMED · VOICE_ASR</span>
-          </div>
-          <span style="font-size:12px; color:var(--text-muted);">ABHA Locker Digital Consent Verified</span>
-        </div>
-
-        <div style="background:var(--bg-surface-soft); padding:var(--space-5); border-radius:var(--radius-xl); border:1px solid var(--border-default); display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
-          <div style="background:var(--bg-surface); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
-            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">ABHA Health Locker History</div>
-            <div style="margin-top:var(--space-2); font-size:14px; font-weight:600; color:var(--text-primary);">ABHA ID: 91-4821-3910-4819</div>
-            <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Consent Timestamp: 12-Sep-2026 09:14 AM</div>
-            <div style="font-size:12px; color:var(--status-success); margin-top:8px;">✓ Digitally Signed by Citizen via Mobile OTP</div>
-          </div>
-          <div style="background:var(--bg-surface); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
-            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Smartphone Camera Attachment</div>
-            <div style="margin-top:var(--space-2); font-size:13px; color:var(--text-secondary);">Attached file: <code>prescription_mobile_capture.jpg</code></div>
-            <span class="badge badge-teal" style="margin-top:8px;">4K Camera Resolution</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  // --- CHANNEL 3: 2G IVR TELEPHONY ---
   return `
     <div style="display:flex; flex-direction:column; gap:var(--space-4);">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:var(--space-2);">
-          <span class="badge badge-amber">Channel 3 · Citizen 2G IVR</span>
-          <span class="badge badge-red">TELEPHONY_ASR · GSM</span>
+          <span class="badge badge-purple">Channel 2 · Mobile BYOD</span>
+          <span class="badge badge-blue">PATIENT_CONFIRMED · VOICE_ASR</span>
         </div>
-        <span style="font-size:12px; color:var(--text-muted);">4-Step Location Waterfall Verified</span>
+        <span style="font-size:12px; color:var(--text-muted);">ABHA Locker Digital Consent Verified</span>
       </div>
 
-      <div style="background:var(--bg-surface-soft); padding:var(--space-5); border-radius:var(--radius-xl); border:1px solid var(--border-default); display:flex; flex-direction:column; gap:var(--space-4);">
-        <div style="background:var(--bg-surface); padding:var(--space-4); border-radius:var(--radius-lg); border-left:4px solid var(--status-danger); border:1px solid var(--border-subtle);">
-          <div style="font-size:11px; font-weight:700; color:var(--status-danger); text-transform:uppercase; margin-bottom:4px;">Verbatim Audio Timestamp Proof</div>
-          <div style="font-size:15px; font-weight:600; color:var(--text-primary); font-style:italic;">
-            [00:12] "नमस्ते डॉक्टर साहब, मुझे पिछले 3 दिनों से छाती में बहुत तेज दर्द और भारीपन लग रहा है..."
-          </div>
-          <div style="display:flex; gap:var(--space-3); margin-top:var(--space-3); align-items:center;">
-            <button class="btn btn-secondary btn-sm" onclick="alert('Playing recorded telephone turn [00:12-00:28]...')">
-              ▶ Listen Audio Snippet (GSM 8kHz)
-            </button>
-            <span style="font-size:12px; color:var(--text-muted);">DoT Circle: Delhi NCR (AIIA Hub Match)</span>
-          </div>
+      <div style="background:var(--bg-surface-soft); padding:var(--space-5); border-radius:var(--radius-xl); border:1px solid var(--border-default); display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
+        <div style="background:var(--bg-surface); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">ABHA Health Locker History</div>
+          <div style="margin-top:var(--space-2); font-size:14px; font-weight:600; color:var(--text-primary);">ABHA ID: 91-4821-3910-4819</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Consent Timestamp: 12-Sep-2026 09:14 AM</div>
+          <div style="font-size:12px; color:var(--status-success); margin-top:8px;">✓ Digitally Signed by Citizen via Mobile OTP</div>
+        </div>
+        <div style="background:var(--bg-surface); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Smartphone Camera Attachment</div>
+          <div style="margin-top:var(--space-2); font-size:13px; color:var(--text-secondary);">Attached file: <code>prescription_mobile_capture.jpg</code></div>
+          <span class="badge badge-teal" style="margin-top:8px;">4K Camera Resolution</span>
         </div>
       </div>
     </div>
