@@ -8,17 +8,29 @@ export function playAudioBase64(base64, format = 'wav') {
   return new Promise((resolve, reject) => {
     if (!base64) { resolve(); return; }
     const audio = new Audio(`data:audio/${format};base64,${base64}`);
-    window.dispatchEvent(new CustomEvent('medikiosk-speech-start'));
-    audio.onended = () => {
+
+    const notifyStart = () => {
+      window.dispatchEvent(new CustomEvent('medikiosk-speech-start'));
+    };
+
+    const notifyEnd = () => {
       window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+    };
+
+    audio.addEventListener('play', notifyStart);
+    audio.addEventListener('playing', notifyStart);
+    audio.addEventListener('pause', notifyEnd);
+    audio.addEventListener('ended', () => {
+      notifyEnd();
       resolve();
-    };
-    audio.onerror = (err) => {
-      window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+    });
+    audio.addEventListener('error', (err) => {
+      notifyEnd();
       reject(err);
-    };
+    });
+
     audio.play().catch((err) => {
-      window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+      notifyEnd();
       reject(err);
     });
   });

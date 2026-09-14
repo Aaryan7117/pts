@@ -60,25 +60,30 @@ export async function initDoctorPatient(encounterId) {
     }
   } catch (err) {
     console.warn('Doctor patient API fetch fallback (using local mock encounter):', err);
+    const kioskState = store.getState().kiosk || {};
+    const hasKioskFacts = kioskState.extractedFacts && kioskState.extractedFacts.length > 0;
+    const dynamicFacts = hasKioskFacts ? kioskState.extractedFacts : [
+      { category: 'chief_complaint', value: kioskState.patientWords || 'General OPD Consultation (सामान्य परामर्श)', patient_words: kioskState.patientWords || 'Consultation request', provenance_tier: 'VOICE' },
+      { category: 'medication', value: 'Metformin 500mg BD', provenance_tier: 'ONNX_OCR' },
+      { category: 'medication', value: 'Atorvastatin 20mg HS', provenance_tier: 'ONNX_OCR' }
+    ];
+
     const mockDetail = {
       encounter: {
         id: encounterId,
-        patient_id: 'Ramesh Kumar (56 / M)',
-        token_number: 'A-261',
-        channel: 'kiosk',
-        severity_badge: 'RED',
-        department: 'General Medicine',
+        patient_id: kioskState.patientId || 'Ramesh Kumar (56 / M)',
+        token_number: kioskState.tokenNumber || 'A-261',
+        channel: kioskState.channel || 'kiosk',
+        severity_badge: kioskState.severityBadge || 'GREEN',
+        department: kioskState.careStream || 'General Medicine',
         status: 'IN_PROGRESS'
       },
-      clinical_facts: [
-        { category: 'chief_complaint', value: 'Chest pain (सीने में दर्द)', patient_words: 'Chest discomfort for 3 days', provenance_tier: 'TOUCH' },
-        { category: 'medication', value: 'Metformin 500mg BD', provenance_tier: 'ONNX_OCR' },
-        { category: 'medication', value: 'Atorvastatin 20mg HS', provenance_tier: 'ONNX_OCR' }
-      ],
+      clinical_facts: dynamicFacts,
+      ayush_intake: kioskState.ayushRecord || {},
       drug_interaction_alerts: [
         { drug_a: 'Metformin', drug_b: 'Contrast Media', description: 'Evaluate renal profile before dye administration.' }
       ],
-      documents: [
+      documents: kioskState.uploadedDocument ? [kioskState.uploadedDocument] : [
         {
           id: 'doc-sample',
           file_path: '/static/uploads/sample_prescription.jpg',

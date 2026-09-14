@@ -13,7 +13,7 @@ import { renderKioskLanguage, initKioskLanguage } from './pages/kiosk/kiosk-lang
 import { renderKioskConsent, initKioskConsent } from './pages/kiosk/kiosk-consent.js';
 import { renderKioskCareStream, initKioskCareStream } from './pages/kiosk/kiosk-care-stream.js';
 import { renderKioskVoiceIntake, initKioskVoiceIntake, destroyKioskVoiceIntake } from './pages/kiosk/kiosk-voice-intake.js';
-import { renderKioskExplainBack, initKioskExplainBack } from './pages/kiosk/kiosk-explain-back.js';
+import { renderKioskExplainBack, initKioskExplainBack, destroyKioskExplainBack } from './pages/kiosk/kiosk-explain-back.js';
 import { renderKioskDocScan, initKioskDocScan, destroyKioskDocScan } from './pages/kiosk/kiosk-doc-scan.js';
 import { renderKioskOcrResults, initKioskOcrResults } from './pages/kiosk/kiosk-ocr-results.js';
 import { renderKioskAyush, initKioskAyush } from './pages/kiosk/kiosk-ayush.js';
@@ -98,7 +98,7 @@ export class Router {
         this._renderView(path, renderKioskVoiceIntake, initKioskVoiceIntake, destroyKioskVoiceIntake);
         break;
       case '/kiosk/summary':
-        this._renderView(path, renderKioskExplainBack, initKioskExplainBack);
+        this._renderView(path, renderKioskExplainBack, initKioskExplainBack, destroyKioskExplainBack);
         break;
       case '/kiosk/triage':
         this._renderView(path, renderKioskTriageAlert, initKioskTriageAlert);

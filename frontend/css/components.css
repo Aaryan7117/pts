@@ -382,7 +382,7 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
   padding: var(--space-4) var(--space-5);
-  min-height: 80px;
+  min-height: 72px;
   text-align: center;
   font-size: 1.15rem;
   font-weight: 500;
@@ -393,6 +393,95 @@
   justify-content: center;
 }
 
+/* Touch Typing Mode & Symptom Quick-Selector Card */
+.kiosk-typing-card {
+  width: 100%;
+  max-width: 620px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: left;
+}
+
+.kiosk-typing-textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 12px 16px;
+  font-size: 1.05rem;
+  font-family: inherit;
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color var(--motion-fast);
+}
+
+.kiosk-typing-textarea:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.kiosk-symptom-chips-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.kiosk-symptom-chips-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.kiosk-symptom-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kiosk-chip-btn {
+  background: var(--bg-surface-soft, #f8fafc);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--motion-fast);
+  user-select: none;
+}
+
+.kiosk-chip-btn:hover {
+  background: var(--brand-tint);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  transform: translateY(-1px);
+}
+
+.kiosk-chip-btn:active {
+  transform: translateY(1px);
+}
+
+.kiosk-chip-btn.selected {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--text-inverse, #ffffff);
+}
+
 /* =========================================================================
    5. CLOSED-LOOP EXPLAIN-BACK SUMMARY CARD
    ========================================================================= */
@@ -400,9 +489,10 @@
   background-color: var(--bg-surface);
   border: 2px solid var(--border-default);
   border-radius: var(--radius-2xl);
-  padding: var(--space-8);
+  padding: var(--space-5) var(--space-6);
   box-shadow: var(--shadow-md);
   max-width: 760px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -410,16 +500,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .explain-back-card__fact-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  margin-bottom: var(--space-8);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
 .explain-back-card__fact-row {

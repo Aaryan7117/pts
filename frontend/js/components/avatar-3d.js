@@ -45,6 +45,9 @@ export class DoctorAvatar {
     this._onTtsEnd = this._onTtsEnd.bind(this);
     this._onSpeechStart = this._onSpeechStart.bind(this);
     this._onSpeechEnd = this._onSpeechEnd.bind(this);
+    this._onMediaPlay = this._onMediaPlay.bind(this);
+    this._onMediaPause = this._onMediaPause.bind(this);
+    this._onMediaEnded = this._onMediaEnded.bind(this);
   }
 
   /**
@@ -150,6 +153,13 @@ export class DoctorAvatar {
     window.addEventListener('medikiosk-speech-start', this._onSpeechStart);
     window.addEventListener('medikiosk-speech-end', this._onSpeechEnd);
 
+    // Capture standard audio element events from any Audio/HTMLMediaElement in the DOM
+    window.addEventListener('play', this._onMediaPlay, true);
+    window.addEventListener('playing', this._onMediaPlay, true);
+    window.addEventListener('pause', this._onMediaPause, true);
+    window.addEventListener('ended', this._onMediaEnded, true);
+    window.addEventListener('error', this._onMediaEnded, true);
+
     // Also check if TTS is currently active
     if (tts && tts.isSpeaking) {
       this.setState('speaking');
@@ -161,6 +171,32 @@ export class DoctorAvatar {
     window.removeEventListener('medikiosk-tts-end', this._onTtsEnd);
     window.removeEventListener('medikiosk-speech-start', this._onSpeechStart);
     window.removeEventListener('medikiosk-speech-end', this._onSpeechEnd);
+
+    window.removeEventListener('play', this._onMediaPlay, true);
+    window.removeEventListener('playing', this._onMediaPlay, true);
+    window.removeEventListener('pause', this._onMediaPause, true);
+    window.removeEventListener('ended', this._onMediaEnded, true);
+    window.removeEventListener('error', this._onMediaEnded, true);
+  }
+
+  _onMediaPlay(e) {
+    if (e.target && (e.target instanceof HTMLMediaElement || e.target.tagName === 'AUDIO')) {
+      this.setState('speaking');
+    }
+  }
+
+  _onMediaPause(e) {
+    if (e.target && (e.target instanceof HTMLMediaElement || e.target.tagName === 'AUDIO')) {
+      if (tts && tts.isSpeaking) return;
+      this.setState('idle');
+    }
+  }
+
+  _onMediaEnded(e) {
+    if (e.target && (e.target instanceof HTMLMediaElement || e.target.tagName === 'AUDIO')) {
+      if (tts && tts.isSpeaking) return;
+      this.setState('idle');
+    }
   }
 
   _onTtsStart() {

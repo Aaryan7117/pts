@@ -92,46 +92,51 @@
    2. PHYSICAL IN-CLINIC KIOSK LAYOUT (Dual-Pane Landscape)
    ========================================================================= */
 .kiosk-shell {
-  min-height: calc(100vh - var(--header-height));
+  height: calc(100vh - var(--header-height));
+  max-height: calc(100vh - var(--header-height));
   display: flex;
   background-color: var(--bg-canvas);
+  overflow: hidden;
 }
 
 .kiosk-split {
   display: flex;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
-/* Left Pane (35% width, ~420px) */
+/* Left Pane (35% width, ~400px) */
 .kiosk-left-pane {
   width: 35%;
-  min-width: 340px;
-  max-width: 440px;
+  min-width: 320px;
+  max-width: 420px;
   background-color: var(--bg-surface);
   border-right: 1.5px solid var(--border-default);
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-5) var(--space-5);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  overflow-y: auto;
   box-shadow: var(--shadow-sm);
+  gap: var(--space-3);
 }
 
 .kiosk-brand-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .kiosk-step-indicator {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 6px 12px;
+  padding: 5px 12px;
   background-color: var(--brand-tint);
   border-radius: var(--radius-full);
   color: var(--brand-primary);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   width: fit-content;
 }
@@ -140,37 +145,40 @@
   background-color: var(--bg-surface-soft);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   display: flex;
   align-items: center;
   gap: var(--space-3);
 }
 
-/* Right Pane (65% width, ~800px) */
+/* Right Pane (65% width) */
 .kiosk-right-pane {
   flex: 1;
-  padding: var(--space-8) var(--space-10);
+  padding: var(--space-5) var(--space-8);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   overflow-y: auto;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
+  height: 100%;
 }
 
 .kiosk-task-canvas {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .kiosk-footer-bar {
-  margin-top: var(--space-8);
-  padding-top: var(--space-6);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* =========================================================================

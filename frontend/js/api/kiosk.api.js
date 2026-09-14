@@ -28,9 +28,13 @@ export const kioskApi = {
     return api.upload('/api/call/audio-turn', formData);
   },
 
-  // Fallback text turn
-  sendTextTurn: (sessionId, text) => 
-    api.post('/api/call/text-turn', { session_id: sessionId, text }),
+  // Fallback text turn (FastAPI expects Form data)
+  sendTextTurn: (sessionId, text) => {
+    const formData = new FormData();
+    formData.append('session_id', sessionId);
+    formData.append('text', text);
+    return api.upload('/api/call/text-turn', formData);
+  },
 
   // End voice session
   endCallSession: (sessionId) => 

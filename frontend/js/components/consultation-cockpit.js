@@ -17,7 +17,7 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
 
   // Extract Chief Complaint
   const chiefComplaintFact = facts.find(f => f.category === 'chief_complaint' || f.category === 'symptom');
-  const chiefComplaint = chiefComplaintFact ? (chiefComplaintFact.patient_words || chiefComplaintFact.value) : 'Acute chest discomfort';
+  const chiefComplaint = chiefComplaintFact ? (chiefComplaintFact.patient_words || chiefComplaintFact.value) : (enc.chief_complaint || enc.summary_30_words || 'General consultation / सामान्य परामर्श');
 
   // Extract Medications
   const medications = facts.filter(f => f.category === 'medication');
@@ -94,7 +94,7 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
           <div style="background:var(--brand-tint); border-left:4px solid var(--brand-primary); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--border-brand);">
             <div style="font-size:11px; font-weight:700; color:var(--brand-primary); text-transform:uppercase; margin-bottom:2px;">30-Second Clinical Triage Synthesis</div>
             <div style="font-size:14px; font-weight:600; color:var(--text-primary); line-height:1.4;">
-              "${chiefComplaint}" · Duration: 3 days · Prior Medications: Metformin 500mg, Atorvastatin 20mg.
+              "${chiefComplaint}" · Duration: ${facts.find(f => f.category === 'symptom' && f.field === 'duration')?.value || 'Recent onset'} · Prior Medications: Metformin 500mg, Atorvastatin 20mg.
             </div>
           </div>
 
@@ -104,7 +104,7 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
             <div style="background:var(--bg-surface-soft); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--border-default); display:flex; flex-direction:column; gap:8px;">
               <div><strong>Chief Complaint:</strong> ${chiefComplaint}</div>
               <div><strong>Recorded Medications:</strong> ${medications.length > 0 ? medications.map(m => m.value).join(', ') : 'Metformin 500mg BD, Atorvastatin 20mg HS'}</div>
-              <div><strong>AYUSH Prakriti / Agni:</strong> Pitta-Vata / Manda Agni (Slow digestion)</div>
+              <div><strong>AYUSH Prakriti / Agni:</strong> ${ayush.agni ? `${ayush.agni.agni_type || ayush.agni} Agni` : 'Sama Agni (Balanced digestion)'}</div>
             </div>
           </div>
 

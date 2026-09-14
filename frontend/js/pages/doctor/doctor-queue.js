@@ -197,8 +197,21 @@ export async function initDoctorQueue() {
           language: 'hi'
         }
       ];
-      store.setDoctorQueue(fallbackQueue, 3);
-      _updateDom(fallbackQueue);
+      const kioskState = store.getState().kiosk || {};
+      const currentPatientQueueItem = (kioskState.encounterId || kioskState.patientWords) ? [{
+        encounter_id: kioskState.encounterId || 'enc-kiosk-live',
+        token_number: kioskState.tokenNumber || 'A-261',
+        channel: kioskState.channel || 'kiosk',
+        severity_badge: kioskState.severityBadge || 'GREEN',
+        summary_30_words: kioskState.patientWords || 'Clinical intake completed at OPD Kiosk',
+        fact_count: (kioskState.extractedFacts && kioskState.extractedFacts.length) || 3,
+        has_medication_conflict: false,
+        has_red_flags: kioskState.severityBadge === 'RED',
+        language: kioskState.language || 'hi'
+      }] : [];
+      const combinedQueue = [...currentPatientQueueItem, ...fallbackQueue];
+      store.setDoctorQueue(combinedQueue, combinedQueue.length);
+      _updateDom(combinedQueue);
     }
   }
 

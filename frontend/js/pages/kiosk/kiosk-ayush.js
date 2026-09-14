@@ -128,14 +128,33 @@ export function initKioskAyush() {
       finishBtn.disabled = true;
       finishBtn.textContent = 'Generating OPD Token...';
 
+      const selectedAgni = document.querySelector('.ayush-chip.selected[data-field="agni"]')?.getAttribute('data-val') || 'sama';
+      const selectedKoshtha = document.querySelector('.ayush-chip.selected[data-field="koshtha"]')?.getAttribute('data-val') || 'madhyama';
+      const selectedNidra = document.querySelector('.ayush-chip.selected[data-field="nidra"]')?.getAttribute('data-val') || 'sound';
+
+      const ayushAssessment = {
+        agni: {
+          agni_type: selectedAgni,
+          hunger_frequency: selectedAgni === 'sama' ? 'normal' : (selectedAgni === 'tikshna' ? 'intense' : 'sluggish'),
+          post_meal_heaviness: selectedAgni === 'manda'
+        },
+        koshtha: {
+          bowel_frequency: selectedKoshtha === 'krura' ? 'irregular' : 'daily',
+          stool_consistency: selectedKoshtha === 'mridu' ? 'loose' : (selectedKoshtha === 'krura' ? 'hard' : 'formed'),
+          requires_laxative: selectedKoshtha === 'krura'
+        },
+        nidra: {
+          sleep_quality: selectedNidra,
+          hours_per_night: selectedNidra === 'sound' ? 7 : (selectedNidra === 'insomnia' ? 4 : 5)
+        }
+      };
+
+      store.updateKioskIntake({ ayushRecord: ayushAssessment });
+
       const encounterId = store.getState().kiosk.encounterId;
       if (encounterId) {
         try {
-          await kioskApi.saveAyushAssessment(encounterId, {
-            agni: { agni_type: 'sama', hunger_frequency: 'normal', post_meal_heaviness: false },
-            koshtha: { bowel_frequency: 'daily', stool_consistency: 'formed', requires_laxative: false },
-            nidra: { sleep_quality: 'sound', hours_per_night: 7 }
-          });
+          await kioskApi.saveAyushAssessment(encounterId, ayushAssessment);
         } catch (e) {
           console.warn('AYUSH save fallback:', e);
         }
