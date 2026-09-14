@@ -43,6 +43,9 @@ export function renderTopbar(currentPath) {
         <a href="#/ivr" class="topbar__portal-btn ${currentPath.startsWith('/ivr') ? 'active' : ''}">
           📞 2G IVR Studio
         </a>
+        <a href="/mobile.html" target="_blank" class="topbar__portal-btn" style="text-decoration:none;">
+          📱 Mobile App ↗
+        </a>
       </nav>
 
       <!-- Right: System Status & User Action -->

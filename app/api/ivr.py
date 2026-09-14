@@ -143,9 +143,9 @@ async def exotel_incoming_call(
     # Insert into encounters table
     await db.execute("""
         INSERT INTO encounters (
-            id, patient_id, abha_id, channel, status, department, severity_badge
-        ) VALUES (?, ?, ?, 'ivr_phone', 'IN_PROGRESS', ?, 'GREEN')
-    """, (encounter_id, patient_id, res.abha_id, f"AYUSH ({res.clinic.system})"))
+            id, patient_id, abha_id, token_number, language, channel, status, department, severity_badge
+        ) VALUES (?, ?, ?, ?, ?, 'ivr_phone', 'IN_PROGRESS', ?, 'GREEN')
+    """, (encounter_id, patient_id, res.abha_id, token_number, lang, f"AYUSH ({res.clinic.system})"))
 
     # Insert into queue_tokens table
     await db.execute("""

@@ -581,14 +581,14 @@
   color: var(--text-muted);
 }
 
-/* ── AYUSH Dashavidha Pariksha Panel ── */
+/* ── AYUSH Dashavidha Pariksha Panel (Luminous High-Contrast Clinical Design) ── */
 .ayush-panel {
-  background: linear-gradient(135deg, rgba(6, 78, 59, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: linear-gradient(135deg, #064e3b 0%, #0f172a 100%);
+  border: 1.5px solid #10b981;
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  padding: 20px 24px;
   margin-bottom: var(--space-5);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 30px rgba(6, 78, 59, 0.25), 0 2px 8px rgba(0, 0, 0, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -599,39 +599,42 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #10b981, #06b6d4, #f59e0b);
+  height: 4px;
+  background: linear-gradient(90deg, #10b981 0%, #38bdf8 50%, #f59e0b 100%);
 }
 
 .ayush-panel__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .ayush-panel__title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-base);
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
   color: #6ee7b7;
+  letter-spacing: -0.01em;
 }
 
 .ayush-panel__subtitle {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  margin-top: 2px;
+  font-size: 12px;
+  color: #a7f3d0;
+  font-weight: 500;
+  margin-top: 3px;
+  opacity: 0.95;
 }
 
 .ayush-panel__grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 @media (max-width: 900px) {
@@ -641,77 +644,89 @@
 }
 
 .ayush-col-card {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-md);
-  padding: var(--space-3);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .ayush-col-card__tag {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .ayush-col-card__value {
-  font-size: var(--text-base);
-  font-weight: 700;
-  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.02em;
 }
 
 .ayush-col-card__detail {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  line-height: 1.4;
+  font-size: 13px;
+  color: #e2e8f0;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.ayush-col-card__detail span {
+  color: #fcd34d;
+  font-weight: 600;
 }
 
 .ayush-ashtavidha-bar {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 23, 42, 0.92);
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
   border-radius: var(--radius-md);
-  padding: var(--space-3);
+  padding: 14px 18px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .ayush-ashtavidha-bar__title {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   text-transform: uppercase;
   color: #38bdf8;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .ayush-ashtavidha-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .ayush-exam-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+  transition: all var(--transition-fast);
 }
 
 .ayush-exam-chip.active {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.4);
-  color: #6ee7b7;
+  background: #065f46;
+  border-color: #34d399;
+  color: #f8fafc;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 /* ── Clinical Laboratory Outlier Cards & Panic Alerts ── */
@@ -1281,5 +1296,305 @@
 
 .dir-item__phone:hover {
   background: rgba(8, 145, 178, 0.2);
+}
+
+/* ── Screen: IVR Telephony & Mobile Voice Studio ── */
+.ivr-screen {
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  background: #0b132b;
+  color: #f8fafc;
+  min-height: 100vh;
+}
+
+.ivr-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.ivr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ivr-header__title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ivr-header__subtitle {
+  font-size: 14px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.ivr-studio-grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .ivr-studio-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ivr-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ivr-card__title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Presets */
+.ivr-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ivr-preset-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ivr-preset-btn:hover {
+  background: rgba(8, 145, 178, 0.15);
+  border-color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.ivr-preset-btn.active {
+  background: rgba(8, 145, 178, 0.25);
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px #38bdf8;
+}
+
+.ivr-preset-btn__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.ivr-preset-btn__meta {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Dialer Form */
+.ivr-dialer-row {
+  display: flex;
+  gap: 10px;
+}
+
+.ivr-input {
+  flex: 1;
+  padding: 12px 16px;
+  background: #0f172a;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  font-size: 15px;
+  font-family: var(--font-mono);
+  outline: none;
+}
+
+.ivr-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+/* Call Simulation Audio Box */
+.ivr-call-box {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1.5px solid #10b981;
+  border-radius: var(--radius-md);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ivr-call-box__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6ee7b7;
+}
+
+.ivr-call-box__speech {
+  font-size: 14px;
+  color: #f8fafc;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid #38bdf8;
+}
+
+/* 4-Step Waterfall Visualizer Nodes */
+.waterfall-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+}
+
+.waterfall-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: all var(--transition-base);
+}
+
+.waterfall-step.active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+}
+
+.waterfall-step.bypassed {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.waterfall-step__num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.waterfall-step.active .waterfall-step__num {
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 12px #10b981;
+}
+
+.waterfall-step__content {
+  flex: 1;
+}
+
+.waterfall-step__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.waterfall-step__desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.waterfall-step__badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.waterfall-step__badge--matched {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.waterfall-step__badge--skipped {
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+/* Assigned Clinic Card */
+.clinic-resolution-card {
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.2) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1.5px solid #0891b2;
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clinic-resolution-card__name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #38bdf8;
+}
+
+.clinic-resolution-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  font-size: 12px;
+}
+
+.clinic-resolution-grid div span {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.clinic-resolution-grid div strong {
+  color: #f1f5f9;
+  font-size: 13px;
 }
 

@@ -56,6 +56,10 @@ class EncounterSummary(BaseModel):
     fact_count: int = 0
     has_red_flags: bool = False
     summary_text: Optional[str] = None
+    patient_name: Optional[str] = None
+    patient_age: Optional[int] = None
+    patient_gender: Optional[str] = None
+    abha_id: Optional[str] = None
 
 
 class EncounterStatusUpdate(BaseModel):

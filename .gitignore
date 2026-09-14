@@ -58,3 +58,4 @@ Thumbs.db
 # Scratch and agent local workspace artifacts
 scratch/
 .agents/
+platform-tools/

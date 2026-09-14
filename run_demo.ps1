@@ -33,6 +33,15 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm --prefix fron
 
 Start-Sleep -Seconds 3
 
+Write-Host "[4/4] Configuring Android USB Port Forwarding (ADB Reverse)..." -ForegroundColor Green
+$adbPath = "E:\sihpatientracking\platform-tools\adb.exe"
+if (Test-Path $adbPath) {
+    & $adbPath start-server | Out-Null
+    & $adbPath reverse tcp:8000 tcp:8000 | Out-Null
+    & $adbPath reverse tcp:5173 tcp:5173 | Out-Null
+    Write-Host " ADB reverse port forwarding configured for Port 8000 and Port 5173!" -ForegroundColor Yellow
+}
+
 Write-Host "`n==============================================================================" -ForegroundColor Cyan
 Write-Host " SYSTEM ONLINE! All services running:" -ForegroundColor Green
 Write-Host " - Dual-Sided Web Hub:       http://localhost:5173/?view=hub" -ForegroundColor White
@@ -41,6 +50,8 @@ Write-Host " - Doctor Workstation:        http://localhost:5173/?view=doctor (PI
 Write-Host " - Hospital Kiosk Terminal:   http://localhost:5173/" -ForegroundColor White
 Write-Host " - Mobile BYOD View:          http://localhost:5173/mobile.html" -ForegroundColor White
 Write-Host " - OpenAPI Documentation:     http://localhost:8000/docs" -ForegroundColor White
+Write-Host " - Android Device (USB):      http://localhost:8000 & http://localhost:5173" -ForegroundColor White
+Write-Host " - Standalone ADB Forward:    run .\adb_forward.ps1" -ForegroundColor White
 Write-Host "==============================================================================" -ForegroundColor Cyan
 
 Start-Process "http://localhost:5173/?view=hub"

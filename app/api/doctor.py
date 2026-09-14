@@ -45,15 +45,21 @@ async def get_doctor_queue(db=Depends(get_db)):
     """
     Get the doctor's waiting queue with triage intelligence.
 
-    Each patient entry includes a 30-word severity-first summary,
-    medication conflict flags, and red flag indicators.
+    Each patient entry includes patient name, demographics, a 30-word
+    severity-first summary, medication conflict flags, and red flag indicators.
     """
-    # Get all waiting/completed encounters
+    # Get all waiting/completed encounters with resolved patient identity
     rows = await db.execute(
         """
-        SELECT e.*, qt.token as queue_token, qt.position
+        SELECT e.*, qt.token as queue_token, qt.position,
+               COALESCE(p.name, u.full_name, 'Patient ' || qt.token) as patient_name,
+               COALESCE(p.age, 50) as patient_age,
+               COALESCE(p.gender, 'unspecified') as patient_gender,
+               COALESCE(e.department, 'General Medicine') as resolved_department
         FROM encounters e
         JOIN queue_tokens qt ON e.id = qt.encounter_id
+        LEFT JOIN patients p ON e.patient_id = p.id
+        LEFT JOIN users u ON (e.patient_id = u.id OR e.patient_id = u.abha_id)
         WHERE e.status IN ('COMPLETED', 'IN_PROGRESS')
         AND qt.status = 'WAITING'
         ORDER BY
@@ -86,17 +92,29 @@ async def get_doctor_queue(db=Depends(get_db)):
         medications = [r["value"] for r in await med_rows.fetchall()]
         drug_alerts = DrugInteractionEngine.check_prescriptions(medications)
 
-        # Get chief complaint for summary
+        # Get chief complaint and key symptoms for coherent clinical summary
         cc_row = await db.execute(
-            "SELECT value, patient_words FROM clinical_facts WHERE encounter_id = ? AND category = 'chief_complaint' LIMIT 1",
+            "SELECT value, normalized_concept, patient_words FROM clinical_facts WHERE encounter_id = ? AND category = 'chief_complaint' LIMIT 1",
             (encounter_id,)
         )
         cc = await cc_row.fetchone()
 
-        # Generate 30-word triage summary
+        sym_rows = await db.execute(
+            "SELECT normalized_concept, value FROM clinical_facts WHERE encounter_id = ? AND category = 'symptom' AND is_negated = 0 LIMIT 2",
+            (encounter_id,)
+        )
+        sym_list = await sym_rows.fetchall()
+
+        # Generate articulate, professional clinical triage summary
         summary_parts = []
         if cc:
-            summary_parts.append(cc["patient_words"] or cc["value"])
+            cc_label = cc["normalized_concept"] or cc["value"]
+            summary_parts.append(cc_label)
+
+        for s in sym_list:
+            s_label = s["normalized_concept"] or s["value"]
+            if s_label and s_label not in summary_parts:
+                summary_parts.append(s_label)
 
         # Add stopped medication info
         stopped_rows = await db.execute(
@@ -108,9 +126,11 @@ async def get_doctor_queue(db=Depends(get_db)):
             summary_parts.append(f"Stopped: {', '.join(stopped)}")
 
         if drug_alerts:
-            summary_parts.append(f"⚠ {len(drug_alerts)} drug interaction(s)")
+            summary_parts.append(f"⚠ {len(drug_alerts)} drug conflict(s)")
 
-        summary_30 = " | ".join(summary_parts)[:150]
+        summary_30 = " • ".join(summary_parts)[:150]
+        if not summary_30:
+            summary_30 = "Clinical intake completed — awaiting physician examination"
 
         has_red_flags = enc["severity_badge"] == "RED"
         has_med_conflict = len(drug_alerts) > 0
@@ -119,13 +139,17 @@ async def get_doctor_queue(db=Depends(get_db)):
             encounter_id=encounter_id,
             token_number=enc["queue_token"],
             severity_badge=enc["severity_badge"],
-            summary_30_words=summary_30 or "Intake in progress",
+            summary_30_words=summary_30,
             channel=enc["channel"],
             fact_count=fact_count,
             has_medication_conflict=has_med_conflict,
             has_red_flags=has_red_flags,
             created_at=enc["created_at"],
-            language=enc["language"] if "language" in enc.keys() and enc["language"] else "hi"
+            language=enc["language"] if "language" in enc.keys() and enc["language"] else "hi",
+            patient_name=enc["patient_name"],
+            patient_age=enc["patient_age"],
+            patient_gender=enc["patient_gender"],
+            department=enc["resolved_department"]
         ))
 
     return DoctorQueueResponse(
@@ -220,6 +244,54 @@ async def get_patient_detail(encounter_id: str, db=Depends(get_db)):
     )
     docs = [dict(d) for d in await doc_rows.fetchall()]
 
+    # Lookup patient demographics
+    pat = None
+    if enc.get("patient_id"):
+        pat_row = await db.execute("SELECT * FROM patients WHERE id = ?", (enc["patient_id"],))
+        pat_raw = await pat_row.fetchone()
+        if pat_raw:
+            pat = dict(pat_raw)
+        else:
+            u_row = await db.execute(
+                "SELECT * FROM users WHERE id = ? OR abha_id = ?",
+                (enc["patient_id"], enc["patient_id"])
+            )
+            u_raw = await u_row.fetchone()
+            if u_raw:
+                u = dict(u_raw)
+                pat = {
+                    "name": u["full_name"],
+                    "age": 50,
+                    "gender": "male",
+                    "abha_id": u.get("abha_id"),
+                    "phone": u.get("mobile")
+                }
+
+    patient_name = pat["name"] if pat else f"Patient {enc['token_number']}"
+    patient_age = pat.get("age") if pat else None
+    patient_gender = pat.get("gender") if pat else None
+    resolved_abha = (pat.get("abha_id") if pat else None) or enc.get("abha_id")
+
+    # Build 30-second articulate clinical triage synthesis narrative
+    age_gender_str = f"{patient_age}-year-old {patient_gender}" if (patient_age and patient_gender) else "Patient"
+    channel_display = "Toll-Free Phone IVR" if enc["channel"] == "ivr_phone" else ("Mobile BYOD" if enc["channel"] == "android_byod" else "OPD Kiosk")
+
+    # Extract symptoms & complaints
+    complaints = [f["normalized_concept"] or f["value"] for f in facts_dicts if f["category"] == "chief_complaint" and not f["is_negated"]]
+    symptoms = [f["normalized_concept"] or f["value"] for f in facts_dicts if f["category"] == "symptom" and not f["is_negated"]]
+    all_symptoms = complaints + [s for s in symptoms if s not in complaints]
+    symptoms_text = ", ".join(all_symptoms[:3]) if all_symptoms else "routine clinical checkup"
+
+    # Extract medications
+    meds_text = f"Taking {', '.join(medications[:3])}." if medications else "No chronic medications currently active."
+    if stopped_meds:
+        meds_text += f" (Discontinued: {', '.join(stopped_meds)})."
+
+    # Alerts & AYUSH note
+    alerts_note = f"⚠ Critical Safety: {len(drug_alerts)} potential drug-drug conflict(s) detected." if drug_alerts else ""
+
+    summary_narrative = f"{patient_name} ({age_gender_str}) presented via {channel_display} with {symptoms_text}. {meds_text} {alerts_note}".strip()
+
     encounter_summary = EncounterSummary(
         encounter_id=enc["id"],
         token_number=enc["token_number"],
@@ -230,7 +302,12 @@ async def get_patient_detail(encounter_id: str, db=Depends(get_db)):
         department=enc["department"],
         created_at=enc["created_at"],
         fact_count=fact_count,
-        has_red_flags=enc["severity_badge"] == "RED"
+        has_red_flags=enc["severity_badge"] == "RED",
+        summary_text=summary_narrative,
+        patient_name=patient_name,
+        patient_age=patient_age,
+        patient_gender=patient_gender,
+        abha_id=resolved_abha
     )
 
     # --- Clinical Facts Mapping ---

@@ -87,7 +87,7 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-3.6-flash",
+                model="gemini-flash-latest",
                 contents=prompt,
                 config=config
             ),
@@ -105,7 +105,7 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-3.6-flash",
+                model="gemini-flash-latest",
                 contents=prompt,
                 config=config
             ),
@@ -138,7 +138,7 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-3.6-flash",
+                model="gemini-flash-latest",
                 contents=[
                     image_part,
                     "Extract all medications and their 2D bounding boxes [ymin, xmin, ymax, xmax] from this prescription."

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/state/intake_provider.dart';
+import '../../app/state/encounter_provider.dart';
 import '../../data/datasources/api_datasource.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
@@ -18,9 +19,15 @@ class SourceDocumentScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final intake = context.watch<IntakeProvider>();
     final rawUrl = intake.lastDocumentResult?.highlightedImageUrl;
-    final liveImageUrl = (rawUrl != null && rawUrl.isNotEmpty)
-        ? rawUrl.replaceFirst('http://localhost:8000', ApiDataSource.defaultBaseUrl)
-        : null;
+    String? liveImageUrl;
+    if (rawUrl != null && rawUrl.isNotEmpty) {
+      if (rawUrl.startsWith('http')) {
+        liveImageUrl = rawUrl.replaceFirst('http://localhost:8000', ApiDataSource.defaultBaseUrl);
+      } else {
+        final path = rawUrl.startsWith('/') ? rawUrl : '/$rawUrl';
+        liveImageUrl = '${ApiDataSource.defaultBaseUrl}$path';
+      }
+    }
 
     return MediScaffold(
       title: 'Original Prescription',
@@ -52,10 +59,10 @@ class SourceDocumentScreen extends StatelessWidget {
                             if (progress == null) return child;
                             return const Center(child: CircularProgressIndicator());
                           },
-                          errorBuilder: (ctx, err, stack) => _buildSchematicPrescription(),
+                          errorBuilder: (ctx, err, stack) => _buildDynamicPrescription(context, intake),
                         ),
                       )
-                    : _buildSchematicPrescription(),
+                    : _buildDynamicPrescription(context, intake),
               ),
             ),
           ),
@@ -68,10 +75,13 @@ class SourceDocumentScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSchematicPrescription() {
+  Widget _buildDynamicPrescription(BuildContext context, IntakeProvider intake) {
+    final encounter = context.read<EncounterProvider>();
+    final meds = intake.extractedMedications;
+
     return Container(
       width: 320,
-      height: 440,
+      constraints: const BoxConstraints(minHeight: 380),
       padding: const EdgeInsets.all(MediDimensions.space20),
       decoration: BoxDecoration(
         color: MediColors.white,
@@ -79,56 +89,67 @@ class SourceDocumentScreen extends StatelessWidget {
         boxShadow: MediDimensions.elevation2,
         border: Border.all(color: MediColors.borderStrong),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Prescription Header & Doctor Info
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Prescription Header & Hospital Info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('CITY CIVIL HOSPITAL OPD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  Text('Date: 10/09/2026', style: TextStyle(fontSize: 12, color: MediColors.textMuted)),
-                ],
-              ),
-              const Divider(),
-              const Text('Patient: Ram Lal (M/45)', style: TextStyle(fontSize: 13)),
-              const SizedBox(height: 12),
-              const Text('Rx', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: MediColors.brandPrimary)),
-              const SizedBox(height: 12),
-              const Text('1. Tab Paracetamol 650mg BD', style: TextStyle(fontSize: 15)),
-              const SizedBox(height: 16),
-              const Text('2. Tab Cetirizine 10mg HS', style: TextStyle(fontSize: 15)),
-              const SizedBox(height: 16),
-              const Text('3. Syp Antacid 10ml TDS', style: TextStyle(fontSize: 15)),
-              const Spacer(),
-              const Align(
-                alignment: Alignment.bottomRight,
-                child: Text('Dr. S. Sharma\nReg: 48291', textAlign: TextAlign.right, style: TextStyle(fontSize: 12)),
-              ),
+              const Text('CIVIL HOSPITAL OPD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: MediColors.brandPrimary)),
+              Text('Token: ${encounter.tokenNumber ?? "A-101"}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: MediColors.textMuted)),
             ],
           ),
-          // Evidence Bounding Box Highlight Overlay
-          Positioned(
-            top: 110,
-            left: 0,
-            right: 40,
-            height: 36,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: MediColors.brandPrimary, width: 2.5),
-                color: MediColors.blue600.withValues(alpha: 0.15),
-                borderRadius: MediDimensions.borderSm,
-              ),
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 6),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                color: MediColors.brandPrimary,
-                child: const Text('Paracetamol 650mg', style: TextStyle(color: MediColors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-            ),
+          const Divider(),
+          Text('Encounter ID: ${encounter.encounterId ?? "Active Encounter"}', style: const TextStyle(fontSize: 12, color: MediColors.textMuted)),
+          const SizedBox(height: 8),
+          const Text('Rx (Prescribed Medications)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: MediColors.brandPrimary)),
+          const SizedBox(height: 12),
+          if (meds.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Text('No medications extracted from this document yet.', style: TextStyle(color: MediColors.textMuted, fontStyle: FontStyle.italic)),
+            )
+          else
+            ...meds.asMap().entries.map((entry) {
+              final idx = entry.key + 1;
+              final med = entry.value;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: MediColors.brandPrimary, width: 2.0),
+                  color: MediColors.blue50,
+                  borderRadius: MediDimensions.borderSm,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '$idx. ${med.name} ${med.dose ?? ""} ${med.frequency ?? ""}',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: MediColors.brandPrimary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${(med.confidence * 100).toInt()}% OCR',
+                        style: const TextStyle(color: MediColors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          const SizedBox(height: 16),
+          const Align(
+            alignment: Alignment.bottomRight,
+            child: Text('Verified by Clinical OCR\nProvenance: No Receipt, No Fact', textAlign: TextAlign.right, style: TextStyle(fontSize: 11, color: MediColors.textMuted)),
           ),
         ],
       ),

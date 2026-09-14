@@ -292,6 +292,16 @@ def seed_database(reset: bool = False):
             (pat["id"], pat["name"], pat["age"], pat["gender"], pat["phone"], pat["language"], pat["abha_id"], pat["hospital_mrn"])
         )
 
+        # Insert User account for Patient Portal login
+        clean_mobile = pat["phone"].replace(" ", "").replace("+91", "").replace("-", "")
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO users (id, role, full_name, mobile, abha_id, password_hash, hospital_name, hospital_phone)
+            VALUES (?, 'patient', ?, ?, ?, 'patient123', 'All India Institute of Ayurveda (AIIA), New Delhi', '+91-11-26950401')
+            """,
+            (pat["id"], pat["name"], clean_mobile, pat["abha_id"])
+        )
+
         # Insert Encounter
         conn.execute(
             """

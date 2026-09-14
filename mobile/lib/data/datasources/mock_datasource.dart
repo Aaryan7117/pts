@@ -91,11 +91,115 @@ class MockDataSource {
       'mr': 'चक्कर नाही (Dizziness Denied)',
     };
 
+    final words = patientWords?.trim() ?? '';
+
+    if (words.isNotEmpty) {
+      final List<ExtractedFactSummary> facts = [];
+      final lower = words.toLowerCase();
+
+      if (words.contains('उल्टी') || words.contains('வாந்தி') || words.contains('వాంతి') || words.contains('उलटी') || lower.contains('vomit') || lower.contains('nausea')) {
+        facts.add(const ExtractedFactSummary(
+          category: 'chief_complaint',
+          field: 'vomiting',
+          concept: 'Nausea and Vomiting (उल्टी / मिचली)',
+          conceptCode: 'SNOMED:422400008',
+          duration: '1-2 days',
+          confidence: 0.96,
+          provenance: 'EMBEDDING',
+        ));
+      }
+      if (words.contains('पेट दर्द') || words.contains('வயிற்று வலி') || words.contains('కడుపు నొప్పి') || words.contains('पोटदुखी') || lower.contains('stomach') || lower.contains('abdominal')) {
+        facts.add(const ExtractedFactSummary(
+          category: 'chief_complaint',
+          field: 'abdominal_pain',
+          concept: 'Abdominal Pain (पेट दर्द)',
+          conceptCode: 'SNOMED:21522001',
+          duration: '2 days',
+          confidence: 0.95,
+          provenance: 'EMBEDDING',
+        ));
+      }
+      if (words.contains('बुखार') || words.contains('காய்ச்சல்') || words.contains('జ్వరం') || words.contains('ताप') || lower.contains('fever') || lower.contains('pyrexia')) {
+        facts.add(ExtractedFactSummary(
+          category: 'chief_complaint',
+          field: 'fever',
+          concept: feverConcept[language] ?? 'Pyrexia / Fever (बुखार)',
+          conceptCode: 'SNOMED:386661006',
+          duration: '2 days',
+          confidence: 0.93,
+          provenance: 'EMBEDDING',
+        ));
+      }
+      if (words.contains('खांसी') || words.contains('இருமல்') || words.contains('దగ్గు') || words.contains('खोकला') || lower.contains('cough')) {
+        facts.add(const ExtractedFactSummary(
+          category: 'chief_complaint',
+          field: 'cough',
+          concept: 'Cough (खांसी)',
+          conceptCode: 'SNOMED:49727002',
+          duration: '3 days',
+          confidence: 0.94,
+          provenance: 'EMBEDDING',
+        ));
+      }
+      if (words.contains('छाती') || words.contains('நெஞ்சு') || words.contains('ఛాతీ') || words.contains('छातीत') || lower.contains('chest')) {
+        facts.add(const ExtractedFactSummary(
+          category: 'chief_complaint',
+          field: 'chest_pain',
+          concept: 'Chest Pain (छाती में दर्द)',
+          conceptCode: 'SNOMED:29857009',
+          duration: '1 day',
+          confidence: 0.97,
+          provenance: 'EMBEDDING',
+        ));
+      }
+      if (words.contains('सिरदर्द') || words.contains('தலைவலி') || words.contains('తలనొప్పి') || words.contains('डोकेदुखी') || lower.contains('headache')) {
+        facts.add(ExtractedFactSummary(
+          category: 'chief_complaint',
+          field: 'headache',
+          concept: headacheConcept[language] ?? 'Severe Headache (तीव्र सिरदर्द)',
+          conceptCode: 'SNOMED:25064002',
+          duration: '2 days',
+          confidence: 0.94,
+          provenance: 'EMBEDDING',
+        ));
+      }
+      if (words.contains('चक्कर') || words.contains('தலைச்சுற்றல்') || words.contains('తలతిరగడం') || lower.contains('dizziness')) {
+        facts.add(const ExtractedFactSummary(
+          category: 'symptom',
+          field: 'dizziness',
+          concept: 'Dizziness / Vertigo (चक्कर आना)',
+          conceptCode: 'SNOMED:404640003',
+          confidence: 0.92,
+          provenance: 'EMBEDDING',
+        ));
+      }
+
+      if (facts.isEmpty) {
+        facts.add(ExtractedFactSummary(
+          category: 'chief_complaint',
+          field: 'reported_symptom',
+          concept: words,
+          confidence: 0.90,
+          provenance: 'PATIENT_VOICE',
+        ));
+      }
+
+      return AudioTurnResponse(
+        sessionId: 'call-sess-live-001',
+        turnIndex: turnIndex + 1,
+        patientTranscript: words,
+        extractedFacts: facts,
+        nextQuestionText: turnIndex == 0 ? (q1[language] ?? q1['en']!) : (q2[language] ?? q2['en']!),
+        isCompleted: turnIndex >= 1,
+      );
+    }
+
+    // Default mock turn when patientWords is not provided
     if (turnIndex == 0) {
       return AudioTurnResponse(
         sessionId: 'call-sess-mock-001',
         turnIndex: 1,
-        patientTranscript: patientWords ?? (defaultTranscript1[language] ?? defaultTranscript1['en']!),
+        patientTranscript: defaultTranscript1[language] ?? defaultTranscript1['en']!,
         extractedFacts: [
           ExtractedFactSummary(
             category: 'chief_complaint',
@@ -123,7 +227,7 @@ class MockDataSource {
       return AudioTurnResponse(
         sessionId: 'call-sess-mock-001',
         turnIndex: 2,
-        patientTranscript: patientWords ?? (defaultTranscript2[language] ?? defaultTranscript2['en']!),
+        patientTranscript: defaultTranscript2[language] ?? defaultTranscript2['en']!,
         extractedFacts: [
           ExtractedFactSummary(
             category: 'symptom',
@@ -186,32 +290,63 @@ class MockDataSource {
     ];
   }
 
-  static DocumentUploadResponse getMockDocumentUpload() {
+  static DocumentUploadResponse getMockDocumentUpload({String filename = 'prescription.jpg'}) {
+    final lower = filename.toLowerCase();
+    if (lower.contains('rajesh')) {
+      return const DocumentUploadResponse(
+        documentId: 'doc-demo-rajesh-01',
+        ocrStatus: 'SUCCESS',
+        extractedMedications: [
+          ExtractedMedication(name: 'Telmisartan', dose: '40mg', frequency: '1-0-0 (सुबह)', confidence: 0.96),
+          ExtractedMedication(name: 'Amlodipine', dose: '5mg', frequency: '0-0-1 (रात)', confidence: 0.94),
+          ExtractedMedication(name: 'Ecosprin', dose: '75mg', frequency: '0-1-0 (दोपहर)', confidence: 0.95),
+        ],
+        flaggedInteractions: [],
+        highlightedImageUrl: 'http://localhost:8000/static/evidence/doc-demo-rajesh-rx-boxed.jpg',
+        rawOcrText: 'Rx\nTab Telmisartan 40mg OD\nTab Amlodipine 5mg OD\nTab Ecosprin 75mg OD\nDr. V. Verma (Cardiology)',
+        overallOcrConfidence: 0.95,
+      );
+    } else if (lower.contains('priya')) {
+      return const DocumentUploadResponse(
+        documentId: 'doc-demo-priya-01',
+        ocrStatus: 'SUCCESS',
+        extractedMedications: [
+          ExtractedMedication(name: 'Pantoprazole', dose: '40mg', frequency: '1-0-0 (खाली पेट)', confidence: 0.96),
+          ExtractedMedication(name: 'Domperidone', dose: '10mg', frequency: '1-0-1 (खाने से पहले)', confidence: 0.93),
+        ],
+        flaggedInteractions: [],
+        highlightedImageUrl: 'http://localhost:8000/static/evidence/doc-demo-priya-rx-boxed.jpg',
+        rawOcrText: 'Rx\nTab Pantoprazole 40mg OD\nTab Domperidone 10mg BD\nDr. P. Nair (Gastro)',
+        overallOcrConfidence: 0.94,
+      );
+    } else if (lower.contains('sunita')) {
+      return const DocumentUploadResponse(
+        documentId: 'doc-demo-sunita-01',
+        ocrStatus: 'SUCCESS',
+        extractedMedications: [
+          ExtractedMedication(name: 'Fasting Plasma Glucose', dose: '382 mg/dL', frequency: 'PANIC ALERT', confidence: 0.99),
+          ExtractedMedication(name: 'HbA1c Glycated Hemoglobin', dose: '11.4 %', frequency: 'UNCONTROLLED', confidence: 0.98),
+        ],
+        flaggedInteractions: ['CRITICAL PANIC VALUE: Fasting Blood Glucose > 300 mg/dL'],
+        highlightedImageUrl: 'http://localhost:8000/static/evidence/doc-demo-sunita-lab-boxed.jpg',
+        rawOcrText: 'BIOCHEMISTRY REPORT\nFasting Blood Sugar: 382 mg/dL [REF: 70-100]\nHbA1c: 11.4 % [REF: < 5.7]\nCity Pathology Labs',
+        overallOcrConfidence: 0.98,
+      );
+    }
+
+    // Default to Lakshmi Devi (Diabetes OPD Rx)
     return const DocumentUploadResponse(
-      documentId: 'doc-mock-001',
+      documentId: 'doc-demo-lakshmi-01',
       ocrStatus: 'SUCCESS',
       extractedMedications: [
-        ExtractedMedication(
-          name: 'Paracetamol',
-          dose: '650mg',
-          frequency: '1-0-1 (सुबह-शाम)',
-          sourceLines: [2, 3],
-          box2d: [150, 45, 185, 320],
-          confidence: 0.95,
-        ),
-        ExtractedMedication(
-          name: 'Cetirizine',
-          dose: '10mg',
-          frequency: '0-0-1 (रात में)',
-          sourceLines: [5],
-          box2d: [220, 50, 255, 290],
-          confidence: 0.92,
-        ),
+        ExtractedMedication(name: 'Metformin', dose: '500mg', frequency: '1-0-1 (सुबह-शाम)', confidence: 0.97),
+        ExtractedMedication(name: 'Glimepiride', dose: '1mg', frequency: '1-0-0 (सुबह नाश्ते से पहले)', confidence: 0.95),
+        ExtractedMedication(name: 'Atorvastatin', dose: '10mg', frequency: '0-0-1 (रात में)', confidence: 0.93),
       ],
-      flaggedInteractions: [],
-      highlightedImageUrl: null,
-      rawOcrText: 'Rx\nParacetamol 650mg BD\nCetirizine 10mg HS\nDr. S. Sharma',
-      overallOcrConfidence: 0.93,
+      flaggedInteractions: ['Metformin + Glimepiride: Monitor for hypoglycemia'],
+      highlightedImageUrl: 'http://localhost:8000/static/evidence/doc-demo-lakshmi-rx-boxed.jpg',
+      rawOcrText: 'Rx\nTab Metformin 500mg BD\nTab Glimepiride 1mg OD\nTab Atorvastatin 10mg HS\nDr. S. Sharma (General Medicine)',
+      overallOcrConfidence: 0.96,
     );
   }
 
