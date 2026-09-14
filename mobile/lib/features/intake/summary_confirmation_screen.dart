@@ -26,7 +26,7 @@ class SummaryConfirmationScreen extends StatelessWidget {
     final displayFacts = intake.facts;
 
     return MediScaffold(
-      title: 'Confirm Information',
+      title: lang.translate('summary_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: Column(
@@ -38,7 +38,7 @@ class SummaryConfirmationScreen extends StatelessWidget {
           ),
           const SizedBox(height: MediDimensions.space8),
           Text(
-            'Check each item. Tap "Correct" to confirm or "Wrong" if incorrect.',
+            lang.translate('summary_sub'),
             style: MediTypography.bodyMedium,
           ),
           const SizedBox(height: MediDimensions.space20),
@@ -53,15 +53,15 @@ class SummaryConfirmationScreen extends StatelessWidget {
                           const Icon(Icons.notes_rounded, size: 64, color: MediColors.slate400),
                           const SizedBox(height: 16),
                           Text(
-                            'No Symptoms Recorded Yet\n(कोई लक्षण दर्ज नहीं हुआ)',
+                            lang.translate('no_symptoms_title'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: MediColors.textMuted),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: MediColors.textMuted),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap "+ Add Another Symptom" below to speak or type your complaints.',
+                            lang.translate('no_symptoms_sub'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14, color: MediColors.textMuted),
+                            style: const TextStyle(fontSize: 14, color: MediColors.textMuted),
                           ),
                         ],
                       ),
@@ -85,15 +85,20 @@ class SummaryConfirmationScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryActionButton(
-            label: 'Confirm & Next (आगे बढ़ें)',
+            label: lang.translate('confirm_next'),
             icon: Icons.check_circle_rounded,
             onPressed: () {
               // If patient reported chest pain or emergency symptom, route to triage
+              // Supports SNOMED concept code and English, Hindi, Tamil, Telugu, Marathi terms
               final hasEmergencySymptom = displayFacts.any(
                 (f) =>
+                    f.conceptCode == 'SNOMED:29857009' ||
                     f.value.toLowerCase().contains('chest') ||
                     f.value.toLowerCase().contains('heart') ||
                     f.value.toLowerCase().contains('छाती') ||
+                    f.value.toLowerCase().contains('நெஞ்சு') ||
+                    f.value.toLowerCase().contains('ఛాతీ') ||
+                    f.value.toLowerCase().contains('छातीत') ||
                     f.value.toLowerCase().contains('cardiac'),
               );
 
@@ -107,7 +112,7 @@ class SummaryConfirmationScreen extends StatelessWidget {
           ),
           const SizedBox(height: MediDimensions.space8),
           SecondaryActionButton(
-            label: '+ Add Another Symptom (अन्य लक्षण)',
+            label: lang.translate('add_another_symptom'),
             onPressed: () => Navigator.of(context).pushNamed('/intake'),
           ),
         ],

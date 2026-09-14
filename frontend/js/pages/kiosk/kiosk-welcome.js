@@ -6,6 +6,7 @@
 import { store } from '../../store.js';
 import { DoctorAvatar } from '../../components/avatar-3d.js';
 import { kioskApi } from '../../api/kiosk.api.js';
+import { i18n } from '../../i18n.js';
 
 let avatarInstance = null;
 
@@ -13,11 +14,9 @@ export function renderKioskWelcome() {
   const state = store.getState();
   const lang = state.kiosk.language || 'hi';
 
-  const welcomeHeading = lang === 'hi' ? 'आयुष ओपीडी में आपका स्वागत है' : 'Welcome to MediKiosk OPD';
-  const welcomeSub = lang === 'hi' 
-    ? 'डॉक्टर से मिलने से पहले, अपनी स्वास्थ्य समस्याओं को सरल शब्दों में दर्ज करें।'
-    : 'Before meeting your physician, tell us about your health concerns in simple words.';
-  const startBtnText = lang === 'hi' ? 'शुरू करें / START' : 'START INTAKE / शुरू करें';
+  const welcomeHeading = i18n.t('welcome_heading', lang);
+  const welcomeSub = i18n.t('welcome_sub', lang);
+  const startBtnText = i18n.t('start_intake', lang);
 
   return `
     <div class="kiosk-shell">

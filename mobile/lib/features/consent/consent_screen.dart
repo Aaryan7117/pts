@@ -26,7 +26,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
     final lang = context.watch<LanguageProvider>();
 
     return MediScaffold(
-      title: 'Consent & Privacy',
+      title: lang.translate('consent_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
@@ -67,16 +67,16 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Audio Explanation (सुनें)',
-                          style: TextStyle(
+                        Text(
+                          lang.translate('audio_explanation_title'),
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: MediColors.brandPrimary,
                           ),
                         ),
                         Text(
-                          _isPlayingAudio ? 'Playing notice in your language...' : 'Tap to hear privacy terms aloud',
+                          _isPlayingAudio ? lang.translate('playing_notice') : lang.translate('audio_explanation_sub'),
                           style: MediTypography.bodyMedium.copyWith(fontSize: 15),
                         ),
                       ],
@@ -117,15 +117,15 @@ class _ConsentScreenState extends State<ConsentScreen> {
                   const SizedBox(height: MediDimensions.space20),
                   _buildBullet(
                     Icons.lock_rounded,
-                    'Protected under Digital Personal Data Protection (DPDP) Act.',
+                    lang.translate('dpdp_bullet'),
                   ),
                   _buildBullet(
                     Icons.medical_services_rounded,
-                    'Used only by your attending OPD doctor during this visit.',
+                    lang.translate('doctor_use_bullet'),
                   ),
                   _buildBullet(
                     Icons.auto_delete_rounded,
-                    'Audio recordings and raw documents are automatically purged.',
+                    lang.translate('auto_purge_bullet'),
                   ),
                 ],
               ),
@@ -143,7 +143,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
           ),
           const SizedBox(height: MediDimensions.space12),
           SecondaryActionButton(
-            label: 'Decline & Exit (अस्वीकार)',
+            label: lang.translate('decline_exit'),
             onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
           ),
         ],

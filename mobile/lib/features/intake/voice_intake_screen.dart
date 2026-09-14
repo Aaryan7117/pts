@@ -21,15 +21,15 @@ class VoiceIntakeScreen extends StatelessWidget {
     final intake = context.watch<IntakeProvider>();
 
     final quickChips = [
-      'Fever (बुखार)',
-      'Severe Headache (सिरदर्द)',
-      'Cough & Cold (खांसी)',
-      'Stomach Pain (पेट दर्द)',
-      'Joint Pain (जोड़ों का दर्द)',
+      {'key': 'chip_fever', 'label': lang.translate('chip_fever')},
+      {'key': 'chip_headache', 'label': lang.translate('chip_headache')},
+      {'key': 'chip_cough', 'label': lang.translate('chip_cough')},
+      {'key': 'chip_stomach_pain', 'label': lang.translate('chip_stomach_pain')},
+      {'key': 'chip_joint_pain', 'label': lang.translate('chip_joint_pain')},
     ];
 
     return MediScaffold(
-      title: 'Voice Intake',
+      title: lang.translate('voice_intake_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
@@ -99,24 +99,24 @@ class VoiceIntakeScreen extends StatelessWidget {
                     child: const Icon(Icons.call, color: MediColors.white, size: 24),
                   ),
                   const SizedBox(width: MediDimensions.space16),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Call AI Intake (फोन कॉल सुविधा)',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          lang.translate('call_intake_shortcut_title'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          'For elderly or hands-free conversational intake',
-                          style: TextStyle(fontSize: 13, color: MediColors.textMuted),
+                          lang.translate('voice_call_fast_track_sub'),
+                          style: const TextStyle(fontSize: 13, color: MediColors.textMuted),
                         ),
                       ],
                     ),
                   ),
                   TextButton(
                     onPressed: () => Navigator.of(context).pushNamed('/active_call'),
-                    child: const Text('CALL (कॉल)', style: TextStyle(fontWeight: FontWeight.w800)),
+                    child: Text(lang.translate('call_intake_shortcut_btn'), style: const TextStyle(fontWeight: FontWeight.w800)),
                   ),
                 ],
               ),
@@ -128,7 +128,7 @@ class VoiceIntakeScreen extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Or tap common symptoms (या स्पर्श करें):',
+                lang.translate('tap_symptom_chip_prompt'),
                 style: MediTypography.caption.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
@@ -138,12 +138,12 @@ class VoiceIntakeScreen extends StatelessWidget {
               runSpacing: 10,
               children: quickChips.map((chip) {
                 return ActionChip(
-                  label: Text(chip, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  label: Text(chip['label']!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   backgroundColor: MediColors.slate100,
                   side: const BorderSide(color: MediColors.border),
                   onPressed: () {
-                    intake.submitTurn(patientSpeech: chip);
+                    intake.submitTurn(patientSpeech: chip['label']!);
                     Navigator.of(context).pushNamed('/processing');
                   },
                 );
@@ -153,7 +153,7 @@ class VoiceIntakeScreen extends StatelessWidget {
         ),
       ),
       bottomBar: SecondaryActionButton(
-        label: 'Type Symptoms Manually (लिखकर बताएं)',
+        label: lang.translate('type_symptoms_link'),
         icon: Icons.keyboard_alt_outlined,
         onPressed: () => Navigator.of(context).pushNamed('/text_intake'),
       ),

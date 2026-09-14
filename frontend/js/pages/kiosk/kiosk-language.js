@@ -5,6 +5,7 @@
 
 import { store } from '../../store.js';
 import { tts } from '../../audio/tts-reader.js';
+import { i18n } from '../../i18n.js';
 
 const LANGUAGES = [
   { code: 'hi', native: 'हिन्दी', english: 'Hindi', preview: 'नमस्ते! आयुष ओपीडी में आपका स्वागत है।' },
@@ -26,9 +27,9 @@ export function renderKioskLanguage() {
             <div class="kiosk-step-indicator">
               Screen 02 · Step 1 of 6
             </div>
-            <h2 class="text-h2" style="margin-top:var(--space-4);">Select Language</h2>
-            <p style="font-size:14px; color:var(--text-secondary); margin-top:var(--space-2);">
-              All questions, synthetic speech readouts, and explain-back summaries will use this language.
+            <h2 id="kioskLangHeader" class="text-h2" style="margin-top:var(--space-4);">${i18n.t('select_language', currentLang)}</h2>
+            <p id="kioskLangSub" style="font-size:14px; color:var(--text-secondary); margin-top:var(--space-2);">
+              ${i18n.t('choose_language_sub', currentLang)}
             </p>
           </div>
 
@@ -43,8 +44,8 @@ export function renderKioskLanguage() {
         <!-- Right Pane: Language Choice Cards -->
         <div class="kiosk-right-pane">
           <div class="kiosk-task-canvas">
-            <h1 class="text-h1" style="margin-bottom:var(--space-2);">अपनी भाषा चुनें / Choose Language</h1>
-            <p class="text-body-lg" style="margin-bottom:var(--space-6);">Tap a card to hear an instant voice sample.</p>
+            <h1 id="kioskLangTitle" class="text-h1" style="margin-bottom:var(--space-2);">${i18n.t('choose_language_title', currentLang)}</h1>
+            <p class="text-body-lg" style="margin-bottom:var(--space-6);">Tap a card to select language and hear voice sample.</p>
 
             <div style="display:flex; flex-direction:column; gap:var(--space-4);">
               ${LANGUAGES.map(lang => `
@@ -65,9 +66,9 @@ export function renderKioskLanguage() {
           </div>
 
           <div class="kiosk-footer-bar">
-            <a href="#/kiosk/welcome" class="btn btn-secondary btn-lg">← Back</a>
+            <a href="#/kiosk/welcome" class="btn btn-secondary btn-lg">${i18n.t('back', currentLang)}</a>
             <button id="btnLanguageContinue" class="btn btn-primary btn-touch" style="min-width:260px; justify-content:center;">
-              Continue / आगे बढ़ें →
+              ${i18n.t('continue', currentLang)}
             </button>
           </div>
         </div>
@@ -78,6 +79,11 @@ export function renderKioskLanguage() {
 
 export function initKioskLanguage() {
   const cards = document.querySelectorAll('.choice-card[data-lang-code]');
+  const continueBtn = document.getElementById('btnLanguageContinue');
+  const headerEl = document.getElementById('kioskLangHeader');
+  const subEl = document.getElementById('kioskLangSub');
+  const titleEl = document.getElementById('kioskLangTitle');
+
   cards.forEach(card => {
     card.addEventListener('click', () => {
       const code = card.getAttribute('data-lang-code');
@@ -87,6 +93,12 @@ export function initKioskLanguage() {
       cards.forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
 
+      // Dynamically update strings on selection
+      if (continueBtn) continueBtn.textContent = i18n.t('continue', code);
+      if (headerEl) headerEl.textContent = i18n.t('select_language', code);
+      if (subEl) subEl.textContent = i18n.t('choose_language_sub', code);
+      if (titleEl) titleEl.textContent = i18n.t('choose_language_title', code);
+
       // Play vocal confirmation sample
       const langObj = LANGUAGES.find(l => l.code === code);
       if (langObj) {
@@ -95,7 +107,6 @@ export function initKioskLanguage() {
     });
   });
 
-  const continueBtn = document.getElementById('btnLanguageContinue');
   if (continueBtn) {
     continueBtn.addEventListener('click', () => {
       window.location.hash = '#/kiosk/consent';

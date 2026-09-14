@@ -70,141 +70,143 @@ class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
     final lang = context.watch<LanguageProvider>();
     final intake = context.watch<IntakeProvider>();
 
+    final chipKeys = [
+      'chip_chest_pain',
+      'chip_stomach_pain',
+      'chip_cough',
+      'chip_vomiting',
+      'chip_back_pain',
+      'chip_joint_pain',
+      'chip_breathlessness',
+      'chip_dizziness',
+    ];
+
     return MediScaffold(
-      title: _isListening ? 'Listening...' : 'Voice Input',
+      title: _isListening ? lang.translate('listening') : lang.translate('voice_intake_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
         child: Column(
           children: [
-          const SizedBox(height: MediDimensions.space24),
-          Text(
-            _isListening ? lang.translate('listening') : 'Tap mic or speak now',
-            style: MediTypography.headlineLarge,
-          ),
-          const SizedBox(height: MediDimensions.space12),
-          Text(
-            _isListening
-                ? 'Speak clearly near the microphone (माइक के पास बोलें)'
-                : 'Tap the wave or mic to resume listening',
-            style: const TextStyle(fontSize: 16, color: MediColors.textMuted),
-          ),
-          const SizedBox(height: MediDimensions.space32),
-
-          // Active 5-Bar Waveform (tappable to start/stop listening)
-          GestureDetector(
-            onTap: () {
-              if (_isListening) {
-                _stopListening();
-              } else {
-                _startListening();
-              }
-            },
-            child: ListeningWave(
-              isActive: _isListening,
-              color: _isListening ? MediColors.brandPrimary : MediColors.slate400,
-              height: 64,
+            const SizedBox(height: MediDimensions.space24),
+            Text(
+              _isListening ? lang.translate('listening') : lang.translate('tap_to_speak'),
+              style: MediTypography.headlineLarge,
             ),
-          ),
-
-          const SizedBox(height: MediDimensions.space40),
-
-          // Live Transcript Container
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(MediDimensions.space20),
-            decoration: BoxDecoration(
-              color: MediColors.surface,
-              borderRadius: MediDimensions.borderLg,
-              border: Border.all(color: MediColors.brandPrimary, width: 2.0),
-              boxShadow: MediDimensions.elevation2,
+            const SizedBox(height: MediDimensions.space12),
+            Text(
+              _isListening
+                  ? lang.translate('speak_clearly_mic')
+                  : lang.translate('tap_wave_resume'),
+              style: const TextStyle(fontSize: 16, color: MediColors.textMuted),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: MediColors.red600,
-                            shape: BoxShape.circle,
+            const SizedBox(height: MediDimensions.space32),
+
+            // Active 5-Bar Waveform (tappable to start/stop listening)
+            GestureDetector(
+              onTap: () {
+                if (_isListening) {
+                  _stopListening();
+                } else {
+                  _startListening();
+                }
+              },
+              child: ListeningWave(
+                isActive: _isListening,
+                color: _isListening ? MediColors.brandPrimary : MediColors.slate400,
+                height: 64,
+              ),
+            ),
+
+            const SizedBox(height: MediDimensions.space40),
+
+            // Live Transcript Container
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(MediDimensions.space20),
+              decoration: BoxDecoration(
+                color: MediColors.surface,
+                borderRadius: MediDimensions.borderLg,
+                border: Border.all(color: MediColors.brandPrimary, width: 2.0),
+                boxShadow: MediDimensions.elevation2,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                              color: MediColors.red600,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Speech / Symptom Input:',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: MediColors.textMuted),
-                        ),
-                      ],
-                    ),
-                    if (_textController.text.isNotEmpty)
-                      GestureDetector(
-                        onTap: () => setState(() => _textController.clear()),
-                        child: const Text('Clear', style: TextStyle(color: MediColors.red600, fontWeight: FontWeight.w600, fontSize: 13)),
+                          const SizedBox(width: 8),
+                          Text(
+                            lang.translate('speech_symptom_input'),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: MediColors.textMuted),
+                          ),
+                        ],
                       ),
-                  ],
-                ),
-                const SizedBox(height: MediDimensions.space12),
-                TextField(
-                  controller: _textController,
-                  maxLines: 3,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500, height: 1.4),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'Type or select symptoms below...',
+                      if (_textController.text.isNotEmpty)
+                        GestureDetector(
+                          onTap: () => setState(() => _textController.clear()),
+                          child: const Text('Clear', style: TextStyle(color: MediColors.red600, fontWeight: FontWeight.w600, fontSize: 13)),
+                        ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: MediDimensions.space12),
+                  TextField(
+                    controller: _textController,
+                    maxLines: 3,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500, height: 1.4),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: lang.translate('type_or_select_hint'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: MediDimensions.space16),
+            const SizedBox(height: MediDimensions.space16),
 
-          // Quick Symptom Chips to test any concept in Concept Bank
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Or tap symptom to test AI (या लक्षण चुनें):',
-              style: MediTypography.caption.copyWith(fontWeight: FontWeight.w700),
+            // Quick Symptom Chips to test any concept in Concept Bank
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                lang.translate('tap_symptom_chip_prompt'),
+                style: MediTypography.caption.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
-          ),
-          const SizedBox(height: MediDimensions.space8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              'छाती में दर्द (Chest Pain)',
-              'पेट में दर्द (Stomach Pain)',
-              'खांसी (Cough)',
-              'उल्टी (Vomiting)',
-              'कमर दर्द (Back Pain)',
-              'घुटने में दर्द (Knee Pain)',
-              'सांस लेने में तकलीफ (Breathlessness)',
-              'चक्कर आना (Dizziness)',
-            ].map((symptom) {
-              final label = symptom.split('(').first.trim();
-              return ActionChip(
-                label: Text(symptom, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                backgroundColor: MediColors.slate100,
-                side: const BorderSide(color: MediColors.border),
-                onPressed: () {
-                  setState(() {
-                    _textController.text = label;
-                  });
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: MediDimensions.space24),
-        ],
+            const SizedBox(height: MediDimensions.space8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: chipKeys.map((key) {
+                final label = lang.translate(key);
+                return ActionChip(
+                  label: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  backgroundColor: MediColors.slate100,
+                  side: const BorderSide(color: MediColors.border),
+                  onPressed: () {
+                    setState(() {
+                      _textController.text = label;
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: MediDimensions.space24),
+          ],
+        ),
       ),
-    ),
-    bottomBar: PrimaryActionButton(
-        label: 'Done Speaking (बोलना समाप्त)',
+      bottomBar: PrimaryActionButton(
+        label: lang.translate('done_speaking'),
         icon: Icons.check_circle,
         onPressed: () async {
           await _speech.stopListening();
@@ -212,8 +214,8 @@ class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
           if (text.isEmpty) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('कृपया बोलें या नीचे से कोई लक्षण चुनें (Please speak or tap a symptom below)'),
+                SnackBar(
+                  content: Text(lang.translate('type_or_select_hint')),
                   backgroundColor: MediColors.amber800,
                 ),
               );

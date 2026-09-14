@@ -12,6 +12,7 @@ class EncounterProvider extends ChangeNotifier {
   String _status = 'NOT_STARTED';
   String _severityBadge = 'GREEN';
   String _department = 'General Medicine';
+  String _language = 'hi';
   bool _isLoading = false;
 
   EncounterProvider({IntakeRepository? repository})
@@ -24,6 +25,7 @@ class EncounterProvider extends ChangeNotifier {
   String get status => _status;
   String get severityBadge => _severityBadge;
   String get department => _department;
+  String get language => _language;
   bool get isLoading => _isLoading;
 
   void setDepartment(String dept) {
@@ -36,6 +38,17 @@ class EncounterProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateLanguage(String lang) async {
+    _language = lang;
+    notifyListeners();
+    if (_encounterId != null) {
+      await _repository.updateLanguage(
+        encounterId: _encounterId!,
+        language: lang,
+      );
+    }
+  }
+
   Future<void> bootstrap({
     String? qrToken,
     String channel = 'android_byod',
@@ -43,6 +56,7 @@ class EncounterProvider extends ChangeNotifier {
   }) async {
     _isLoading = true;
     _channel = channel;
+    _language = language;
     notifyListeners();
 
     try {
@@ -75,6 +89,7 @@ class EncounterProvider extends ChangeNotifier {
     _status = 'NOT_STARTED';
     _severityBadge = 'GREEN';
     _department = 'General Medicine';
+    _language = 'hi';
     _isLoading = false;
     notifyListeners();
   }

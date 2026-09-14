@@ -191,17 +191,25 @@ class SemanticConceptNormalizer:
                 is_negated=True
             )
 
-        # Step 2: Try sentence-transformer vector embedding match
-        if self._embedding_model is not None and self._concept_embeddings is not None:
-            return self._embedding_match(text)
+        # Step 2: Check high-precision multi-language keyword match first
+        kw_match = self._keyword_match(text, lang)
+        if kw_match.status == "CONFIRMED_MATCH":
+            return kw_match
 
-        # Step 3: Fallback — keyword-based matching
-        return self._keyword_match(text, lang)
+        # Step 3: Sentence-transformer vector embedding match
+        if self._embedding_model is not None and self._concept_embeddings is not None:
+            emb_match = self._embedding_match(text)
+            if emb_match.score >= kw_match.score:
+                return emb_match
+            if kw_match.concept is not None and kw_match.score >= 0.55:
+                return kw_match
+            return emb_match
+
+        return kw_match
 
     def _keyword_match(self, text: str, lang: str) -> ConceptMatch:
         """
-        Fallback substring matching when the embedding model is unavailable.
-        Uses the multi-language keyword lists in the concept bank.
+        High-precision substring matching using the multi-language keyword lists in the concept bank.
         """
         text_lower = text.lower()
         best_match = None
@@ -210,11 +218,9 @@ class SemanticConceptNormalizer:
         for concept in (self._concept_metadata or []):
             keywords = concept.get("keywords", [])
             for keyword in keywords:
-                if keyword.lower() in text_lower:
-                    # Score based on keyword coverage
-                    score = len(keyword) / max(len(text_lower), 1)
-                    score = min(score * 1.5, 0.90)  # Cap and boost
-
+                kw_lower = keyword.lower()
+                if kw_lower in text_lower:
+                    score = 0.95 if kw_lower == text_lower else 0.88
                     if score > best_score:
                         best_score = score
                         best_match = concept

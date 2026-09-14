@@ -5,14 +5,24 @@
 
 import { store } from '../../store.js';
 import { tts } from '../../audio/tts-reader.js';
+import { i18n } from '../../i18n.js';
 
 export function renderKioskExplainBack() {
   const kioskState = store.getState().kiosk;
   const lang = kioskState.language || 'hi';
 
-  const headingText = lang === 'hi' 
-    ? 'क्या हमने सही समझा?' 
-    : 'Did we understand you correctly?';
+  const headingText = i18n.t('explain_back_heading', lang);
+  const subText = i18n.t('explain_back_sub', lang);
+
+  // Check if patient provided custom words or use localized defaults
+  const facts = kioskState.extractedFacts || [];
+  const problemFact = facts.find(f => f.category === 'chief_complaint' && f.field === 'problem');
+  const durationFact = facts.find(f => f.category === 'symptom' && f.field === 'duration');
+  const painFact = facts.find(f => f.category === 'symptom' && f.field === 'severity');
+
+  const problemDisplay = problemFact ? problemFact.value : i18n.t('sample_fact_problem', lang);
+  const durationDisplay = durationFact ? durationFact.value : i18n.t('sample_fact_duration', lang);
+  const painDisplay = painFact ? painFact.value : i18n.t('sample_fact_pain', lang);
 
   return `
     <div class="kiosk-shell">
@@ -23,14 +33,14 @@ export function renderKioskExplainBack() {
             <div class="kiosk-step-indicator">
               Screen 10 · Step 5 of 6 (Verification)
             </div>
-            <h2 class="text-h2" style="margin-top:var(--space-4);">Explain-Back Review</h2>
+            <h2 class="text-h2" style="margin-top:var(--space-4);">${i18n.t('explain_back_step_title', lang)}</h2>
             <p style="font-size:14px; color:var(--text-secondary); margin-top:var(--space-2);">
-              We reflect back our clinical understanding. Confirm with a single tap.
+              ${i18n.t('explain_back_step_desc', lang)}
             </p>
           </div>
 
           <button id="btnReadSummaryAloud" class="btn btn-secondary btn-md" style="justify-content:center;">
-            🔊 Hear Summary Aloud
+            ${i18n.t('hear_summary', lang)}
           </button>
         </div>
 
@@ -42,7 +52,7 @@ export function renderKioskExplainBack() {
                 <div>
                   <h2 class="text-h2">${headingText}</h2>
                   <div style="font-size:14px; color:var(--text-muted); margin-top:2px;">
-                    Here is the summary prepared for your physician:
+                    ${subText}
                   </div>
                 </div>
                 <span class="badge badge-teal">AI Synthesized</span>
@@ -50,37 +60,37 @@ export function renderKioskExplainBack() {
 
               <div class="explain-back-card__fact-list">
                 <div class="explain-back-card__fact-row">
-                  <span class="explain-back-card__fact-label">Main Problem / मुख्य समस्या</span>
-                  <span class="explain-back-card__fact-value">Chest Pain (सीने में दर्द)</span>
+                  <span class="explain-back-card__fact-label">${i18n.t('main_problem', lang)}</span>
+                  <span class="explain-back-card__fact-value">${problemDisplay}</span>
                 </div>
                 <div class="explain-back-card__fact-row">
-                  <span class="explain-back-card__fact-label">Duration / कितने दिनों से</span>
-                  <span class="explain-back-card__fact-value">3 Days (3 दिन)</span>
+                  <span class="explain-back-card__fact-label">${i18n.t('duration', lang)}</span>
+                  <span class="explain-back-card__fact-value">${durationDisplay}</span>
                 </div>
                 <div class="explain-back-card__fact-row">
-                  <span class="explain-back-card__fact-label">Pain Level / दर्द की तीव्रता</span>
-                  <span class="explain-back-card__fact-value">Moderate 6 / 10</span>
+                  <span class="explain-back-card__fact-label">${i18n.t('pain_level', lang)}</span>
+                  <span class="explain-back-card__fact-value">${painDisplay}</span>
                 </div>
                 <div class="explain-back-card__fact-row">
-                  <span class="explain-back-card__fact-label">Breathing Difficulty / सांस फूलना</span>
-                  <span class="explain-back-card__fact-value" style="color:var(--status-success);">None Reported</span>
+                  <span class="explain-back-card__fact-label">${i18n.t('breathing_diff', lang)}</span>
+                  <span class="explain-back-card__fact-value" style="color:var(--status-success);">${i18n.t('none_reported', lang)}</span>
                 </div>
               </div>
 
               <!-- Two Massive Verification Actions -->
               <div class="explain-back-card__actions">
                 <button id="btnExplainBackNo" class="btn btn-outline-danger btn-touch" style="justify-content:center;">
-                  ↻ NO, SAY AGAIN / नहीं
+                  ${i18n.t('btn_no_repeat', lang)}
                 </button>
                 <button id="btnExplainBackYes" class="btn btn-ayush btn-touch" style="justify-content:center;">
-                  ✓ YES, THAT'S RIGHT / हाँ सही है →
+                  ${i18n.t('btn_yes_correct', lang)}
                 </button>
               </div>
             </div>
           </div>
 
           <div class="kiosk-footer-bar">
-            <a href="#/kiosk/intake" class="btn btn-secondary btn-lg">← Re-record</a>
+            <a href="#/kiosk/intake" class="btn btn-secondary btn-lg">${i18n.t('rerecord', lang)}</a>
             <span style="font-size:13px; color:var(--text-muted);">
               One-tap confirmation · No medical editing required
             </span>
@@ -93,9 +103,7 @@ export function renderKioskExplainBack() {
 
 export function initKioskExplainBack() {
   const lang = store.getState().kiosk.language || 'hi';
-  const summaryVoice = lang === 'hi'
-    ? 'हमने समझा कि आपको 3 दिनों से सीने में दर्द है और सांस लेने में तकलीफ नहीं है। क्या यह सही है?'
-    : 'We understood you have had chest pain for 3 days with no breathing difficulty. Is this correct?';
+  const summaryVoice = i18n.t('summary_voice_text', lang);
 
   // Read summary aloud button
   const readBtn = document.getElementById('btnReadSummaryAloud');

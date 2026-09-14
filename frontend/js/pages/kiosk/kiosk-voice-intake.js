@@ -8,6 +8,7 @@ import { sounds } from '../../audio/sound-effects.js';
 import { AudioVisualizer } from '../../audio/audio-visualizer.js';
 import { kioskApi } from '../../api/kiosk.api.js';
 import { tts } from '../../audio/tts-reader.js';
+import { i18n } from '../../i18n.js';
 
 let visualizer = null;
 let mediaRecorder = null;
@@ -16,12 +17,8 @@ let isRecording = false;
 
 export function renderKioskVoiceIntake() {
   const lang = store.getState().kiosk.language || 'hi';
-  const promptText = lang === 'hi' 
-    ? 'आपको क्या तकलीफ हो रही है?' 
-    : 'What health problem are you experiencing?';
-  const subText = lang === 'hi' 
-    ? 'नीचे दिए गए माइक बटन को दबाएं और अपनी भाषा में खुलकर बताएं।' 
-    : 'Tap the microphone below and speak naturally in your own words.';
+  const promptText = i18n.t('voice_prompt', lang);
+  const subText = i18n.t('voice_sub', lang);
 
   return `
     <div class="kiosk-shell">
@@ -40,7 +37,7 @@ export function renderKioskVoiceIntake() {
 
           <div style="display:flex; flex-direction:column; gap:var(--space-3);">
             <button id="btnHearIntakeQuestion" class="btn btn-secondary btn-md" style="justify-content:center;">
-              🔊 Hear Question Aloud
+              🔊 ${i18n.t('hear_explanation', lang)}
             </button>
             <div class="kiosk-audio-help-box">
               <span style="font-size:24px;">🎙</span>
@@ -74,28 +71,28 @@ export function renderKioskVoiceIntake() {
               <canvas id="kioskWaveformCanvas" class="waveform-canvas" width="220" height="56"></canvas>
 
               <div id="kioskMicStatusText" style="font-size:16px; font-weight:700; color:var(--brand-primary); margin-bottom:var(--space-4);">
-                TAP TO TALK / बोलने के लिए दबाएं
+                ${i18n.t('tap_to_talk', lang)}
               </div>
 
               <!-- Live Rolling Transcript Card -->
               <div class="live-transcript-card" id="kioskLiveTranscript">
                 <span style="color:var(--text-muted); font-style:italic;">
-                  Your spoken words will appear here in real time...
+                  ${i18n.t('live_transcript_placeholder', lang)}
                 </span>
               </div>
             </div>
 
             <div style="margin-top:var(--space-4);">
               <button id="btnSwitchToTyping" class="btn btn-ghost btn-sm">
-                ⌨ Prefer typing instead? Click here
+                ${i18n.t('prefer_typing', lang)}
               </button>
             </div>
           </div>
 
           <div class="kiosk-footer-bar">
-            <a href="#/kiosk/care-stream" class="btn btn-secondary btn-lg">← Back</a>
+            <a href="#/kiosk/care-stream" class="btn btn-secondary btn-lg">${i18n.t('back', lang)}</a>
             <button id="btnVoiceDone" class="btn btn-primary btn-touch" style="min-width:280px; justify-content:center;" disabled>
-              ✓ Done Speaking / पूरा हुआ →
+              ${i18n.t('done_speaking', lang)}
             </button>
           </div>
         </div>
@@ -105,6 +102,7 @@ export function renderKioskVoiceIntake() {
 }
 
 export async function initKioskVoiceIntake() {
+  const lang = store.getState().kiosk.language || 'hi';
   const micBtn = document.getElementById('btnKioskMic');
   const statusText = document.getElementById('kioskMicStatusText');
   const transcriptCard = document.getElementById('kioskLiveTranscript');
@@ -117,8 +115,7 @@ export async function initKioskVoiceIntake() {
   const hearBtn = document.getElementById('btnHearIntakeQuestion');
   if (hearBtn) {
     hearBtn.addEventListener('click', () => {
-      const lang = store.getState().kiosk.language || 'hi';
-      const text = lang === 'hi' ? 'आपको क्या तकलीफ हो रही है? बोलकर बताएं।' : 'What health problem are you experiencing? Please tell us.';
+      const text = i18n.t('voice_prompt', lang);
       tts.speak(text, lang);
     });
   }
@@ -129,7 +126,7 @@ export async function initKioskVoiceIntake() {
 
   if (!sessionId && encounterId) {
     try {
-      const res = await kioskApi.startCallSession(encounterId, store.getState().kiosk.language || 'hi');
+      const res = await kioskApi.startCallSession(encounterId, lang);
       sessionId = res.session_id;
       store.updateKioskIntake({ sessionId });
     } catch (e) {
@@ -146,7 +143,7 @@ export async function initKioskVoiceIntake() {
         // START RECORDING
         isRecording = true;
         micBtn.classList.add('active');
-        statusText.textContent = 'LISTENING... / सुन रहे हैं... (TAP WHEN DONE)';
+        statusText.textContent = i18n.t('listening_status', lang);
         statusText.style.color = 'var(--status-danger)';
         sounds.playStartListening();
         visualizer.start();
@@ -166,9 +163,7 @@ export async function initKioskVoiceIntake() {
         }
 
         // Simulate rolling speech recognition for immediate feedback
-        const sampleText = store.getState().kiosk.language === 'hi'
-          ? 'मुझे पिछले 3 दिनों से सीने में दर्द और भारीपन महसूस हो रहा है...'
-          : "I have been experiencing chest pain and heaviness for the past 3 days...";
+        const sampleText = i18n.t('sample_transcript', lang);
 
         let charIdx = 0;
         transcriptCard.innerHTML = '';
@@ -190,7 +185,7 @@ export async function initKioskVoiceIntake() {
         // STOP RECORDING
         isRecording = false;
         micBtn.classList.remove('active');
-        statusText.textContent = 'SPEECH RECORDED / आवाज दर्ज हो गई';
+        statusText.textContent = i18n.t('speech_recorded', lang);
         statusText.style.color = 'var(--status-success)';
         sounds.playStopListening();
         visualizer.stop();
@@ -209,13 +204,13 @@ export async function initKioskVoiceIntake() {
   // Done button: transition to explain back
   if (doneBtn) {
     doneBtn.addEventListener('click', async () => {
-      const patientWords = transcriptCard.textContent.trim() || 'Chest discomfort for 3 days';
+      const patientWords = transcriptCard.textContent.trim() || i18n.t('sample_transcript', lang);
       store.updateKioskIntake({
         patientWords,
         extractedFacts: [
-          { category: 'chief_complaint', field: 'problem', value: 'Chest pain (सीने में दर्द)' },
-          { category: 'symptom', field: 'duration', value: '3 days (3 दिन)' },
-          { category: 'symptom', field: 'severity', value: 'Moderate 6/10' }
+          { category: 'chief_complaint', field: 'problem', value: i18n.t('sample_fact_problem', lang) },
+          { category: 'symptom', field: 'duration', value: i18n.t('sample_fact_duration', lang) },
+          { category: 'symptom', field: 'severity', value: i18n.t('sample_fact_pain', lang) }
         ]
       });
 
@@ -241,7 +236,7 @@ export async function initKioskVoiceIntake() {
   const switchBtn = document.getElementById('btnSwitchToTyping');
   if (switchBtn) {
     switchBtn.addEventListener('click', () => {
-      const typed = prompt('Please type your symptom / अपनी समस्या लिखें:', 'Chest pain for 3 days');
+      const typed = prompt(i18n.t('type_symptom_prompt', lang), i18n.t('sample_transcript', lang));
       if (typed) {
         transcriptCard.textContent = typed;
         if (doneBtn) doneBtn.disabled = false;

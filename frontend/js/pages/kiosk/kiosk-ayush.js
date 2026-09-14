@@ -5,8 +5,11 @@
 
 import { store } from '../../store.js';
 import { kioskApi } from '../../api/kiosk.api.js';
+import { i18n } from '../../i18n.js';
 
 export function renderKioskAyush() {
+  const lang = store.getState().kiosk.language || 'hi';
+
   return `
     <div class="kiosk-shell">
       <div class="kiosk-split">
@@ -16,9 +19,9 @@ export function renderKioskAyush() {
             <div class="kiosk-step-indicator" style="background:var(--status-ayush-tint, #eaf8f0); color:var(--status-ayush);">
               Screen 18 · AYUSH Profile
             </div>
-            <h2 class="text-h2" style="margin-top:var(--space-4);">Daily Health Habits</h2>
+            <h2 class="text-h2" style="margin-top:var(--space-4);">${i18n.t('ayush_step_title', lang)}</h2>
             <p style="font-size:14px; color:var(--text-secondary); margin-top:var(--space-2);">
-              Ayurvedic physicians evaluate your digestion (Agni), elimination (Koshtha), and sleep quality (Nidra).
+              ${i18n.t('ayush_step_desc', lang)}
             </p>
           </div>
 
@@ -33,24 +36,24 @@ export function renderKioskAyush() {
         <!-- Right Pane: Lifestyle Habits -->
         <div class="kiosk-right-pane">
           <div class="kiosk-task-canvas">
-            <h1 class="text-h1" style="margin-bottom:var(--space-2);">Your Daily Habits / दिनचर्या व आदतें</h1>
-            <p class="text-body-lg" style="margin-bottom:var(--space-6);">Please tap the options that best describe your routine:</p>
+            <h1 class="text-h1" style="margin-bottom:var(--space-2);">${i18n.t('ayush_title', lang)}</h1>
+            <p class="text-body-lg" style="margin-bottom:var(--space-6);">${i18n.t('ayush_sub', lang)}</p>
 
             <div style="display:flex; flex-direction:column; gap:var(--space-5);">
               <!-- 1. Digestion (Agni) -->
               <div class="card card-sm">
                 <div style="font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:var(--space-3);">
-                  1. Appetite & Digestion / भूख और पाचन (अग्नि)
+                  ${i18n.t('appetite_digestion', lang)}
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-3);" id="groupAgni">
                   <button class="btn btn-secondary btn-md ayush-chip selected" data-field="agni" data-val="sama">
-                    Regular / सामान्य भूख
+                    ${i18n.t('regular_hunger', lang)}
                   </button>
                   <button class="btn btn-secondary btn-md ayush-chip" data-field="agni" data-val="manda">
-                    Slow / कम भूख (भारीपन)
+                    ${i18n.t('slow_hunger', lang)}
                   </button>
                   <button class="btn btn-secondary btn-md ayush-chip" data-field="agni" data-val="tikshna">
-                    Intense / बहुत तेज भूख
+                    ${i18n.t('intense_hunger', lang)}
                   </button>
                 </div>
               </div>
@@ -58,17 +61,17 @@ export function renderKioskAyush() {
               <!-- 2. Bowel Habit (Koshtha) -->
               <div class="card card-sm">
                 <div style="font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:var(--space-3);">
-                  2. Bowel Regularity / पेट साफ होना (कोष्ठ)
+                  ${i18n.t('bowel_regularity', lang)}
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-3);" id="groupKoshtha">
                   <button class="btn btn-secondary btn-md ayush-chip selected" data-field="koshtha" data-val="madhyama">
-                    Regular / रोज़ाना साफ
+                    ${i18n.t('bowel_regular', lang)}
                   </button>
                   <button class="btn btn-secondary btn-md ayush-chip" data-field="koshtha" data-val="krura">
-                    Constipated / कब्ज
+                    ${i18n.t('bowel_constipated', lang)}
                   </button>
                   <button class="btn btn-secondary btn-md ayush-chip" data-field="koshtha" data-val="mridu">
-                    Loose / बार-बार जाना
+                    ${i18n.t('bowel_loose', lang)}
                   </button>
                 </div>
               </div>
@@ -76,17 +79,17 @@ export function renderKioskAyush() {
               <!-- 3. Sleep (Nidra) -->
               <div class="card card-sm">
                 <div style="font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:var(--space-3);">
-                  3. Sleep Quality / नींद की स्थिति (निद्रा)
+                  ${i18n.t('sleep_quality', lang)}
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-3);" id="groupNidra">
                   <button class="btn btn-secondary btn-md ayush-chip selected" data-field="nidra" data-val="sound">
-                    Sound / गहरी व शांत नींद
+                    ${i18n.t('sleep_sound', lang)}
                   </button>
                   <button class="btn btn-secondary btn-md ayush-chip" data-field="nidra" data-val="disturbed">
-                    Disturbed / बीच में टूटना
+                    ${i18n.t('sleep_disturbed', lang)}
                   </button>
                   <button class="btn btn-secondary btn-md ayush-chip" data-field="nidra" data-val="insomnia">
-                    Difficulty Sleeping / देर से आना
+                    ${i18n.t('sleep_difficulty', lang)}
                   </button>
                 </div>
               </div>
@@ -94,9 +97,9 @@ export function renderKioskAyush() {
           </div>
 
           <div class="kiosk-footer-bar">
-            <a href="#/kiosk/ocr-results" class="btn btn-secondary btn-lg">← Back</a>
+            <a href="#/kiosk/ocr-results" class="btn btn-secondary btn-lg">${i18n.t('back', lang)}</a>
             <button id="btnAyushFinish" class="btn btn-ayush btn-touch" style="min-width:300px; justify-content:center;">
-              Complete & Get Token / टोकन प्राप्त करें →
+              ${i18n.t('btn_complete_token', lang)}
             </button>
           </div>
         </div>

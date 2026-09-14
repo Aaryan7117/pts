@@ -62,7 +62,7 @@ class _AyushScreenState extends State<AyushScreen> {
     final intake = context.read<IntakeProvider>();
 
     return MediScaffold(
-      title: 'AYUSH Clinical Assessment',
+      title: lang.translate('ayush_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: SingleChildScrollView(
@@ -105,42 +105,42 @@ class _AyushScreenState extends State<AyushScreen> {
               style: MediTypography.headlineLarge,
             ),
             const SizedBox(height: MediDimensions.space8),
-            const Text(
-              'Dashavidha Pariksha pre-assessment for your Ayurvedic physician.',
-              style: TextStyle(fontSize: 16, color: MediColors.textMuted),
+            Text(
+              lang.translate('ayush_sub'),
+              style: const TextStyle(fontSize: 16, color: MediColors.textMuted),
             ),
             const SizedBox(height: MediDimensions.space24),
 
             // Section 1: Agni Assessment (Digestive Fire)
-            Text('1. Digestive Fire / Agni (पाचन शक्ति)', style: MediTypography.headlineMedium.copyWith(fontSize: 20)),
+            Text(lang.translate('agni_section_title'), style: MediTypography.headlineMedium.copyWith(fontSize: 20)),
             const SizedBox(height: MediDimensions.space12),
             LargeChoiceCard(
-              title: 'Sama Agni (सम अग्नि)',
-              subtitle: 'Balanced appetite, normal digestion without discomfort',
+              title: lang.translate('sama_agni'),
+              subtitle: lang.translate('sama_agni_sub'),
               icon: Icons.local_fire_department_rounded,
               isSelected: _selectedAgni == 'sama',
               onTap: () => setState(() => _selectedAgni = 'sama'),
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
-              title: 'Vishama Agni (विषम अग्नि)',
-              subtitle: 'Irregular digestion, gas, bloating, fluctuating appetite',
+              title: lang.translate('vishama_agni'),
+              subtitle: lang.translate('vishama_agni_sub'),
               icon: Icons.waves_rounded,
               isSelected: _selectedAgni == 'vishama',
               onTap: () => setState(() => _selectedAgni = 'vishama'),
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
-              title: 'Tikshna Agni (तीक्ष्ण अग्नि)',
-              subtitle: 'Excessive appetite, heartburn, acidity, rapid digestion',
+              title: lang.translate('tikshna_agni'),
+              subtitle: lang.translate('tikshna_agni_sub'),
               icon: Icons.whatshot_rounded,
               isSelected: _selectedAgni == 'tikshna',
               onTap: () => setState(() => _selectedAgni = 'tikshna'),
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
-              title: 'Manda Agni (मन्द अग्नि)',
-              subtitle: 'Sluggish digestion, post-meal heaviness, low appetite',
+              title: lang.translate('manda_agni'),
+              subtitle: lang.translate('manda_agni_sub'),
               icon: Icons.hourglass_bottom_rounded,
               isSelected: _selectedAgni == 'manda',
               onTap: () => setState(() => _selectedAgni = 'manda'),
@@ -158,18 +158,18 @@ class _AyushScreenState extends State<AyushScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Metabolic Toxins / Ama Markers (आम लक्षण)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  Text(lang.translate('ama_section_title'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   CheckboxListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('White or yellowish coating on tongue (जिह्वा लेप)'),
+                    title: Text(lang.translate('coated_tongue')),
                     value: _hasCoatedTongue,
                     onChanged: (v) => setState(() => _hasCoatedTongue = v ?? false),
                   ),
                   CheckboxListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Morning body heaviness or joint stiffness (गौरव / जकड़ाहट)'),
+                    title: Text(lang.translate('morning_stiffness')),
                     value: _hasMorningStiffness,
                     onChanged: (v) => setState(() => _hasMorningStiffness = v ?? false),
                   ),
@@ -180,35 +180,35 @@ class _AyushScreenState extends State<AyushScreen> {
             const SizedBox(height: MediDimensions.space24),
 
             // Section 2: Prakriti (Constitution)
-            Text('2. Body Constitution / Prakriti (प्रकृति)', style: MediTypography.headlineMedium.copyWith(fontSize: 20)),
+            Text(lang.translate('prakriti_section_title'), style: MediTypography.headlineMedium.copyWith(fontSize: 20)),
             const SizedBox(height: MediDimensions.space12),
             LargeChoiceCard(
-              title: 'Tridoshaja / Balanced (त्रिदोषज)',
-              subtitle: 'Harmonious frame, balanced sleep, good resilience',
+              title: lang.translate('tridoshaja_title'),
+              subtitle: lang.translate('tridoshaja_sub'),
               icon: Icons.balance_rounded,
               isSelected: _selectedPrakriti == 'tridoshaja',
               onTap: () => setState(() => _selectedPrakriti = 'tridoshaja'),
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
-              title: 'Vata Dominant (वात प्रधान)',
-              subtitle: 'Light frame, dry skin, light sleep, cold intolerance',
+              title: lang.translate('vata_title'),
+              subtitle: lang.translate('vata_sub'),
               icon: Icons.air_rounded,
               isSelected: _selectedPrakriti == 'vata',
               onTap: () => setState(() => _selectedPrakriti = 'vata'),
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
-              title: 'Pitta Dominant (पित्त प्रधान)',
-              subtitle: 'Medium frame, warm body, sharp hunger, heat sensitive',
+              title: lang.translate('pitta_title'),
+              subtitle: lang.translate('pitta_sub'),
               icon: Icons.wb_sunny_rounded,
               isSelected: _selectedPrakriti == 'pitta',
               onTap: () => setState(() => _selectedPrakriti = 'pitta'),
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
-              title: 'Kapha Dominant (कफ प्रधान)',
-              subtitle: 'Broad sturdy build, calm demeanor, deep sleep, cold skin',
+              title: lang.translate('kapha_title'),
+              subtitle: lang.translate('kapha_sub'),
               icon: Icons.water_drop_rounded,
               isSelected: _selectedPrakriti == 'kapha',
               onTap: () => setState(() => _selectedPrakriti = 'kapha'),
@@ -217,10 +217,10 @@ class _AyushScreenState extends State<AyushScreen> {
             const SizedBox(height: MediDimensions.space24),
 
             // Section 3: Koshtha (Bowel Habits)
-            Text('3. Bowel Constitution / Koshtha (कोष्ठ)', style: MediTypography.headlineMedium.copyWith(fontSize: 20)),
+            Text(lang.translate('koshtha_section_title'), style: MediTypography.headlineMedium.copyWith(fontSize: 20)),
             const SizedBox(height: MediDimensions.space12),
             LargeChoiceCard(
-              title: 'Madhyama Koshtha (मध्यम कोष्ठ)',
+              title: lang.translate('madhyama_koshtha'),
               subtitle: 'Regular once-daily bowel motion, normal soft formed stool',
               icon: Icons.check_circle_outline,
               isSelected: _selectedKoshtha == 'madhyama',
@@ -228,7 +228,7 @@ class _AyushScreenState extends State<AyushScreen> {
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
-              title: 'Krura Koshtha (क्रूर कोष्ठ)',
+              title: lang.translate('krura_koshtha'),
               subtitle: 'Constipation-prone, hard dry stools, requires laxatives',
               icon: Icons.warning_amber_rounded,
               isSelected: _selectedKoshtha == 'krura',
@@ -236,7 +236,7 @@ class _AyushScreenState extends State<AyushScreen> {
             ),
             const SizedBox(height: MediDimensions.space8),
             LargeChoiceCard(
-              title: 'Mridu Koshtha (मृदु कोष्ठ)',
+              title: lang.translate('mridu_koshtha'),
               subtitle: 'Easy loose motions, sensitive digestion, evacuated quickly with milk',
               icon: Icons.opacity_rounded,
               isSelected: _selectedKoshtha == 'mridu',
@@ -247,7 +247,7 @@ class _AyushScreenState extends State<AyushScreen> {
         ),
       ),
       bottomBar: PrimaryActionButton(
-        label: 'Save AYUSH Profile & Get Token (टोकन लें)',
+        label: lang.translate('continue_queue'),
         backgroundColor: MediColors.ayushGreen,
         icon: Icons.confirmation_number_rounded,
         onPressed: () {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../app/state/language_provider.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
 import '../../core/widgets/medi_scaffold.dart';
@@ -13,33 +15,35 @@ class ServicesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+
     final services = [
       {
-        'title': 'OPD Pharmacy (दवाखाना)',
+        'title': lang.translate('pharmacy_title'),
         'floor': 'Ground Floor, Counter 3-6',
         'waitTime': '5 min',
         'icon': Icons.local_pharmacy_rounded,
       },
       {
-        'title': 'Pathology & Blood Lab (जाँच लैब)',
+        'title': lang.translate('pathology_title'),
         'floor': '1st Floor, Room 114',
         'waitTime': '12 min',
         'icon': Icons.biotech_rounded,
       },
       {
-        'title': 'Injection & Dressing Room',
+        'title': lang.translate('injection_title'),
         'floor': 'Ground Floor, Room 12',
         'waitTime': '3 min',
         'icon': Icons.healing_rounded,
       },
       {
-        'title': 'Radiology & X-Ray (एक्स-रे)',
+        'title': lang.translate('radiology_title'),
         'floor': 'Basement 1, Wing B',
         'waitTime': '15 min',
         'icon': Icons.personal_injury_rounded,
       },
       {
-        'title': 'AYUSH Herbal Dispensary (आयुष औषधि)',
+        'title': lang.translate('ayush_dispensary_title'),
         'floor': 'Ground Floor, Room 8',
         'waitTime': '4 min',
         'icon': Icons.eco_rounded,
@@ -47,18 +51,20 @@ class ServicesScreen extends StatelessWidget {
     ];
 
     return MediScaffold(
-      title: 'Hospital Services',
+      title: lang.translate('hospital_services_title'),
+      currentLanguage: lang.currentLanguage,
+      onLanguageChanged: (l) => lang.setLanguage(l),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Hospital Facilities & Counters',
+            lang.translate('hospital_services_title'),
             style: MediTypography.headlineLarge,
           ),
           const SizedBox(height: MediDimensions.space8),
-          const Text(
-            'Live wait times and locations for essential hospital counters.',
-            style: TextStyle(fontSize: 16),
+          Text(
+            lang.translate('hospital_services_sub'),
+            style: const TextStyle(fontSize: 16),
           ),
           const SizedBox(height: MediDimensions.space20),
           Expanded(
@@ -79,7 +85,7 @@ class ServicesScreen extends StatelessWidget {
         ],
       ),
       bottomBar: PrimaryActionButton(
-        label: 'View Interactive Hospital Map',
+        label: lang.translate('hospital_map_title'),
         icon: Icons.map_rounded,
         onPressed: () => Navigator.of(context).pushNamed('/map'),
       ),

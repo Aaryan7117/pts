@@ -11,6 +11,7 @@ class IntakeProvider extends ChangeNotifier {
   String? _sessionId;
   int _turnCount = 0;
   bool _isListening = false;
+  String _currentLanguage = 'hi';
   String _currentTranscript = '';
   String _activeQuestion = 'नमस्ते, मैं मेडीकिओस्क हूँ। आज आपको क्या परेशानी महसूस हो रही है?';
   bool _isInterviewCompleted = false;
@@ -38,12 +39,30 @@ class IntakeProvider extends ChangeNotifier {
   bool get isProcessingTurn => _isProcessingTurn;
   String get currentTranscript => _currentTranscript;
   String get activeQuestion => _activeQuestion;
+  String get currentLanguage => _currentLanguage;
   bool get isInterviewCompleted => _isInterviewCompleted;
   DocumentUploadResponse? get lastDocumentResult => _lastDocumentResult;
   List<ClinicalFact> get facts => List.unmodifiable(_facts);
   List<ExtractedMedication> get extractedMedications => List.unmodifiable(_extractedMedications);
   Map<String, String> get vitals => Map.unmodifiable(_vitals);
   AyurvedicIntakeRecord? get ayushRecord => _ayushRecord;
+
+  void setLanguage(String language) {
+    if (_currentLanguage != language) {
+      _currentLanguage = language;
+      if (_turnCount == 0) {
+        final Map<String, String> openings = {
+          'hi': 'नमस्ते, मैं मेडीकिओस्क हूँ। आज आपको क्या परेशानी महसूस हो रही है?',
+          'en': 'Hello, I am MediKiosk. What symptoms are you experiencing today?',
+          'ta': 'வணக்கம், நான் மெடிகியோஸ்க். இன்று உங்களுக்கு என்ன பிரச்சனை?',
+          'te': 'నమస్కారం, నేను మెడికియోస్క్. ఈరోజు మీకు ఎలాంటి సమస్య ఉంది?',
+          'mr': 'नमस्कार, मी मेडीकिओस्क आहे. आज तुम्हाला काय त्रास होत आहे?',
+        };
+        _activeQuestion = openings[language] ?? openings['en']!;
+        notifyListeners();
+      }
+    }
+  }
 
   void toggleListening({String? simulatedTranscript}) {
     _isListening = !_isListening;
@@ -54,6 +73,7 @@ class IntakeProvider extends ChangeNotifier {
   }
 
   Future<void> startSession({required String encounterId, required String language}) async {
+    _currentLanguage = language;
     final res = await _repository.startCallSession(
       encounterId: encounterId,
       language: language,
@@ -80,6 +100,7 @@ class IntakeProvider extends ChangeNotifier {
         sessionId: _sessionId ?? 'mock-session',
         turnIndex: _turnCount,
         fallbackWords: patientSpeech ?? _currentTranscript,
+        language: _currentLanguage,
       );
 
       _turnCount++;

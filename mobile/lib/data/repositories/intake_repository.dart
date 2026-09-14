@@ -35,6 +35,18 @@ class IntakeRepository {
     }
   }
 
+  Future<bool> updateLanguage({
+    required String encounterId,
+    required String language,
+  }) async {
+    if (useMock) return true;
+    try {
+      return await api.updateEncounterLanguage(encounterId, language);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<CallSessionStartResponse> startCallSession({
     required String encounterId,
     required String language,
@@ -56,6 +68,7 @@ class IntakeRepository {
     required String sessionId,
     required int turnIndex,
     String? fallbackWords,
+    String language = 'hi',
   }) async {
     if (!useMock && fallbackWords != null && fallbackWords.isNotEmpty) {
       try {
@@ -71,6 +84,7 @@ class IntakeRepository {
     return MockDataSource.getMockAudioTurn(
       turnIndex: turnIndex,
       patientWords: fallbackWords,
+      language: language,
     );
   }
 

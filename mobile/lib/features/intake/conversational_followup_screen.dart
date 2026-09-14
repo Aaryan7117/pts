@@ -146,7 +146,7 @@ class _ConversationalFollowupScreenState extends State<ConversationalFollowupScr
     final options = _getOptionsForQuestion(question);
 
     return MediScaffold(
-      title: 'Follow-Up Question',
+      title: lang.translate('followup_title'),
       currentLanguage: lang.currentLanguage,
       onLanguageChanged: (l) => lang.setLanguage(l),
       body: Column(
@@ -159,7 +159,7 @@ class _ConversationalFollowupScreenState extends State<ConversationalFollowupScr
           ),
           const SizedBox(height: MediDimensions.space12),
           Text(
-            'Tap your answer to proceed (जवाब चुनें):',
+            lang.translate('followup_sub'),
             style: MediTypography.bodyMedium,
           ),
           const SizedBox(height: MediDimensions.space20),
@@ -191,7 +191,7 @@ class _ConversationalFollowupScreenState extends State<ConversationalFollowupScr
         mainAxisSize: MainAxisSize.min,
         children: [
           PrimaryActionButton(
-            label: 'Confirm Answer (आगे बढ़ें)',
+            label: lang.translate('confirm_answer'),
             icon: Icons.arrow_forward_rounded,
             onPressed: () async {
               final answerToSubmit = _selectedAnswer.isNotEmpty

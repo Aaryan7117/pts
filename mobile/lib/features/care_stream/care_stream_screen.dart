@@ -29,26 +29,26 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
 
     final streams = [
       {
-        'title': 'General Medicine (सामान्य चिकित्सा)',
-        'subtitle': 'Fever, cough, cold, weakness, diabetes, blood pressure',
+        'title': lang.translate('general_medicine_title'),
+        'subtitle': lang.translate('general_medicine_sub'),
         'icon': Icons.medical_services_rounded,
         'value': 'General Medicine',
       },
       {
-        'title': 'AYUSH / Ayurveda (आयुष एवं आयुर्वेद)',
-        'subtitle': 'Prakriti, chronic joint pain, digestive health, lifestyle',
+        'title': lang.translate('ayush_dept_title'),
+        'subtitle': lang.translate('ayush_dept_sub'),
         'icon': Icons.eco_rounded,
         'value': 'AYUSH (Ayurveda)',
       },
       {
-        'title': 'Pediatrics & Child Health (बाल रोग)',
-        'subtitle': 'Child immunization, growth, pediatric infections',
+        'title': lang.translate('pediatrics_dept_title'),
+        'subtitle': lang.translate('pediatrics_dept_sub'),
         'icon': Icons.child_care_rounded,
         'value': 'Pediatrics',
       },
       {
-        'title': 'Urgent / Emergency Care (आपातकालीन)',
-        'subtitle': 'Chest pain, acute breathlessness, bleeding, trauma',
+        'title': lang.translate('emergency_dept_title'),
+        'subtitle': lang.translate('emergency_dept_sub'),
         'icon': Icons.emergency_rounded,
         'value': 'Emergency',
       },
@@ -67,7 +67,7 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
           ),
           const SizedBox(height: MediDimensions.space8),
           Text(
-            'Select the clinic or medical department you wish to consult today.',
+            lang.translate('care_stream_sub'),
             style: MediTypography.bodyMedium,
           ),
           const SizedBox(height: MediDimensions.space24),
@@ -97,10 +97,10 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
       ),
       bottomBar: PrimaryActionButton(
         label: _selectedStream.contains('AYUSH')
-            ? 'Continue with AYUSH Intake (आयुष सेवन शुरू करें)'
+            ? lang.translate('continue_ayush_intake')
             : (_selectedStream == 'Emergency'
-                ? 'Immediate Emergency Triaging (तत्काल आपातकालीन)'
-                : 'Continue to Intake (आगे बढ़ें)'),
+                ? lang.translate('continue_emergency_triage')
+                : lang.translate('continue_intake')),
         backgroundColor: _selectedStream.contains('AYUSH')
             ? const Color(0xFF2E7D32)
             : (_selectedStream == 'Emergency' ? const Color(0xFFD32F2F) : null),

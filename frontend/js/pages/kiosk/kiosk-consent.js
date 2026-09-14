@@ -5,13 +5,10 @@
 
 import { store } from '../../store.js';
 import { tts } from '../../audio/tts-reader.js';
+import { i18n } from '../../i18n.js';
 
 export function renderKioskConsent() {
   const lang = store.getState().kiosk.language || 'hi';
-
-  const readAloudText = lang === 'hi'
-    ? 'हम आपकी स्वास्थ्य समस्याओं को डॉक्टर के लिए संक्षेप में तैयार करने के लिए पूछते हैं। आपकी जानकारी सुरक्षित है।'
-    : 'We collect your symptoms to prepare a case summary for your physician. Your data is confidential and secure.';
 
   return `
     <div class="kiosk-shell">
@@ -22,30 +19,30 @@ export function renderKioskConsent() {
             <div class="kiosk-step-indicator">
               Screen 03 · Step 2 of 6
             </div>
-            <h2 class="text-h2" style="margin-top:var(--space-4);">Informed Consent</h2>
+            <h2 class="text-h2" style="margin-top:var(--space-4);">${i18n.t('consent_title', lang)}</h2>
             <p style="font-size:14px; color:var(--text-secondary); margin-top:var(--space-2);">
-              Patient confidentiality is our clinical priority. Review our 3 safety commitments.
+              ${i18n.t('consent_sub', lang)}
             </p>
           </div>
 
           <button id="btnReadConsent" class="btn btn-secondary btn-md" style="width:100%; justify-content:center;">
-            🔊 Hear Explanation
+            ${i18n.t('hear_explanation', lang)}
           </button>
         </div>
 
         <!-- Right Pane: 3 Safety Cards & Agreement -->
         <div class="kiosk-right-pane">
           <div class="kiosk-task-canvas">
-            <h1 class="text-h1" style="margin-bottom:var(--space-2);">Before We Begin / शुरू करने से पहले</h1>
-            <p class="text-body-lg" style="margin-bottom:var(--space-6);">Please review how your health information is protected:</p>
+            <h1 class="text-h1" style="margin-bottom:var(--space-2);">${i18n.t('consent_title', lang)}</h1>
+            <p class="text-body-lg" style="margin-bottom:var(--space-6);">${i18n.t('consent_sub', lang)}</p>
 
             <div style="display:flex; flex-direction:column; gap:var(--space-4);">
               <div class="card card-sm" style="display:flex; gap:var(--space-4); align-items:flex-start;">
                 <div style="font-size:24px;">🎯</div>
                 <div>
-                  <h3 class="text-h4">1. Why We Ask Symptoms / हम लक्षण क्यों पूछते हैं</h3>
+                  <h3 class="text-h4">${i18n.t('consent_point1_title', lang)}</h3>
                   <p style="font-size:14px; color:var(--text-secondary); margin-top:2px;">
-                    To prepare an organized clinical history before you enter the doctor's chamber, reducing your wait and consultation rush.
+                    ${i18n.t('consent_point1_desc', lang)}
                   </p>
                 </div>
               </div>
@@ -53,9 +50,9 @@ export function renderKioskConsent() {
               <div class="card card-sm" style="display:flex; gap:var(--space-4); align-items:flex-start;">
                 <div style="font-size:24px;">🔒</div>
                 <div>
-                  <h3 class="text-h4">2. Prescription Document Security / दस्तावेज़ सुरक्षा</h3>
+                  <h3 class="text-h4">${i18n.t('consent_point2_title', lang)}</h3>
                   <p style="font-size:14px; color:var(--text-secondary); margin-top:2px;">
-                    Uploaded prescriptions are processed on local hospital servers for medicine OCR and stored securely.
+                    ${i18n.t('consent_point2_desc', lang)}
                   </p>
                 </div>
               </div>
@@ -63,9 +60,9 @@ export function renderKioskConsent() {
               <div class="card card-sm" style="display:flex; gap:var(--space-4); align-items:flex-start;">
                 <div style="font-size:24px;">👨‍⚕️</div>
                 <div>
-                  <h3 class="text-h4">3. Who Sees Your Records / कौन देख सकता है</h3>
+                  <h3 class="text-h4">${i18n.t('consent_point3_title', lang)}</h3>
                   <p style="font-size:14px; color:var(--text-secondary); margin-top:2px;">
-                    Only authorized AIIA hospital doctors and medical attendants assigned to your consultation room can access this summary.
+                    ${i18n.t('consent_point3_desc', lang)}
                   </p>
                 </div>
               </div>
@@ -73,11 +70,11 @@ export function renderKioskConsent() {
           </div>
 
           <div class="kiosk-footer-bar">
-            <a href="#/kiosk/language" class="btn btn-secondary btn-lg">← Back</a>
+            <a href="#/kiosk/language" class="btn btn-secondary btn-lg">${i18n.t('back', lang)}</a>
             <div style="display:flex; gap:var(--space-3);">
-              <a href="#/kiosk/welcome" class="btn btn-ghost btn-lg">Decline</a>
+              <a href="#/kiosk/welcome" class="btn btn-ghost btn-lg">${i18n.t('decline', lang)}</a>
               <button id="btnAgreeConsent" class="btn btn-ayush btn-touch" style="min-width:280px; justify-content:center;">
-                ✓ I Agree / मुझे स्वीकार है →
+                ${i18n.t('agree_continue', lang)}
               </button>
             </div>
           </div>
@@ -92,9 +89,7 @@ export function initKioskConsent() {
   if (readBtn) {
     readBtn.addEventListener('click', () => {
       const lang = store.getState().kiosk.language || 'hi';
-      const text = lang === 'hi'
-        ? 'हम आपके लक्षण डॉक्टर के लिए संक्षेप में तैयार करने के लिए पूछते हैं। आपकी जानकारी सुरक्षित है।'
-        : 'We collect your symptoms to prepare a case summary for your physician. Your data is confidential and secure.';
+      const text = `${i18n.t('consent_point1_desc', lang)} ${i18n.t('consent_point2_desc', lang)}`;
       tts.speak(text, lang);
     });
   }

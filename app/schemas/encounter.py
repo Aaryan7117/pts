@@ -31,7 +31,7 @@ class EncounterBootstrapRequest(BaseModel):
         default="kiosk",
         description="Which intake channel is initiating this encounter"
     )
-    language: str = Field(default="hi", description="Preferred language code (en, hi, ta, te, mr)")
+    language: Literal["en", "hi", "ta", "te", "mr"] = Field(default="hi", description="Preferred language code (en, hi, ta, te, mr)")
 
 
 class EncounterBootstrapResponse(BaseModel):
@@ -60,4 +60,10 @@ class EncounterSummary(BaseModel):
 
 class EncounterStatusUpdate(BaseModel):
     """Request to update encounter status."""
-    status: Literal["IN_PROGRESS", "COMPLETED", "DOCTOR_REVIEWED"]
+    status: Literal["BOOTSTRAPPED", "IN_PROGRESS", "COMPLETED", "DOCTOR_REVIEWED"]
+
+
+class EncounterLanguageUpdate(BaseModel):
+    """Request to update encounter preferred language."""
+    language: Literal["en", "hi", "ta", "te", "mr"]
+

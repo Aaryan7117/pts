@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../app/state/language_provider.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
@@ -55,6 +57,7 @@ class _PrivacyResetOverlayState extends State<PrivacyResetOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
     final progress = _secondsRemaining / widget.countdownSeconds;
 
     return Container(
@@ -71,7 +74,7 @@ class _PrivacyResetOverlayState extends State<PrivacyResetOverlay> {
         children: [
           Container(
             padding: const EdgeInsets.all(MediDimensions.space16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: MediColors.blue50,
               shape: BoxShape.circle,
             ),
@@ -79,13 +82,13 @@ class _PrivacyResetOverlayState extends State<PrivacyResetOverlay> {
           ),
           const SizedBox(height: MediDimensions.space16),
           Text(
-            'Session Privacy Auto-Reset',
+            lang.translate('auto_reset_title'),
             style: MediTypography.headlineMedium.copyWith(fontSize: 22),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: MediDimensions.space8),
           Text(
-            'To protect your health data, all information will be cleared from this screen in $_secondsRemaining seconds.',
+            '${lang.translate('auto_reset_sub')} $_secondsRemaining s.',
             style: MediTypography.bodyMedium,
             textAlign: TextAlign.center,
           ),
@@ -115,7 +118,7 @@ class _PrivacyResetOverlayState extends State<PrivacyResetOverlay> {
                       foregroundColor: MediColors.white,
                       shape: RoundedRectangleBorder(borderRadius: MediDimensions.borderMd),
                     ),
-                    child: const Text('Reset Now (समाप्त)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    child: Text(lang.translate('reset_now'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                   ),
                 ),
               ),
@@ -134,7 +137,7 @@ class _PrivacyResetOverlayState extends State<PrivacyResetOverlay> {
                         side: const BorderSide(color: MediColors.borderStrong, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: MediDimensions.borderMd),
                       ),
-                      child: const Text('Keep Open', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      child: Text(lang.translate('keep_open'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ),

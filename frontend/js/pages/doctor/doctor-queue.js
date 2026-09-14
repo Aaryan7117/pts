@@ -104,12 +104,23 @@ function _renderRows(queue) {
     `;
   }
 
+  const langLabels = {
+    'hi': 'हिन्दी',
+    'en': 'English',
+    'ta': 'தமிழ்',
+    'te': 'తెలుగు',
+    'mr': 'मराठी'
+  };
+
   return queue.map(entry => {
     const channelBadge = entry.channel === 'ivr_phone'
       ? '<span class="badge badge-amber">📞 Citizen IVR</span>'
       : entry.channel === 'android_byod'
       ? '<span class="badge badge-purple">📱 BYOD</span>'
       : '<span class="badge badge-teal">🏥 Kiosk</span>';
+
+    const langName = langLabels[entry.language] || entry.language || 'हिन्दी';
+    const langBadge = `<span class="badge badge-purple" style="font-size:11px;" title="Patient Language: ${langName}">🗣 ${langName}</span>`;
 
     const severityBadge = entry.severity_badge === 'RED'
       ? '<span class="badge badge-red">🔴 CRITICAL</span>'
@@ -120,7 +131,12 @@ function _renderRows(queue) {
     return `
       <tr style="${entry.severity_badge === 'RED' ? 'background:var(--status-danger-tint);' : ''}">
         <td><strong class="text-mono" style="font-size:17px; color:var(--brand-primary);">${entry.token_number}</strong></td>
-        <td>${channelBadge}</td>
+        <td>
+          <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
+            ${channelBadge}
+            ${langBadge}
+          </div>
+        </td>
         <td>${severityBadge}</td>
         <td>
           <div style="font-weight:600; color:var(--text-primary); font-size:14px;">${entry.summary_30_words || 'Patient intake recorded'}</div>
@@ -155,7 +171,8 @@ export async function initDoctorQueue() {
           summary_30_words: 'எனக்கு மூன்று நாட்களாக மார்பு வலி உள்ளது (Chest discomfort for 3 days)',
           fact_count: 5,
           has_medication_conflict: true,
-          has_red_flags: true
+          has_red_flags: true,
+          language: 'ta'
         },
         {
           encounter_id: 'enc-demo-ananya-003',
@@ -165,7 +182,8 @@ export async function initDoctorQueue() {
           summary_30_words: 'Cannot catch breath, chest tightness since last night',
           fact_count: 4,
           has_medication_conflict: false,
-          has_red_flags: true
+          has_red_flags: true,
+          language: 'en'
         },
         {
           encounter_id: 'enc-demo-sunita-004',
@@ -175,7 +193,8 @@ export async function initDoctorQueue() {
           summary_30_words: 'Acute weakness, dizziness, extreme thirst reported via telephony',
           fact_count: 3,
           has_medication_conflict: false,
-          has_red_flags: true
+          has_red_flags: true,
+          language: 'hi'
         }
       ];
       store.setDoctorQueue(fallbackQueue, 3);
