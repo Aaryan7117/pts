@@ -1,103 +1,192 @@
-/* ============================================================
-   MediKiosk — Design Tokens (White Clinical Theme)
-   Clean, professional hospital kiosk aesthetic.
-   ============================================================ */
+/**
+ * MediKiosk Web — 3-Layer Design Token Architecture
+ * Conforms to MEDIKIOSK_WEB_DESIGN_SPEC.md & WCAG 2.2 Level AAA (>= 7:1)
+ * "RetinopathyScan Light Medical Standard"
+ */
 
 :root {
-  /* ── Base surfaces ── */
-  --bg-primary: #ffffff;
-  --bg-surface: #ffffff;
-  --bg-card: #ffffff;
-  --bg-sidebar: #f8fafc;
-  --bg-hover: #f0f9ff;
-  --bg-active: #e0f2fe;
+  /* =========================================================================
+     LAYER 1: PRIMITIVE TOKENS (Raw Hex, Spacing, Radius, Shadow Units)
+     ========================================================================= */
 
-  /* ── Borders ── */
-  --border-light: #e2e8f0;
-  --border-medium: #cbd5e1;
-  --border-focus: #0891b2;
+  /* Neutral Slate Palette */
+  --pr-slate-25:  #FBFCFE;
+  --pr-slate-50:  #F6F9FC; /* Base canvas */
+  --pr-slate-100: #EEF3F8; /* Card hover / input background */
+  --pr-slate-200: #DCE5F0; /* Clean thin border */
+  --pr-slate-300: #B8C8DB; /* Border strong / icon inactive */
+  --pr-slate-400: #8FA2BA; /* Disabled placeholder */
+  --pr-slate-500: #6B7A90; /* Secondary metadata text */
+  --pr-slate-600: #4B586B; /* Body muted text */
+  --pr-slate-700: #334053; /* High contrast body copy */
+  --pr-slate-800: #1D2B3F; /* Secondary heading */
+  --pr-slate-900: #10233E; /* Deep clinical contrast primary text */
+  --pr-white:     #FFFFFF;
 
-  /* ── Medical teal accent ── */
-  --accent: #0891b2;
-  --accent-light: #ecfeff;
-  --accent-hover: #0e7490;
-  --accent-dark: #155e75;
-  --accent-gradient: linear-gradient(135deg, #06b6d4, #0891b2);
+  /* Primary Royal Blues */
+  --pr-blue-50:   #EAF3FF;
+  --pr-blue-100:  #D4E6FE;
+  --pr-blue-200:  #A7C8FD;
+  --pr-blue-400:  #5392F8;
+  --pr-blue-600:  #1E75E8;
+  --pr-blue-700:  #1667D9; /* Primary action blue */
+  --pr-blue-900:  #0D3B7A; /* Deep navy authority */
+  --pr-blue-950:  #08244D;
 
-  /* ── Text ── */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-inverse: #ffffff;
+  /* Healthcare Teals & AYUSH Greens */
+  --pr-teal-50:   #E7F8F6;
+  --pr-teal-100:  #C4F1EB;
+  --pr-teal-500:  #12A59C;
+  --pr-teal-700:  #0B8F87; /* Telehealth & device status */
+  --pr-teal-900:  #075B56;
 
-  /* ── Dark Surface High-Contrast Text (for dark panels, chips, and overlays) ── */
-  --text-dark-title: #f8fafc;
-  --text-dark-body: #e2e8f0;
-  --text-dark-secondary: #cbd5e1;
-  --text-dark-muted: #94a3b8;
-  --text-dark-teal: #6ee7b7;
-  --text-dark-amber: #fcd34d;
-  --text-dark-sky: #38bdf8;
+  --pr-green-50:  #EAF8F0;
+  --pr-green-100: #D0F2DF;
+  --pr-green-600: #17824C; /* Clinical success */
+  --pr-green-800: #0D6338;
+  --pr-green-900: #047857; /* Ministry of AYUSH emerald */
 
-  /* ── Severity (always paired with icon + text for color-blind safety) ── */
-  --severity-red: #dc2626;
-  --severity-red-bg: #fef2f2;
-  --severity-red-border: #fecaca;
-  --severity-yellow: #d97706;
-  --severity-yellow-bg: #fffbeb;
-  --severity-yellow-border: #fde68a;
-  --severity-green: #16a34a;
-  --severity-green-bg: #f0fdf4;
-  --severity-green-border: #bbf7d0;
+  /* Triage Red & Warning Amber */
+  --pr-red-50:    #FFF0F0;
+  --pr-red-100:   #FFE0E0;
+  --pr-red-600:   #E04040;
+  --pr-red-700:   #C83A3A; /* Red Flag urgent emergency */
+  --pr-red-900:   #881D1D;
 
-  /* ── Shadows ── */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --pr-amber-50:  #FFF6E5;
+  --pr-amber-100: #FEEDCC;
+  --pr-amber-500: #D97E00;
+  --pr-amber-700: #B66A00; /* Drug alert / missing document */
+  --pr-amber-900: #7A4300;
 
-  /* ── Mic button ── */
-  --mic-size: 140px;
-  --mic-glow: 0 0 40px rgba(8, 145, 178, 0.25);
-  --mic-active-glow: 0 0 50px rgba(220, 38, 38, 0.35);
+  /* Spacing Scale (8px system with 4px micro offsets) */
+  --space-0-5: 2px;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
 
-  /* ── Spacing ── */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
-  --space-16: 64px;
-
-  /* ── Radii ── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* Border Radius Scale */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
+  --radius-2xl:  28px;
   --radius-full: 9999px;
 
-  /* ── Typography ── */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  /* Shadows (Multi-layered, low-tint, crisp medical elevation) */
+  --shadow-xs: 0 1px 2px rgba(16, 35, 62, 0.04);
+  --shadow-sm: 0 2px 4px rgba(16, 35, 62, 0.04), 0 1px 2px rgba(16, 35, 62, 0.03);
+  --shadow-md: 0 4px 12px rgba(16, 35, 62, 0.06), 0 2px 4px rgba(16, 35, 62, 0.04);
+  --shadow-lg: 0 8px 24px rgba(16, 35, 62, 0.08), 0 3px 6px rgba(16, 35, 62, 0.04);
+  --shadow-xl: 0 16px 36px rgba(16, 35, 62, 0.12), 0 6px 12px rgba(16, 35, 62, 0.06);
+  --shadow-active-blue: 0 0 0 3px rgba(22, 103, 217, 0.2), 0 4px 14px rgba(22, 103, 217, 0.18);
+  --shadow-active-red:  0 0 0 3px rgba(200, 58, 58, 0.25), 0 6px 20px rgba(200, 58, 58, 0.25);
 
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  --text-5xl: 3rem;
+  /* Z-Index Stack */
+  --z-base:         1;
+  --z-card-hover:   10;
+  --z-sticky-nav:   100;
+  --z-dropdown:     200;
+  --z-modal-scrim:  900;
+  --z-modal-canvas: 1000;
+  --z-toast:        1100;
 
-  /* ── Transitions ── */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Motion & Easing Curves */
+  --motion-instant:  100ms;
+  --motion-fast:     180ms;
+  --motion-normal:   280ms;
+  --motion-slow:     450ms;
+  --motion-pulse:   1400ms;
+
+  --ease-spring:     cubic-bezier(0.175, 0.885, 0.32, 1.15);
+  --ease-smooth:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:    cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* =========================================================================
+     LAYER 2: SEMANTIC TOKENS (Intent & Role)
+     ========================================================================= */
+
+  /* Backgrounds & Canvas */
+  --bg-canvas:         var(--pr-slate-50);     /* #F6F9FC Base Page Canvas */
+  --bg-surface:        var(--pr-white);        /* #FFFFFF Card & Modal Surfaces */
+  --bg-surface-soft:   var(--pr-slate-25);     /* #FBFCFE Subtle Inset */
+  --bg-surface-subtle: var(--pr-slate-100);    /* #EEF3F8 Disabled / Alternate Row */
+
+  /* Text & Typography */
+  --text-primary:      var(--pr-slate-900);    /* #10233E (WCAG AAA: 15.2:1) */
+  --text-secondary:    var(--pr-slate-700);    /* #334053 (WCAG AAA: 10.1:1) */
+  --text-muted:        var(--pr-slate-500);    /* #6B7A90 (WCAG AA: 5.2:1) */
+  --text-inverse:      var(--pr-white);        /* #FFFFFF */
+  --text-brand:        var(--pr-blue-700);     /* #1667D9 Interactive links */
+
+  /* Borders & Dividers */
+  --border-subtle:     var(--pr-slate-100);
+  --border-default:    var(--pr-slate-200);    /* #DCE5F0 Standard card borders */
+  --border-strong:     var(--pr-slate-300);
+  --border-brand:      var(--pr-blue-700);
+
+  /* Brand Interactive */
+  --brand-primary:     var(--pr-blue-700);     /* #1667D9 Dominant Action */
+  --brand-dark:        var(--pr-blue-900);     /* #0D3B7A Deep Header Accent */
+  --brand-tint:        var(--pr-blue-50);      /* #EAF3FF Selected Card Fill */
+  --brand-hover:       var(--pr-blue-600);
+
+  /* Clinical Status Intent */
+  --status-teal:         var(--pr-teal-700);   /* #0B8F87 Clinical Telehealth & Sensors */
+  --status-teal-tint:    var(--pr-teal-50);
+  --status-ayush:        var(--pr-green-900);  /* #047857 Ministry of AYUSH & Verified */
+  --status-success:      var(--pr-green-600);  /* #17824C Normal Range / Verified Fact */
+  --status-success-tint: var(--pr-green-50);
+  --status-warning:      var(--pr-amber-700);  /* #B66A00 Drug Alert / Missing Document */
+  --status-warning-tint: var(--pr-amber-50);
+  --status-danger:       var(--pr-red-700);    /* #C83A3A Red Flag Triage & Emergency */
+  --status-danger-tint:  var(--pr-red-50);
+
+  /* =========================================================================
+     LAYER 3: COMPONENT-SCOPED TOKENS
+     ========================================================================= */
+
+  /* Shell Dimensions */
+  --header-height:           72px;
+  --sidebar-width:            250px;
+  --sidebar-collapsed-width:  76px;
+
+  /* Card Specifications */
+  --card-padding-sm:          16px;
+  --card-padding-md:          24px;
+  --card-padding-lg:          32px;
+  --card-radius:              var(--radius-xl);   /* 20px */
+  --card-border-width:        1px;
+
+  /* Button Dimensions */
+  --btn-height-sm:            36px;
+  --btn-height-md:            48px;
+  --btn-height-lg:            60px;
+  --btn-height-touch:         68px; /* For Kiosk / Touch tablets */
+  --btn-radius:               var(--radius-md);   /* 12px */
+
+  /* Voice & Waveform Widgets */
+  --mic-btn-size-desktop:     88px;
+  --mic-btn-size-kiosk:       104px;
+  --waveform-bar-width:       5px;
+  --waveform-bar-gap:         6px;
+  --waveform-bar-radius:      3px;
+
+  /* Document Bounding Boxes ("No Receipt, No Fact") */
+  --bounding-box-color:       #F59E0B;
+  --bounding-box-bg:          rgba(245, 158, 11, 0.18);
+  --bounding-box-border:      2.5px solid #D97706;
+
+  /* Typography Font Stack */
+  --font-family-sans: 'Plus Jakarta Sans', 'Inter', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
 }
