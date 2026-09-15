@@ -53,66 +53,55 @@ class TTSService:
         self._indicf5_model = None
 
     def is_online(self) -> bool:
-        """Quick 50ms network probe to check internet connectivity."""
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.05)
-            sock.connect(("1.1.1.1", 53))
-            sock.close()
-            return True
-        except (socket.timeout, socket.error, OSError):
-            return False
+        """Network probe to check internet connectivity with 0.8s timeout."""
+        for target, port in [("api.sarvam.ai", 443), ("1.1.1.1", 443), ("8.8.8.8", 53)]:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.8)
+                sock.connect((target, port))
+                sock.close()
+                return True
+            except (socket.timeout, socket.error, OSError):
+                continue
+        return False
 
     async def synthesize(self, text: str, language: str = "hi") -> TTSResult:
         """
         Synthesize speech from text.
 
         Priority:
-          1. Sarvam Bulbul V3 (cloud, if online + not STANDALONE + API key present)
-          2. AI4Bharat IndicF5 (offline local near-human diffusion TTS on GPU)
-          3. IndicF5 on GPU Edge Server (offline LAN microservice via SPEECH_SERVICE_URL)
-          4. Silence WAV (dev fallback)
+          1. Sarvam Bulbul V3 (cloud, if online + API key present: near-human Indian voice)
+          2. AI4Bharat IndicF5 (offline diffusion TTS)
+          3. IndicF5 on GPU Edge Server (via SPEECH_SERVICE_URL)
+          4. Client-side Web Speech fallback
         """
         if not text or not text.strip():
             silence = self._generate_silence_wav(duration_ms=500)
             return TTSResult(silence, base64.b64encode(silence).decode("utf-8"), 500, provider="empty_input")
 
-        # --- Tier 1 / Tier 2 Priority based on DEPLOYMENT_MODE ---
         deployment_mode = os.getenv("DEPLOYMENT_MODE", settings.DEPLOYMENT_MODE).upper()
 
-        # In STANDALONE / OFFLINE mode: prioritize local IndicF5 first
-        if deployment_mode in ("STANDALONE", "OFFLINE"):
+        # Tier 1: Cloud Sarvam Bulbul V3 (natural, crystal-clear speech for en/hi/ta/te/mr)
+        if self.is_online() and deployment_mode != "OFFLINE" and settings.has_sarvam:
             try:
-                return await self._synthesize_indicf5_local(text, language)
+                return await self._synthesize_sarvam(text, language)
             except Exception as e:
-                logger.warning(f"Local AI4Bharat IndicF5 failed: {e}. Falling back to cloud/remote...")
+                logger.warning(f"Sarvam Bulbul V3 failed: {e}. Cascading to local models.")
 
-            if self.is_online() and settings.has_sarvam:
-                try:
-                    return await self._synthesize_sarvam(text, language)
-                except Exception as e:
-                    logger.warning(f"Sarvam Bulbul V3 fallback failed: {e}.")
-        else:
-            # Cloud-first mode
-            if self.is_online() and settings.has_sarvam:
-                try:
-                    return await self._synthesize_sarvam(text, language)
-                except Exception as e:
-                    logger.warning(f"Sarvam Bulbul V3 failed: {e}. Cascading to local IndicF5.")
+        # Tier 2: Local AI4Bharat IndicF5
+        try:
+            return await self._synthesize_indicf5_local(text, language)
+        except Exception as e:
+            logger.warning(f"Local AI4Bharat IndicF5 failed: {e}.")
 
-            try:
-                return await self._synthesize_indicf5_local(text, language)
-            except Exception as e:
-                logger.warning(f"Local AI4Bharat IndicF5 failed: {e}.")
-
-        # --- Tier 3: IndicF5 on GPU Edge Server (Offline LAN Forwarding) ---
+        # Tier 3: IndicF5 on GPU Edge Server (Offline LAN Forwarding)
         if settings.has_remote_speech:
             try:
                 return await self._synthesize_indicf5_remote(text, language)
             except Exception as e:
                 logger.warning(f"IndicF5 Edge Server forwarding failed: {e}.")
 
-        # --- Fallback: Empty audio signals the browser to use native Web Speech API offline ---
+        # Fallback: Empty audio signals the browser to use native Web Speech API offline
         logger.warning(
             "No TTS provider available. Returning empty audio for client-side Web Speech fallback."
         )

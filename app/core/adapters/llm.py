@@ -86,15 +86,30 @@ class GeminiFlashProvider(LLMProvider):
             response_schema=schema,
             temperature=0.1
         )
-        response = await asyncio.wait_for(
-            client.aio.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=config
-            ),
-            timeout=self.timeout_seconds
-        )
-        return schema.model_validate_json(response.text)
+        models_to_try = [self._model]
+        for alt in ["gemini-3.5-flash-lite", "gemini-flash-latest"]:
+            if alt not in models_to_try:
+                models_to_try.append(alt)
+
+        last_err = None
+        for m in models_to_try:
+            try:
+                response = await asyncio.wait_for(
+                    client.aio.models.generate_content(
+                        model=m,
+                        contents=prompt,
+                        config=config
+                    ),
+                    timeout=self.timeout_seconds
+                )
+                return schema.model_validate_json(response.text)
+            except Exception as e:
+                last_err = e
+                if "NOT_FOUND" in str(e) or "404" in str(e):
+                    logger.warning(f"Gemini model {m} not found, trying fallback...")
+                    continue
+                raise e
+        raise last_err
 
     async def generate_text(self, prompt: str, system_prompt: str) -> str:
         from google.genai import types
@@ -324,6 +339,51 @@ class ResilientLLMService:
         return await self._execute(
             lambda provider: provider.generate_text(prompt, system_prompt)
         )
+
+    async def generate_intake_turn(self, prompt: str, schema: Type[T], system_prompt: str) -> T:
+        """
+        Execute context-aware OPD intake question generation.
+        Strict Routing:
+          ONLINE  → Gemini Flash
+          OFFLINE → Qwen 2.5 7B → Qwen 2.5 3B
+        Strictly excludes Groq/Llama or any other external models.
+        """
+        candidates: list[LLMProvider] = []
+
+        # 1. ONLINE tier: Gemini Flash (if configured and online)
+        if settings.has_gemini and self.is_online():
+            for provider in self.cloud_providers:
+                if isinstance(provider, GeminiFlashProvider):
+                    candidates.append(provider)
+                    break
+
+        # 2. OFFLINE / Fallback tier: Qwen 2.5 7B -> Qwen 2.5 3B
+        for provider in self.edge_providers:
+            if isinstance(provider, OllamaEdgeProvider):
+                candidates.append(provider)
+
+        if not candidates:
+            candidates.extend(self.edge_providers)
+
+        last_error = None
+        for provider in candidates:
+            try:
+                logger.info(f"Generating OPD intake turn via {provider.provider_name}...")
+                result = await provider.generate_structured(prompt, schema, system_prompt)
+                logger.info(f"OPD intake turn successfully generated via {provider.provider_name}")
+                return result
+            except Exception as e:
+                logger.warning(
+                    f"Intake provider {provider.provider_name} failed ({type(e).__name__}: {e}). "
+                    f"Cascading to next provider..."
+                )
+                last_error = e
+                continue
+
+        raise RuntimeError(
+            f"All OPD intake LLM providers exhausted. Last error: {last_error}"
+        )
+
 
     async def _execute(self, task_fn):
         """Run task across provider chain with failover."""

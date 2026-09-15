@@ -7,6 +7,7 @@ POST /api/call/session/end   — End session and lock intake
 These endpoints power the "Call AI Intake" feature on the mobile app.
 """
 
+from typing import Optional
 import uuid
 import json
 import logging
@@ -107,6 +108,7 @@ async def start_call_session(request: CallSessionStartRequest, db=Depends(get_db
 async def process_audio_turn(
     session_id: str = Form(...),
     audio_file: UploadFile = File(...),
+    language: Optional[str] = Form(None),
     db=Depends(get_db)
 ):
     """
@@ -123,35 +125,42 @@ async def process_audio_turn(
         sess_row = await db.execute("SELECT * FROM call_sessions WHERE id = ?", (session_id,))
         sess_db = await sess_row.fetchone()
         encounter_id = f"enc-{uuid.uuid4().hex[:6]}"
-        language = "hi"
+        sess_lang = (language.strip().lower() if language and language.strip() else None) or "hi"
         if sess_db:
             encounter_id = dict(sess_db).get("encounter_id", encounter_id)
-            language = dict(sess_db).get("language", "hi")
+            if not language:
+                sess_lang = dict(sess_db).get("language", "hi")
         else:
             token = f"T-{uuid.uuid4().hex[:4].upper()}"
-            await db.execute("INSERT OR IGNORE INTO encounters (id, token_number, language, channel, status) VALUES (?, ?, ?, 'mobile_byod', 'IN_PROGRESS')", (encounter_id, token, language))
-            await db.execute("INSERT OR IGNORE INTO call_sessions (id, encounter_id, status, language, current_step) VALUES (?, ?, 'CALL_ACTIVE', ?, 'chief_complaint')", (session_id, encounter_id, language))
+            await db.execute("INSERT OR IGNORE INTO encounters (id, token_number, language, channel, status) VALUES (?, ?, ?, 'mobile_byod', 'IN_PROGRESS')", (encounter_id, token, sess_lang))
+            await db.execute("INSERT OR IGNORE INTO call_sessions (id, encounter_id, status, language, current_step) VALUES (?, ?, 'CALL_ACTIVE', ?, 'chief_complaint')", (session_id, encounter_id, sess_lang))
             await db.commit()
-        engine = InterviewEngine(language=language)
-        session = {"encounter_id": encounter_id, "language": language, "engine": engine, "turn_count": 0}
+        engine = InterviewEngine(language=sess_lang)
+        session = {"encounter_id": encounter_id, "language": sess_lang, "engine": engine, "turn_count": 0}
         _active_sessions[session_id] = session
 
+    if language and language.strip():
+        lang_code = language.strip().lower()
+        session["language"] = lang_code
+        if hasattr(session.get("engine"), "language"):
+            session["engine"].language = lang_code
+
     engine: InterviewEngine = session["engine"]
-    language = session["language"]
+    active_language = session.get("language") or "hi"
 
     # Read audio bytes
     audio_bytes = await audio_file.read()
 
     # Step 1: Transcribe audio → text
     asr = get_asr_service()
-    asr_result = await asr.transcribe(audio_bytes, language)
+    asr_result = await asr.transcribe(audio_bytes, active_language)
     transcript = (asr_result.text or "").strip()
 
     # If no speech was detected, reprompt kindly without losing turn state
     if not transcript:
-        reprompt_text = "I couldn't hear that clearly. Could you please speak again?" if language == "en" else "माफ़ कीजिए, मैं सुन नहीं पाया। कृपया दोबारा बोलें।"
+        reprompt_text = "I couldn't hear that clearly. Could you please speak again?" if active_language == "en" else "माफ़ कीजिए, मैं सुन नहीं पाया। कृपया दोबारा बोलें।"
         tts = get_tts_service()
-        tts_result = await tts.synthesize(reprompt_text, language)
+        tts_result = await tts.synthesize(reprompt_text, active_language)
         return AudioTurnResponse(
             session_id=session_id,
             turn_index=session["turn_count"],
@@ -203,7 +212,7 @@ async def process_audio_turn(
     if result["next_question"]:
         next_question_text = result["next_question"]["question_text"]
         tts = get_tts_service()
-        tts_result = await tts.synthesize(next_question_text, language)
+        tts_result = await tts.synthesize(next_question_text, active_language)
         next_question_audio = tts_result.audio_base64
 
     # Update session state
@@ -238,6 +247,7 @@ async def process_audio_turn(
 async def process_text_turn(
     session_id: str = Form(...),
     text: str = Form(...),
+    language: Optional[str] = Form(None),
     db=Depends(get_db)
 ):
     """
@@ -250,21 +260,28 @@ async def process_text_turn(
         sess_row = await db.execute("SELECT * FROM call_sessions WHERE id = ?", (session_id,))
         sess_db = await sess_row.fetchone()
         encounter_id = f"enc-{uuid.uuid4().hex[:6]}"
-        language = "hi"
+        sess_lang = (language.strip().lower() if language and language.strip() else None) or "hi"
         if sess_db:
             encounter_id = dict(sess_db).get("encounter_id", encounter_id)
-            language = dict(sess_db).get("language", "hi")
+            if not language:
+                sess_lang = dict(sess_db).get("language", "hi")
         else:
             token = f"T-{uuid.uuid4().hex[:4].upper()}"
-            await db.execute("INSERT OR IGNORE INTO encounters (id, token_number, language, channel, status) VALUES (?, ?, ?, 'mobile_byod', 'IN_PROGRESS')", (encounter_id, token, language))
-            await db.execute("INSERT OR IGNORE INTO call_sessions (id, encounter_id, status, language, current_step) VALUES (?, ?, 'CALL_ACTIVE', ?, 'chief_complaint')", (session_id, encounter_id, language))
+            await db.execute("INSERT OR IGNORE INTO encounters (id, token_number, language, channel, status) VALUES (?, ?, ?, 'mobile_byod', 'IN_PROGRESS')", (encounter_id, token, sess_lang))
+            await db.execute("INSERT OR IGNORE INTO call_sessions (id, encounter_id, status, language, current_step) VALUES (?, ?, 'CALL_ACTIVE', ?, 'chief_complaint')", (session_id, encounter_id, sess_lang))
             await db.commit()
-        engine = InterviewEngine(language=language)
-        session = {"encounter_id": encounter_id, "language": language, "engine": engine, "turn_count": 0}
+        engine = InterviewEngine(language=sess_lang)
+        session = {"encounter_id": encounter_id, "language": sess_lang, "engine": engine, "turn_count": 0}
         _active_sessions[session_id] = session
 
+    if language and language.strip():
+        lang_code = language.strip().lower()
+        session["language"] = lang_code
+        if hasattr(session.get("engine"), "language"):
+            session["engine"].language = lang_code
+
     engine: InterviewEngine = session["engine"]
-    language = session["language"]
+    active_language = session.get("language") or "hi"
     transcript = text.strip()
 
     # Process through interview engine

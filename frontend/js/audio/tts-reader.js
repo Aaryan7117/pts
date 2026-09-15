@@ -229,126 +229,52 @@ class TTSReader {
   }
 
   /**
-   * Acoustic Formant Voice Synthesizer (Web Audio API)
-   * Plays pleasant clinical speech harmonics matching the phonetic duration and rhythm
-   * of the text. Ensures auditory feedback and avatar synchronization on all platforms.
+   * Graceful speech fallback:
+   * Retries clean browser SpeechSynthesis without custom voice pitch modulation.
+   * If synthesis is completely unsupported, smoothly completes with a natural reading timer
+   * so the avatar and intake flow proceed without alien/sawtooth acoustic noise.
    */
   _speakWithAcousticFallback(text, lang) {
     this._clearTimers();
     this._stopFallbackAudio();
 
-    try {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) {
-        this._emit('start', { text, lang, provider: 'timer_fallback' });
-        const dur = Math.max(2000, (text.length / 15) * 1000);
-        this._fallbackTimer = setTimeout(() => this._emit('end', { text, lang }), dur);
+    if (this.synth) {
+      try {
+        this.synth.cancel();
+        const simpleUtterance = new SpeechSynthesisUtterance(text);
+        simpleUtterance.lang = this._mapLocale(lang);
+        simpleUtterance.rate = 0.95;
+        let started = false;
+        simpleUtterance.onstart = () => {
+          started = true;
+          this._emit('start', { text, lang, provider: 'webspeech_retry' });
+        };
+        simpleUtterance.onend = () => {
+          this._emit('end', { text, lang });
+        };
+        simpleUtterance.onerror = () => {
+          if (!started) {
+            this._runSilentCompletion(text, lang);
+          } else {
+            this._emit('end', { text, lang });
+          }
+        };
+        this.synth.speak(simpleUtterance);
         return;
+      } catch (e) {
+        console.warn('WebSpeech clean retry failed:', e);
       }
-
-      if (!this._audioCtx || this._audioCtx.state === 'closed') {
-        this._audioCtx = new AudioContextClass();
-      }
-      if (this._audioCtx.state === 'suspended') {
-        this._audioCtx.resume();
-      }
-
-      const ctx = this._audioCtx;
-      const now = ctx.currentTime + 0.05;
-
-      // Estimate syllables & duration (~140 words per minute)
-      const words = text.split(/\s+/).filter(Boolean);
-      const wordCount = Math.max(2, words.length);
-      const syllableDuration = 0.16; // ~160ms per syllable
-      const syllablesPerWord = 2.4;
-      const totalSyllables = Math.round(wordCount * syllablesPerWord);
-      const totalDuration = totalSyllables * syllableDuration;
-
-      // Master output gain
-      const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.12, now);
-      masterGain.connect(ctx.destination);
-      this._fallbackNodes.push(masterGain);
-
-      // Multi-formant speech synthesis nodes:
-      // F0 (vocal chord fundamental ~125Hz male clinical doctor), F1 (~500Hz), F2 (~1500Hz)
-      const oscF0 = ctx.createOscillator();
-      const oscF1 = ctx.createOscillator();
-      const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
-      const outputData = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < noiseBuffer.length; i++) {
-        outputData[i] = Math.random() * 2 - 1;
-      }
-
-      oscF0.type = 'sawtooth';
-      oscF1.type = 'triangle';
-
-      const filterF1 = ctx.createBiquadFilter();
-      filterF1.type = 'bandpass';
-      filterF1.frequency.setValueAtTime(550, now);
-      filterF1.Q.setValueAtTime(4.0, now);
-
-      const filterF2 = ctx.createBiquadFilter();
-      filterF2.type = 'bandpass';
-      filterF2.frequency.setValueAtTime(1600, now);
-      filterF2.Q.setValueAtTime(5.0, now);
-
-      // Syllable rhythmic cadence gain
-      const rhythmGain = ctx.createGain();
-      rhythmGain.gain.setValueAtTime(0.001, now);
-
-      // Modulate rhythm gain and formant pitches across syllables to mimic speech cadence
-      let timeCursor = now;
-      for (let s = 0; s < totalSyllables; s++) {
-        const syllableLen = syllableDuration * (0.85 + Math.random() * 0.3);
-        const pitchMod = 125 + Math.sin(s * 0.7) * 14 + (s % 5 === 0 ? 10 : 0);
-
-        oscF0.frequency.setValueAtTime(pitchMod, timeCursor);
-        oscF1.frequency.setValueAtTime(pitchMod * 2, timeCursor);
-
-        // Gentle vowel onset and consonant release
-        rhythmGain.gain.setValueAtTime(0.001, timeCursor);
-        rhythmGain.gain.linearRampToValueAtTime(0.18, timeCursor + syllableLen * 0.3);
-        rhythmGain.gain.exponentialRampToValueAtTime(0.02, timeCursor + syllableLen * 0.85);
-        rhythmGain.gain.setValueAtTime(0.001, timeCursor + syllableLen);
-
-        timeCursor += syllableLen;
-      }
-
-      // Final decay
-      rhythmGain.gain.setValueAtTime(0.001, timeCursor);
-
-      oscF0.connect(filterF1);
-      oscF1.connect(filterF2);
-      filterF1.connect(rhythmGain);
-      filterF2.connect(rhythmGain);
-      rhythmGain.connect(masterGain);
-
-      oscF0.start(now);
-      oscF1.start(now);
-      oscF0.stop(timeCursor + 0.1);
-      oscF1.stop(timeCursor + 0.1);
-
-      this._fallbackNodes.push(oscF0, oscF1, filterF1, filterF2, rhythmGain);
-
-      // Emit start immediately as audio starts
-      this._emit('start', { text, lang, provider: 'acoustic_synthesizer' });
-
-      // Emit end precisely when audio completes
-      const durationMs = (timeCursor - now) * 1000;
-      this._fallbackTimer = setTimeout(() => {
-        this._stopFallbackAudio();
-        this._emit('end', { text, lang, provider: 'acoustic_synthesizer' });
-      }, durationMs);
-
-    } catch (err) {
-      console.warn('Acoustic voice synthesis failed, using timer:', err);
-      this._emit('start', { text, lang, provider: 'silent_timer' });
-      const durationMs = Math.max(2000, (text.length / 15) * 1000);
-      this._fallbackTimer = setTimeout(() => {
-        this._emit('end', { text, lang });
-      }, durationMs);
     }
+
+    this._runSilentCompletion(text, lang);
+  }
+
+  _runSilentCompletion(text, lang) {
+    this._emit('start', { text, lang, provider: 'silent_timer' });
+    const durationMs = Math.max(1500, Math.min(6000, (text.length / 15) * 1000));
+    this._fallbackTimer = setTimeout(() => {
+      this._emit('end', { text, lang });
+    }, durationMs);
   }
 
   _stopFallbackAudio() {

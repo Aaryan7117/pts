@@ -161,57 +161,21 @@ export async function initDoctorQueue() {
       store.setDoctorQueue(q, res.total_waiting);
       _updateDom(q);
     } catch (e) {
-      console.warn('Doctor queue API fetch fallback (using local sample):', e);
-      const fallbackQueue = [
-        {
-          encounter_id: 'enc-demo-lakshmi-001',
-          token_number: 'A-101',
-          channel: 'kiosk',
-          severity_badge: 'RED',
-          summary_30_words: 'எனக்கு மூன்று நாட்களாக மார்பு வலி உள்ளது (Chest discomfort for 3 days)',
-          fact_count: 5,
-          has_medication_conflict: true,
-          has_red_flags: true,
-          language: 'ta'
-        },
-        {
-          encounter_id: 'enc-demo-ananya-003',
-          token_number: 'A-103',
-          channel: 'android_byod',
-          severity_badge: 'RED',
-          summary_30_words: 'Cannot catch breath, chest tightness since last night',
-          fact_count: 4,
-          has_medication_conflict: false,
-          has_red_flags: true,
-          language: 'en'
-        },
-        {
-          encounter_id: 'enc-demo-sunita-004',
-          token_number: 'IVR-402',
-          channel: 'ivr_phone',
-          severity_badge: 'RED',
-          summary_30_words: 'Acute weakness, dizziness, extreme thirst reported via telephony',
-          fact_count: 3,
-          has_medication_conflict: false,
-          has_red_flags: true,
-          language: 'hi'
-        }
-      ];
-      const kioskState = store.getState().kiosk || {};
-      const currentPatientQueueItem = (kioskState.encounterId || kioskState.patientWords) ? [{
-        encounter_id: kioskState.encounterId || 'enc-kiosk-live',
-        token_number: kioskState.tokenNumber || 'A-261',
-        channel: kioskState.channel || 'kiosk',
-        severity_badge: kioskState.severityBadge || 'GREEN',
-        summary_30_words: kioskState.patientWords || 'Clinical intake completed at OPD Kiosk',
-        fact_count: (kioskState.extractedFacts && kioskState.extractedFacts.length) || 3,
-        has_medication_conflict: false,
-        has_red_flags: kioskState.severityBadge === 'RED',
-        language: kioskState.language || 'hi'
-      }] : [];
-      const combinedQueue = [...currentPatientQueueItem, ...fallbackQueue];
-      store.setDoctorQueue(combinedQueue, combinedQueue.length);
-      _updateDom(combinedQueue);
+      console.warn('Doctor queue API fetch error:', e);
+      // Show error state instead of fake mock data
+      const tbody = document.getElementById('doctorQueueTableBody');
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align:center; padding:var(--space-8); color:var(--status-danger);">
+              <div style="font-size:20px; margin-bottom:8px;">⚠️</div>
+              <div style="font-weight:700; font-size:14px; margin-bottom:4px;">Unable to load patient queue</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Backend server may be starting up or unreachable. Error: ${e.message || 'Connection failed'}</div>
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('btnRefreshDoctorQueue')?.click()">🔄 Retry Now</button>
+            </td>
+          </tr>
+        `;
+      }
     }
   }
 

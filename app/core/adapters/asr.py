@@ -66,15 +66,17 @@ class ASRService:
         self._whisper_model = None
 
     def is_online(self) -> bool:
-        """Quick 50ms network probe to check internet connectivity."""
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.05)
-            sock.connect(("1.1.1.1", 53))
-            sock.close()
-            return True
-        except (socket.timeout, socket.error, OSError):
-            return False
+        """Network probe to check internet connectivity with 0.8s timeout."""
+        for target, port in [("api.sarvam.ai", 443), ("1.1.1.1", 443), ("8.8.8.8", 53)]:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.8)
+                sock.connect((target, port))
+                sock.close()
+                return True
+            except (socket.timeout, socket.error, OSError):
+                continue
+        return False
 
     async def transcribe(self, audio_bytes: bytes, language: str = "hi") -> ASRResult:
         """
@@ -83,8 +85,8 @@ class ASRService:
         Priority:
           1. Sarvam Saaras V4 (cloud, if online + not STANDALONE)
           2. Groq Whisper-Large-v3-Turbo (cloud secondary)
-          3. IndicConformer / faster-whisper on GPU Edge Server (via SPEECH_SERVICE_URL)
-          4. Local faster-whisper (offline on CPU, 0 MB VRAM)
+          3. Local faster-whisper (for English or Indic fallback)
+          4. IndicConformer (for native Indic hi/ta/te/mr)
           5. No speech detected
 
         Args:
@@ -93,6 +95,8 @@ class ASRService:
         """
         if not audio_bytes:
             return ASRResult(text="", language=language, confidence=0.0, provider="empty_input")
+
+        is_english = language.lower().startswith("en")
 
         # --- Tier 1: Cloud (if online and not forced OFFLINE) ---
         deployment_mode = os.getenv("DEPLOYMENT_MODE", settings.DEPLOYMENT_MODE).upper()
@@ -113,22 +117,31 @@ class ASRService:
                 except Exception as e:
                     logger.warning(f"Groq Whisper failed: {e}.")
 
-        # --- Tier 2: Local AI4Bharat Speech Models (IndicConformer + IndicWhisper) ---
-        # 1. AI4Bharat IndicConformer (IIT Madras 12,000h Vistaar dataset on CPU ONNX)
-        try:
-            res = await self._transcribe_indicconformer_local(audio_bytes, language)
-            if res.text and len(res.text.strip()) > 1:
-                return res
-        except Exception as e:
-            logger.warning(f"Local AI4Bharat IndicConformer transcription error: {repr(e)}")
+        # --- Tier 2: Local AI4Bharat Speech Models ---
+        # For English: use Whisper directly (NEVER use IndicConformer-Hindi for English speech)
+        if is_english:
+            try:
+                res = await self._transcribe_whisper_local(audio_bytes, "en")
+                if res.text and res.text.strip():
+                    return res
+            except Exception as e:
+                logger.warning(f"Local Whisper transcription error for English: {repr(e)}")
+        else:
+            # 1. AI4Bharat IndicConformer (IIT Madras 12,000h Vistaar dataset on CPU ONNX)
+            try:
+                res = await self._transcribe_indicconformer_local(audio_bytes, language)
+                if res.text and len(res.text.strip()) > 1:
+                    return res
+            except Exception as e:
+                logger.warning(f"Local AI4Bharat IndicConformer transcription error: {repr(e)}")
 
-        # 2. AI4Bharat IndicWhisper / faster-whisper (Offline CPU INT8, 0 MB VRAM)
-        try:
-            res = await self._transcribe_whisper_local(audio_bytes, language)
-            if res.text and res.text.strip():
-                return res
-        except Exception as e:
-            logger.warning(f"Local IndicWhisper transcription error: {repr(e)}")
+            # 2. AI4Bharat IndicWhisper / faster-whisper (Offline CPU INT8, 0 MB VRAM)
+            try:
+                res = await self._transcribe_whisper_local(audio_bytes, language)
+                if res.text and res.text.strip():
+                    return res
+            except Exception as e:
+                logger.warning(f"Local IndicWhisper transcription error: {repr(e)}")
 
         # --- Tier 3: IndicConformer on Remote GPU Edge Server (LAN) ---
         if settings.has_remote_speech:
@@ -269,6 +282,9 @@ class ASRService:
         Runs purely on CPU via ONNX Runtime (0 MB VRAM), leaving GPU free for Qwen 7B & IndicF5.
         """
         lang_code = language.lower().strip()
+        if lang_code.startswith("en"):
+            raise ValueError("IndicConformer does not support English. Use Whisper.")
+
         if lang_code not in self._indic_models:
             import onnx_asr
             repo_map = {
@@ -282,7 +298,6 @@ class ASRService:
                 "ml": "OpenVoiceOS/ai4bharat-indicconformer-ml-onnx",
                 "pa": "OpenVoiceOS/ai4bharat-indicconformer-pa-onnx",
                 "ur": "OpenVoiceOS/ai4bharat-indicconformer-ur-onnx",
-                "en": "OpenVoiceOS/ai4bharat-indicconformer-hi-onnx",
             }
             repo_id = repo_map.get(lang_code, "OpenVoiceOS/ai4bharat-indicconformer-hi-onnx")
             logger.info(f"Initializing AI4Bharat IndicConformer for '{lang_code}' from {repo_id}...")

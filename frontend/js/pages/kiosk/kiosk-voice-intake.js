@@ -162,6 +162,301 @@ const SYMPTOM_CHIPS = {
   ]
 };
 
+
+const I18N_VOICE_UI = {
+  dr_verma_title: {
+    en: 'Dr. Verma, MD',
+    hi: 'डॉ. वर्मा (वरिष्ठ चिकित्सक)',
+    ta: 'டாக்டர் வர்மா (மருத்துவர்)',
+    te: 'డాక్టర్ వర్మ (వైద్య నిపుణులు)',
+    mr: 'डॉ. वर्मा (वरिष्ठ चिकित्सक)'
+  },
+  dr_verma_role: {
+    en: '● AI Clinical Intake Specialist',
+    hi: '● एआई ओपीडी परामर्श',
+    ta: '● AI மருத்துவ ஆலோசனை',
+    te: '● AI ఓపీడీ సంప్రదింపులు',
+    mr: '● AI ओपीडी सल्लागार'
+  },
+  dr_verma_desc: {
+    en: 'Dr. Verma conducts an adaptive clinical intake in your language. Listen to each question, then speak or tap your response.',
+    hi: 'डॉ. वर्मा आपसे आपके स्वास्थ्य के बारे में पूछ रहे हैं। प्रश्न सुनें और बोलकर या लिखकर उत्तर दें।',
+    ta: 'டாக்டர் வர்மா உங்கள் மொழியில் மருத்துவ விவரங்களைக் கேட்கிறார். கேள்வியைக் கேட்டுப் பதிலளிக்கவும்.',
+    te: 'డాక్టర్ వర్మ మీ భాషలో మీ ఆరోగ్యం గురించి అడుగుతున్నారు. ప్రశ్న విని సమాధానం చెప్పండి.',
+    mr: 'डॉ. वर्मा आपल्या भाषेत आपल्या आरोग्याविषयी विचारत आहेत. प्रश्न ऐका आणि उत्तर द्या.'
+  },
+  detected_symptoms: {
+    en: 'Detected Symptoms',
+    hi: 'पहचाने गए लक्षण',
+    ta: 'கண்டறியப்பட்ட அறிகுறிகள்',
+    te: 'గుర్తించబడిన లక్షణాలు',
+    mr: 'ओळखलेली लक्षणे'
+  },
+  facts_appear_here: {
+    en: 'Facts will appear here as you speak...',
+    hi: 'बोलने पर लक्षण यहाँ दिखाई देंगे...',
+    ta: 'நீங்கள் பேசும்போது அறிகுறிகள் இங்கே தோன்றும்...',
+    te: 'మీరు మాట్లాడేటప్పుడు లక్షణాలు ఇక్కడ కనిపిస్తాయి...',
+    mr: 'बोलल्यावर लक्षणे येथे दिसतील...'
+  },
+  tap_to_speak: {
+    en: 'Tap microphone to speak',
+    hi: 'बोलने के लिए माइक दबाएं',
+    ta: 'பேச மைக்-ஐ அழுத்தவும்',
+    te: 'మాట్లాడటానికి మైక్ నొక్కండి',
+    mr: 'बोलण्यासाठी माइक दाबा'
+  },
+  mic_listening: {
+    en: 'Listening... Speak naturally (will auto-submit when done)',
+    hi: 'सुन रहा हूँ... बोलिए (बोलने के बाद स्वतः दर्ज होगा)',
+    ta: 'கேட்கிறேன்... பேசுங்கள் (பேசிய பிறகு தானாகப் பதிவு செய்யப்படும்)',
+    te: 'వింటున్నాను... మాట్లాడండి (మాట్లాడిన తర్వాత స్వయంచాలకంగా నమోదు చేయబడుతుంది)',
+    mr: 'ऐकत आहे... बोला (बोलल्यानंतर आपोआप नोंदवले जाईल)'
+  },
+  mic_denied: {
+    en: 'Microphone access denied. Please type your symptoms below.',
+    hi: 'माइक्रोफ़ोन की अनुमति नहीं मिली। कृपया नीचे लक्षण लिखें।',
+    ta: 'மைக்ரோஃபோன் அனுமதி கிடைக்கவில்லை. தயவுசெய்து கீழே அறிகுறிகளை தட்டச்சு செய்யவும்.',
+    te: 'మైక్రోఫోన్ అనుమతి నిరాకరించబడింది. దయచేసి క్రింద లక్షణాలను టైప్ చేయండి.',
+    mr: 'मायक्रोफोन परवानगी नाकारली. कृपया खाली लक्षणे टाइप करा.'
+  },
+  type_symptoms: {
+    en: 'Type or Select Your Symptoms',
+    hi: 'लक्षण लिखें या नीचे से चुनें',
+    ta: 'அறிகுறிகளை எழுதவும் அல்லது தேர்ந்தெடுக்கவும்',
+    te: 'లక్షణాలను రాయండి లేదా ఎంచుకోండి',
+    mr: 'लक्षणे लिहा किंवा निवडा'
+  },
+  type_placeholder: {
+    en: 'e.g. Fever for 3 days and severe headache...',
+    hi: 'उदा. ३ दिन से बुखार और सिरदर्द हो रहा है...',
+    ta: 'உதா. 3 நாட்களாக காய்ச்சல் மற்றும் தலைவலி...',
+    te: 'உదా. 3 రోజులుగా జ్వరం மற்றும் தலைவலி...',
+    mr: 'उदा. ३ दिवस ताप आणि तीव्र डोकेदुखी...'
+  },
+  clear: {
+    en: 'Clear',
+    hi: 'हटाएं',
+    ta: 'அழி',
+    te: 'క్లియర్',
+    mr: 'साफ करा'
+  },
+  quick_symptoms: {
+    en: 'Quick Symptoms (Tap to add)',
+    hi: 'सामान्य लक्षण (जोड़ने के लिए दबाएं)',
+    ta: 'விரைவு அறிகுறிகள் (சேர்க்க தொடவும்)',
+    te: 'త్వరిత లక్షణాలు (జోడించడానికి నొక్కండి)',
+    mr: 'द्रुत लक्षणे (जोडण्यासाठी टॅप करा)'
+  },
+  send_answer: {
+    en: 'Send Answer',
+    hi: 'उत्तर भेजें',
+    ta: 'பதில் அனுப்பவும்',
+    te: 'సమాధానం పంపండి',
+    mr: 'उत्तर पाठवा'
+  },
+  review_summary: {
+    en: 'Review Summary',
+    hi: 'सारांश देखें',
+    ta: 'சுருக்கம் பார்க்கவும்',
+    te: 'సారాంశం చూడండి',
+    mr: 'सारांश पहा'
+  },
+  you_label: {
+    en: 'You',
+    hi: 'आप',
+    ta: 'நீங்கள்',
+    te: 'మీరు',
+    mr: 'तुम्ही'
+  },
+  processing_voice: {
+    en: '🎙️ Processing your voice with AI ASR...',
+    hi: '🎙️ आपकी आवाज़ का विश्लेषण किया जा रहा है...',
+    ta: '🎙️ உங்கள் குரல் பகுப்பாய்வு செய்யப்படுகிறது...',
+    te: '🎙️ మీ వాయిస్ విశ్లేషించబడుతోంది...',
+    mr: '🎙️ आपल्या आवाजाचे विश्लेषण होत आहे...'
+  },
+  analyzing_preview: {
+    en: '🎙️ [Analyzing spoken response...]',
+    hi: '🎙️ [आवाज़ का विश्लेषण हो रहा है...]',
+    ta: '🎙️ [குரல் பகுப்பாய்வு செய்யப்படுகிறது...]',
+    te: '🎙️ [వాయిస్ విశ్లేషించబడుతోంది...]',
+    mr: '🎙️ [आवाजाचे विश्लेषण होत आहे...]'
+  },
+  general_intake: {
+    en: 'General Health Intake',
+    hi: 'सामान्य स्वास्थ्य परामर्श',
+    ta: 'பொது சுகாதார ஆலோசனை',
+    te: 'సాధారణ ఆరోగ్య సంప్రదింపులు',
+    mr: 'सामान्य आरोग्य सल्ला'
+  },
+  voice_recorded: {
+    en: 'Voice symptoms recorded',
+    hi: 'लक्षण दर्ज किए गए',
+    ta: 'குரல் அறிகுறிகள் பதிவு செய்யப்பட்டன',
+    te: 'వాయిస్ లక్షణాలు నమోదు చేయబడ్డాయి',
+    mr: 'लक्षणे नोंदवली गेली'
+  },
+  use_mic_instead: {
+    en: 'Use Microphone Instead',
+    hi: 'माइक का उपयोग करें',
+    ta: 'மைக்ரோஃபோனைப் பயன்படுத்தவும்',
+    te: 'బదులుగా మైక్రోఫోన్ ఉపయోగించండి',
+    mr: 'माइकचा वापर करा'
+  },
+  closing_speech: {
+    en: 'Thank you. I have recorded your symptoms. Let us now review your clinical summary.',
+    hi: 'धन्यवाद। मैंने आपकी सभी स्वास्थ्य जानकारी दर्ज कर ली है। अब कृपया सारांश की पुष्टि करें।',
+    ta: 'நன்றி. உங்கள் உடல்நலத் தகவல்கள் பதிவு செய்யப்பட்டுள்ளன. இப்போது மருத்துவ சுருக்கத்தை மதிப்பாய்வு செய்வோம்.',
+    te: 'ధన్యవాదాలు. మీ ఆరోగ్య వివరాలు నమోదు చేయబడ్డాయి. ఇప్పుడు వైద్య సారాంశాన్ని సమీక్షిద్దాం.',
+    mr: 'धन्यवाद. मी तुमची सर्व आरोग्य माहिती नोंदवली आहे. आता कृपया सारांशाची पडताळणी करा.'
+  },
+  next_turn_prompt: {
+    en: 'Listening... speak or type your answer',
+    hi: 'बोलें या नीचे लिखें (अगला उत्तर)',
+    ta: 'பேசவும் அல்லது கீழே எழுதவும் (அடுத்த பதில்)',
+    te: 'మాట్లాడండి లేదా క్రింద రాయండి (తదుపరి సమాధానం)',
+    mr: 'बोला किंवा खाली लिहा (पुढील उत्तर)'
+  },
+  intake_complete: {
+    en: 'Intake complete! Moving to summary...',
+    hi: 'परामर्श पूर्ण! सारांश पर जा रहे हैं...',
+    ta: 'பதிவு நிறைவடைந்தது! சுருக்கத்திற்கு செல்கிறது...',
+    te: 'పూర్తయింది! సారాంశానికి వెళ్తున్నాము...',
+    mr: 'नोंदणी पूर्ण! सारांशाकडे जात आहोत...'
+  }
+};
+
+function getVoiceUi(key, lang) {
+  return I18N_VOICE_UI[key]?.[lang] || I18N_VOICE_UI[key]?.hi || '';
+}
+
+const CLINICAL_FACTS_I18N = {
+  default_problem: {
+    en: 'General Health Consultation',
+    hi: 'सामान्य स्वास्थ्य परामर्श',
+    ta: 'பொது சுகாதார ஆலோசனை',
+    te: 'సాధారణ ఆరోగ్య సంప్రదింపులు',
+    mr: 'सामान्य आरोग्य सल्ला'
+  },
+  fever: {
+    en: 'Acute Febrile Illness',
+    hi: 'तेज़ बुखार (High Fever)',
+    ta: 'கடுமையான காய்ச்சல் (High Fever)',
+    te: 'తీవ్ర జ్వరం (High Fever)',
+    mr: 'तीव्र ताप (High Fever)'
+  },
+  cough: {
+    en: 'Upper Respiratory Tract Infection',
+    hi: 'खांसी व ज़ुकाम (Cough & Cold)',
+    ta: 'இருமல் மற்றும் சளி (Cough & Cold)',
+    te: 'దగ్గు மற்றும் జలుబు (Cough & Cold)',
+    mr: 'खोकला आणि सर्दी (Cough & Cold)'
+  },
+  chest: {
+    en: 'Chest Discomfort / Dyspnea',
+    hi: 'सीने में दर्द या सांस फूलना (Chest Pain)',
+    ta: 'மார்பு வலி / மூச்சுத்திணறல் (Chest Pain)',
+    te: 'ఛాతీ నొప్పి / శ్వాస ఆడకపోవడం (Chest Pain)',
+    mr: 'छातीत दुखणे / दम लागणे (Chest Pain)'
+  },
+  headache: {
+    en: 'Cephalea (Headache)',
+    hi: 'सिरदर्द (Severe Headache)',
+    ta: 'கடுமையான தலைவலி (Headache)',
+    te: 'తీవ్ర తలనొప్పి (Headache)',
+    mr: 'तीव्र डोकेदुखी (Headache)'
+  },
+  stomach: {
+    en: 'Acute Gastroenteritis',
+    hi: 'पेट दर्द व पाचन विकार (Stomach Pain)',
+    ta: 'வயிற்று வலி / செரிமானக் கோளாறு (Stomach Pain)',
+    te: 'కడుపు నొప్పి మరియు జీర్ణ సమస్యలు (Stomach Pain)',
+    mr: 'पोटदुखी व पचन समस्या (Stomach Pain)'
+  },
+  joint: {
+    en: 'Arthralgia / Joint Pain',
+    hi: 'जोड़ों व घुटनों में दर्द (Joint Pain)',
+    ta: 'மூட்டு மற்றும் முழங்கால் வலி (Joint Pain)',
+    te: 'కీళ్ల మరియు మోకాళ్ల నొప్పులు (Joint Pain)',
+    mr: 'सांधे आणि गुडघे दुखी (Joint Pain)'
+  },
+  skin: {
+    en: 'Skin Rash & Itching',
+    hi: 'त्वचा एलर्जी व खुजली (Skin Rash)',
+    ta: 'தோல் தடிப்பு மற்றும் அரிப்பு (Skin Rash)',
+    te: 'చర్మ దద్దుర్లు మరియు దురద (Skin Rash)',
+    mr: 'त्वचा ॲलर्जी व खाज (Skin Rash)'
+  },
+  weakness: {
+    en: 'General Weakness & Fatigue',
+    hi: 'कमजोरी व थकान (Weakness)',
+    ta: 'உடல் சோர்வு மற்றும் பலவீனம் (Weakness)',
+    te: 'నీరసం மற்றும் అలసట (Weakness)',
+    mr: 'अशक्तपणा आणि थकवा (Weakness)'
+  },
+  duration_recent: {
+    en: 'Recent onset (1-3 days)',
+    hi: 'हाल ही में (१-३ दिन)',
+    ta: 'சமீபத்தில் (1-3 நாட்கள்)',
+    te: 'ఇటీవల (1-3 రోజులు)',
+    mr: 'अलीकडेच (१-३ दिवस)'
+  },
+  duration_weeks: {
+    en: '1-2 weeks',
+    hi: '१-२ सप्ताह से',
+    ta: '1-2 வாரங்களாக',
+    te: '1-2 వారాలుగా',
+    mr: '१-२ आठवड्यांपासून'
+  },
+  duration_morning: {
+    en: 'Since morning',
+    hi: 'आज सुबह से',
+    ta: 'இன்று காலை முதல்',
+    te: 'ఈ ఉదయం నుండి',
+    mr: 'आज सकाळपासून'
+  },
+  duration_yesterday: {
+    en: 'Since yesterday',
+    hi: 'कल से',
+    ta: 'நேற்று முதல்',
+    te: 'நிన్నటి నుండి',
+    mr: 'कालपासून'
+  },
+  duration_days_suffix: {
+    en: 'days',
+    hi: 'दिनों से',
+    ta: 'நாட்களாக',
+    te: 'రోజులుగా',
+    mr: 'दिवसांपासून'
+  },
+  severity_severe: {
+    en: 'Severe (8/10)',
+    hi: 'तेज़ (८/१०)',
+    ta: 'தீவிரமானது (8/10)',
+    te: 'తీవ్రమైనది (8/10)',
+    mr: 'तीव्र (८/१०)'
+  },
+  severity_moderate: {
+    en: 'Moderate (5/10)',
+    hi: 'मध्यम (५/१०)',
+    ta: 'மிதமான (5/10)',
+    te: 'మధ్యస్థం (5/10)',
+    mr: 'मध्यम (५/१०)'
+  },
+  severity_mild: {
+    en: 'Mild (3/10)',
+    hi: 'हल्का (३/१०)',
+    ta: 'லேசான (3/10)',
+    te: 'తేలికపాటి (3/10)',
+    mr: 'सौम्य (३/१०)'
+  }
+};
+
+function getClinicalFactText(key, lang) {
+  return CLINICAL_FACTS_I18N[key]?.[lang] || CLINICAL_FACTS_I18N[key]?.en || '';
+}
+
 export function renderKioskVoiceIntake() {
   const lang = store.getState().kiosk.language || 'hi';
   const promptText = i18n.t('voice_prompt', lang);
@@ -202,18 +497,16 @@ export function renderKioskVoiceIntake() {
               <span style="font-size:24px;">👨‍⚕️</span>
               <div>
                 <h2 style="font-size:16px; font-weight:800; color:var(--text-primary); margin:0;">
-                  ${lang === 'en' ? 'Dr. Verma, MD' : 'डॉ. वर्मा (वरिष्ठ चिकित्सक)'}
+                  ${getVoiceUi('dr_verma_title', lang)}
                 </h2>
                 <div style="font-size:11px; color:var(--brand-primary); font-weight:700;">
-                  ● ${lang === 'en' ? 'AI Clinical Intake Specialist' : 'एआई ओपीडी परामर्श'}
+                  ${getVoiceUi('dr_verma_role', lang)}
                 </div>
               </div>
             </div>
             
             <p style="font-size:12px; color:var(--text-secondary); line-height:1.4; margin:4px 0 8px 0;">
-              ${lang === 'en'
-                ? 'Dr. Verma conducts an adaptive clinical intake in your language. Listen to each question, then speak or tap your response.'
-                : 'डॉ. वर्मा आपसे आपके स्वास्थ्य के बारे में पूछ रहे हैं। प्रश्न सुनें और बोलकर या लिखकर उत्तर दें।'}
+              ${getVoiceUi('dr_verma_desc', lang)}
             </p>
           </div>
 
@@ -223,12 +516,12 @@ export function renderKioskVoiceIntake() {
           <!-- Live Clinical Extracted Entity Chips -->
           <div style="background:rgba(2,132,199,0.04); border:1px solid rgba(2,132,199,0.15); border-radius:var(--radius-md); padding:10px;">
             <div style="font-size:11px; font-weight:800; color:var(--brand-primary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-              <span>🩺 ${lang === 'en' ? 'Detected Symptoms' : 'पहचाने गए लक्षण'}:</span>
+              <span>🩺 ${getVoiceUi('detected_symptoms', lang)}:</span>
               <span id="kioskFactCountBadge" class="badge badge-primary" style="font-size:10px; padding:1px 6px;">0</span>
             </div>
             <div id="kioskFactChipsLive" style="display:flex; flex-wrap:wrap; gap:6px; min-height:36px; align-items:center;">
               <span style="font-size:11px; color:var(--text-muted); font-style:italic;">
-                ${lang === 'en' ? 'Facts will appear here as you speak...' : 'बोलने पर लक्षण यहाँ दिखाई देंगे...'}
+                ${getVoiceUi('facts_appear_here', lang)}
               </span>
             </div>
           </div>
@@ -278,7 +571,7 @@ export function renderKioskVoiceIntake() {
               </div>
 
               <div id="kioskMicStatusText" class="mic-status-label" style="font-size:15px; font-weight:700; margin-top:8px;">
-                ${lang === 'en' ? 'Tap microphone to speak' : 'बोलने के लिए माइक दबाएं'}
+                ${getVoiceUi('tap_to_speak', lang)}
               </div>
 
               <!-- Real-time WebAudio Waveform Visualizer -->
@@ -291,18 +584,18 @@ export function renderKioskVoiceIntake() {
             <div id="kioskTypingModeContainer" style="display:none; flex-direction:column; width:100%; background:var(--bg-card); border:1px solid var(--border-medium); border-radius:var(--radius-lg); padding:12px; box-shadow:var(--shadow-sm);">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <label for="kioskTypingInput" style="font-weight:700; font-size:13px; color:var(--text-primary);">
-                  ⌨️ ${lang === 'en' ? 'Type or Select Your Symptoms' : 'लक्षण लिखें या नीचे से चुनें'}:
+                  ⌨️ ${getVoiceUi('type_symptoms', lang)}:
                 </label>
                 <button id="btnClearTyping" class="btn btn-ghost btn-sm" style="font-size:11px; padding:2px 8px;">
-                  ✕ ${lang === 'en' ? 'Clear' : 'हटाएं'}
+                  ✕ ${getVoiceUi('clear', lang)}
                 </button>
               </div>
 
-              <textarea id="kioskTypingInput" class="kiosk-typing-textarea" placeholder="${lang === 'en' ? 'e.g. Fever for 3 days and severe headache...' : 'उदा. ३ दिन से बुखार और सिरदर्द हो रहा है...'}" rows="2"></textarea>
+              <textarea id="kioskTypingInput" class="kiosk-typing-textarea" placeholder="${getVoiceUi('type_placeholder', lang)}" rows="2"></textarea>
 
               <div class="kiosk-symptom-chips-container" style="margin-top:6px;">
                 <div class="kiosk-symptom-chips-title" style="font-size:11px; font-weight:700;">
-                  ⚡ ${lang === 'en' ? 'Quick Symptoms (Tap to add)' : 'सामान्य लक्षण (जोड़ने के लिए दबाएं)'}:
+                  ⚡ ${getVoiceUi('quick_symptoms', lang)}:
                 </div>
                 <div class="kiosk-symptom-chips" id="kioskSymptomChips"></div>
               </div>
@@ -332,12 +625,12 @@ export function renderKioskVoiceIntake() {
             <div style="display:flex; gap:10px;">
               <!-- Send Turn Answer -->
               <button id="btnSubmitAnswer" class="btn btn-primary btn-touch" style="min-width:180px; justify-content:center;" disabled>
-                ✓ ${lang === 'en' ? 'Send Answer' : 'उत्तर भेजें'} →
+                ✓ ${getVoiceUi('send_answer', lang)} →
               </button>
 
               <!-- Finalize & Proceed to Summary -->
               <button id="btnVoiceDone" class="btn btn-ayush btn-touch" style="min-width:200px; justify-content:center;">
-                📋 ${lang === 'en' ? 'Review Summary' : 'सारांश देखें'} →
+                📋 ${getVoiceUi('review_summary', lang)} →
               </button>
             </div>
           </div>
@@ -376,7 +669,7 @@ export async function initKioskVoiceIntake() {
   currentAudioBase64 = null;
 
   // 1. Doctor Avatar starts strictly in IDLE / LISTENING animation.
-  avatarInstance = new DoctorAvatar('kioskVoiceAvatarContainer');
+  avatarInstance = new DoctorAvatar('kioskVoiceAvatarContainer', { language: lang });
   avatarInstance.mount();
   avatarInstance.setState('idle');
 
@@ -500,7 +793,7 @@ export async function initKioskVoiceIntake() {
       bubble.innerHTML = `👨‍⚕️ <strong>Dr. Verma:</strong> ${text}`;
     } else {
       bubble.style.cssText = 'background:#CCFBF1; color:#0F766E; font-size:13px; font-weight:600; padding:8px 14px; border-radius:12px 12px 2px 12px; align-self:flex-end; max-width:85%;';
-      bubble.innerHTML = `👤 <strong>${lang === 'en' ? 'You' : 'आप'}:</strong> ${text}`;
+      bubble.innerHTML = `👤 <strong>${getVoiceUi('you_label', lang)}:</strong> ${text}`;
     }
     conversationStream.appendChild(bubble);
     conversationStream.scrollTop = conversationStream.scrollHeight;
@@ -518,7 +811,7 @@ export async function initKioskVoiceIntake() {
     if (facts.length === 0) {
       chipsEl.innerHTML = `
         <span style="font-size:11px; color:var(--text-muted); font-style:italic;">
-          ${lang === 'en' ? 'Facts will appear here as you speak...' : 'बोलने पर लक्षण यहाँ दिखाई देंगे...'}
+          ${getVoiceUi('facts_appear_here', lang)}
         </span>
       `;
       return;
@@ -558,7 +851,7 @@ export async function initKioskVoiceIntake() {
         inputMode = 'typing';
         if (voiceContainer) voiceContainer.style.display = 'none';
         if (typingContainer) typingContainer.style.display = 'flex';
-        toggleBtn.innerHTML = `🎙️ ${lang === 'en' ? 'Use Microphone Instead' : 'माइक का उपयोग करें'}`;
+        toggleBtn.innerHTML = `🎙️ ${getVoiceUi('use_mic_instead', lang)}`;
         if (typingInput) typingInput.focus();
       } else {
         inputMode = 'voice';
@@ -629,9 +922,7 @@ export async function initKioskVoiceIntake() {
           instructionBox.style.boxShadow = '';
           instructionBox.style.background = 'rgba(2,132,199,0.06)';
         }
-        statusText.textContent = lang === 'en'
-          ? 'Listening... Speak naturally (will auto-submit when done)'
-          : 'सुन रहा हूँ... बोलिए (बोलने के बाद स्वतः दर्ज होगा)';
+        statusText.textContent = getVoiceUi('mic_listening', lang);
         statusText.style.color = 'var(--status-danger)';
         sounds.playStartListening();
 
@@ -657,9 +948,7 @@ export async function initKioskVoiceIntake() {
           };
         } catch (err) {
           console.warn('Microphone access error:', err);
-          statusText.textContent = lang === 'en'
-            ? 'Microphone access denied. Please type your symptoms below.'
-            : 'माइक्रोफ़ोन की अनुमति नहीं मिली। कृपया नीचे लक्षण लिखें।';
+          statusText.textContent = getVoiceUi('mic_denied', lang);
           isRecording = false;
           micBtn.classList.remove('active');
           return;
@@ -691,9 +980,7 @@ export async function initKioskVoiceIntake() {
     }
 
     if (statusText) {
-      statusText.textContent = lang === 'en'
-        ? '🎙️ Processing your voice with AI ASR...'
-        : '🎙️ आपकी आवाज़ का विश्लेषण किया जा रहा है...';
+      statusText.textContent = getVoiceUi('processing_voice', lang);
       statusText.style.color = 'var(--brand-primary)';
     }
 
@@ -721,9 +1008,9 @@ export async function initKioskVoiceIntake() {
     const typedText = typingInput ? typingInput.value.trim() : '';
     let previewText = recordedPatientText || typedText;
     if (!previewText && audioBlob) {
-      previewText = lang === 'en' ? '🎙️ [Analyzing spoken response...]' : '🎙️ [आवाज़ का विश्लेषण हो रहा है...]';
+      previewText = getVoiceUi('analyzing_preview', lang);
     } else if (!previewText) {
-      previewText = lang === 'en' ? 'General Health Intake' : 'सामान्य स्वास्थ्य परामर्श';
+      previewText = getVoiceUi('general_intake', lang);
     }
 
     if (submitBtn) {
@@ -731,7 +1018,7 @@ export async function initKioskVoiceIntake() {
       submitBtn.textContent = 'Processing...';
     }
     if (statusText) {
-      statusText.textContent = 'AI Physician is processing your response...';
+      statusText.textContent = getVoiceUi('processing_voice', lang);
       statusText.style.color = 'var(--brand-primary)';
     }
 
@@ -766,17 +1053,17 @@ export async function initKioskVoiceIntake() {
       try {
         let turnRes = null;
         if (audioBlob && audioBlob.size > 200) {
-          turnRes = await kioskApi.sendAudioTurn(sessionId, audioBlob);
+          turnRes = await kioskApi.sendAudioTurn(sessionId, audioBlob, lang);
         } else if (typedText || recordedPatientText) {
-          turnRes = await kioskApi.sendTextTurn(sessionId, typedText || recordedPatientText);
+          turnRes = await kioskApi.sendTextTurn(sessionId, typedText || recordedPatientText, lang);
         }
 
         if (turnRes) {
           // Update bubble with real transcribed text from backend ASR!
-          const actualSpoken = turnRes.patient_transcript || (previewText.startsWith('🎙️') ? (lang === 'en' ? 'Voice symptoms recorded' : 'लक्षण दर्ज किए गए') : previewText);
+          const actualSpoken = turnRes.patient_transcript || (previewText.startsWith('🎙️') ? getVoiceUi('voice_recorded', lang) : previewText);
           const bubbleEl = document.getElementById(bubbleId);
           if (bubbleEl) {
-            bubbleEl.innerHTML = `👤 <strong>${lang === 'en' ? 'You' : 'आप'}:</strong> ${actualSpoken}`;
+            bubbleEl.innerHTML = `👤 <strong>${getVoiceUi('you_label', lang)}:</strong> ${actualSpoken}`;
           }
           if (transcriptCard) {
             transcriptCard.textContent = actualSpoken;
@@ -826,17 +1113,15 @@ export async function initKioskVoiceIntake() {
 
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = `✓ ${lang === 'en' ? 'Send Answer' : 'उत्तर भेजें'} →`;
+      submitBtn.textContent = `✓ ${getVoiceUi('send_answer', lang)} →`;
     }
 
     if (isCompleted) {
-      const closingSpeech = lang === 'en'
-        ? 'Thank you. I have recorded your symptoms. Let us now review your clinical summary.'
-        : 'धन्यवाद। मैंने आपकी सभी स्वास्थ्य जानकारी दर्ज कर ली है। अब कृपया सारांश की पुष्टि करें।';
+      const closingSpeech = getVoiceUi('closing_speech', lang);
       
       if (questionCardText) questionCardText.textContent = `"${closingSpeech}"`;
       if (statusText) {
-        statusText.textContent = 'Intake complete! Moving to summary...';
+        statusText.textContent = getVoiceUi('intake_complete', lang);
         statusText.style.color = 'var(--status-success)';
       }
       
@@ -859,9 +1144,7 @@ export async function initKioskVoiceIntake() {
     addChatBubble('doctor', currentQuestionText);
 
     if (statusText) {
-      statusText.textContent = lang === 'en'
-        ? 'Listening... speak or type your answer'
-        : 'बोलें या नीचे लिखें (अगला उत्तर)';
+      statusText.textContent = getVoiceUi('next_turn_prompt', lang);
       statusText.style.color = 'var(--brand-primary)';
     }
 
@@ -899,46 +1182,46 @@ function extractClinicalFactsFromText(patientWords, lang) {
   const text = (patientWords || '').toLowerCase();
   
   // 1. Chief Complaint identification
-  let problem = 'General Health Consultation';
+  let problem = getClinicalFactText('default_problem', lang);
   if (/fever|बुखार|காய்ச்சல்|జ్వరం|ताप/.test(text)) {
-    problem = lang === 'en' ? 'Acute Febrile Illness' : 'तेज़ बुखार (High Fever)';
+    problem = getClinicalFactText('fever', lang);
   } else if (/cough|cold|खांसी|सर्दी|இருமல்|దగ్గు|खोकला/.test(text)) {
-    problem = lang === 'en' ? 'Upper Respiratory Tract Infection' : 'खांसी व ज़ुकाम (Cough & Cold)';
-  } else if (/chest|breath|सांस|छाती|மார்பு|ఛాతీ|छातीत/.test(text)) {
-    problem = lang === 'en' ? 'Chest Discomfort / Dyspnea' : 'सीने में दर्द या सांस फूलना (Chest Pain)';
+    problem = getClinicalFactText('cough', lang);
+  } else if (/chest|breath|सांस|छाती|மார்பு|ఛాతী|छातीत/.test(text)) {
+    problem = getClinicalFactText('chest', lang);
   } else if (/headache|head|सिरदर्द|सिर|தலைவலி|తలనొప్పి|डोकेदुखी/.test(text)) {
-    problem = lang === 'en' ? 'Cephalea (Headache)' : 'सिरदर्द (Severe Headache)';
+    problem = getClinicalFactText('headache', lang);
   } else if (/stomach|abdomen|vomit|diarrhea|पेट|उल्टी|दस्त|வயிறு|కడుపు|पोट/.test(text)) {
-    problem = lang === 'en' ? 'Acute Gastroenteritis' : 'पेट दर्द व पाचन विकार (Stomach Pain)';
+    problem = getClinicalFactText('stomach', lang);
   } else if (/joint|knee|bone|गठिया|जोड़ों|घुटने|மூட்டு|కీళ్ల|सांधे/.test(text)) {
-    problem = lang === 'en' ? 'Arthralgia / Joint Pain' : 'जोड़ों व घुटनों में दर्द (Joint Pain)';
+    problem = getClinicalFactText('joint', lang);
   } else if (/skin|rash|itching|खुजली|त्वचा|தோல்|చర్మ|खाज/.test(text)) {
-    problem = lang === 'en' ? 'Skin Rash & Itching' : 'त्वचा एलर्जी व खुजली (Skin Rash)';
+    problem = getClinicalFactText('skin', lang);
   } else if (/weakness|fatigue|dizziness|कमजोरी|चक्कर|களைப்பு|నీரசம்|थकवा/.test(text)) {
-    problem = lang === 'en' ? 'General Weakness' : 'कमजोरी व थकान (Weakness)';
+    problem = getClinicalFactText('weakness', lang);
   } else {
     problem = patientWords.length > 40 ? patientWords.substring(0, 38) + '...' : patientWords;
   }
 
   // 2. Duration
-  let duration = lang === 'en' ? 'Recent onset (1-3 days)' : 'हाल ही में (१-३ दिन)';
+  let duration = getClinicalFactText('duration_recent', lang);
   const dayMatch = text.match(/(\d+)\s*(day|दिन|நாட்கள்|రోజులు|दिवस)/);
   if (dayMatch) {
-    duration = `${dayMatch[1]} ${lang === 'en' ? 'days' : 'दिनों से'}`;
+    duration = `${dayMatch[1]} ${getClinicalFactText('duration_days_suffix', lang)}`;
   } else if (/week|हफ़्ते|सप्ताह|வாரம்|వారం/.test(text)) {
-    duration = lang === 'en' ? '1-2 weeks' : '१-२ सप्ताह से';
+    duration = getClinicalFactText('duration_weeks', lang);
   } else if (/morning|सुबह|காலை|ఉదయం|सकाळ/.test(text)) {
-    duration = lang === 'en' ? 'Since morning' : 'आज सुबह से';
+    duration = getClinicalFactText('duration_morning', lang);
   } else if (/yesterday|कल|நேற்று|నిన్న/.test(text)) {
-    duration = lang === 'en' ? 'Since yesterday' : 'कल से';
+    duration = getClinicalFactText('duration_yesterday', lang);
   }
 
   // 3. Severity
-  let severity = lang === 'en' ? 'Moderate (5/10)' : 'मध्यम (५/१०)';
+  let severity = getClinicalFactText('severity_moderate', lang);
   if (/severe|तेज़|तीव्र|अत्यधिक|கடுமையான|తీవ్రమైన|तीव्र/.test(text)) {
-    severity = lang === 'en' ? 'Severe (8/10)' : 'तेज़ (८/१०)';
+    severity = getClinicalFactText('severity_severe', lang);
   } else if (/mild|हल्का|லேசான|తేలికపాటి|सौम्य/.test(text)) {
-    severity = lang === 'en' ? 'Mild (3/10)' : 'हल्का (३/१०)';
+    severity = getClinicalFactText('severity_mild', lang);
   }
 
   return [

@@ -161,7 +161,16 @@ async def _process_single_document(
             for m in vision_result.medications
         ]
         ocr_status = "SUCCESS"
-        raw_ocr_text = "\n".join(f"{m.name} {m.dose or ''} {m.frequency or ''}" for m in extracted_meds)
+        raw_ocr_text = "\n".join(f"{m.name} {m.dose or ''} {m.frequency or ''}".strip() for m in extracted_meds)
+        ocr_lines_data = [
+            {
+                "line_index": idx + 1,
+                "text": f"{m.name} {m.dose or ''} {m.frequency or ''}".strip(),
+                "confidence": m.confidence or 0.95,
+                "box_2d": m.box_2d
+            }
+            for idx, m in enumerate(extracted_meds)
+        ]
 
         boxes = [m.box_2d for m in extracted_meds if m.box_2d]
         if boxes:
@@ -284,6 +293,9 @@ async def _process_single_document(
     drug_alerts = [DrugInteractionAlert(**alert) for alert in drug_alerts_raw]
 
     # Step 4: Save Document Record
+    web_file_path = file_path.as_posix()
+    web_highlighted_path = Path(highlighted_path).as_posix() if highlighted_path else ""
+
     await db.execute(
         """
         INSERT INTO documents
@@ -292,7 +304,7 @@ async def _process_single_document(
         """,
         (
             document_id, encounter_id, linked_patient_id, document_type, document_date,
-            str(file_path), ocr_status, raw_ocr_text, json.dumps(ocr_lines_data), highlighted_path
+            web_file_path, ocr_status, raw_ocr_text, json.dumps(ocr_lines_data), web_highlighted_path
         )
     )
 

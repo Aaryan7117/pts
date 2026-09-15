@@ -21,18 +21,24 @@ export const kioskApi = {
     api.post('/api/call/session/start', { encounter_id: encounterId, language }),
 
   // Send audio turn (speech turn)
-  sendAudioTurn: (sessionId, audioBlob) => {
+  sendAudioTurn: (sessionId, audioBlob, language = null) => {
     const formData = new FormData();
     formData.append('session_id', sessionId);
     formData.append('audio_file', audioBlob, 'patient_voice.wav');
+    if (language) {
+      formData.append('language', language);
+    }
     return api.upload('/api/call/audio-turn', formData);
   },
 
   // Fallback text turn (FastAPI expects Form data)
-  sendTextTurn: (sessionId, text) => {
+  sendTextTurn: (sessionId, text, language = null) => {
     const formData = new FormData();
     formData.append('session_id', sessionId);
     formData.append('text', text);
+    if (language) {
+      formData.append('language', language);
+    }
     return api.upload('/api/call/text-turn', formData);
   },
 
