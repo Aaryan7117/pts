@@ -53,7 +53,7 @@ export const DICTIONARY = {
 
     // Voice Intake
     voice_prompt: 'What health problem are you experiencing?',
-    voice_sub: 'Tap the microphone below and speak naturally in your own words.',
+    voice_sub: 'Tap the microphone button and speak naturally',
     tap_to_speak: 'Tap Mic to Speak',
     tap_to_talk: 'TAP TO TALK',
     listening: 'Listening... please speak',

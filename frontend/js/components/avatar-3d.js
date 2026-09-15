@@ -20,10 +20,11 @@ export class DoctorAvatar {
       totalFrames: 150,
       idlePath: '/avatar/idle',
       speakingPath: '/avatar/speaking',
+      pointingPath: '/avatar/pointing',
       autoSyncAudio: true,
     }, options);
 
-    this.state = 'idle'; // 'idle' | 'speaking'
+    this.state = 'idle'; // 'idle' | 'pointing' | 'speaking'
     this.canvas = null;
     this.ctx = null;
     this.animId = null;
@@ -31,8 +32,11 @@ export class DoctorAvatar {
     // Frame storage
     this.idleFrames = new Array(this.options.totalFrames);
     this.speakingFrames = new Array(this.options.totalFrames);
+    this.pointingFrames = new Array(this.options.totalFrames);
     this.idleLoadedCount = 0;
     this.speakingLoadedCount = 0;
+    this.pointingLoadedCount = 0;
+    this.pointingCompleteCallback = null;
     this.isPreloaded = false;
 
     // Playback state
@@ -88,20 +92,38 @@ export class DoctorAvatar {
   }
 
   /**
-   * Set explicit avatar state ('idle' or 'speaking')
-   * @param {'idle'|'speaking'} nextState
+   * Set explicit avatar state ('idle', 'pointing', or 'speaking')
+   * @param {'idle'|'pointing'|'speaking'} nextState
+   * @param {Function} [callback] - Optional completion callback for non-looping states (e.g. pointing)
    */
-  setState(nextState) {
-    if (nextState !== 'idle' && nextState !== 'speaking') return;
-    if (this.state === nextState) return;
+  setState(nextState, callback) {
+    if (nextState !== 'idle' && nextState !== 'speaking' && nextState !== 'pointing') return;
+    if (this.state === nextState && nextState !== 'pointing') return;
 
     this.state = nextState;
 
-    // Reset frame index on speaking start for natural speech onset
-    if (nextState === 'speaking') {
+    // Reset frame index on speaking or pointing start for natural onset
+    if (nextState === 'speaking' || nextState === 'pointing') {
       this.currentFrameIdx = 0;
     }
 
+    if (nextState === 'pointing') {
+      this.pointingCompleteCallback = callback || null;
+    } else {
+      this.pointingCompleteCallback = null;
+    }
+
+    this._updateStatusPill();
+  }
+
+  /**
+   * Play the pointing onboarding animation once, then transition back to idle.
+   * @param {Function} [onComplete] - Callback executed when pointing finishes
+   */
+  playPointingOnce(onComplete) {
+    this.currentFrameIdx = 0;
+    this.pointingCompleteCallback = onComplete || null;
+    this.state = 'pointing';
     this._updateStatusPill();
   }
 
@@ -118,9 +140,10 @@ export class DoctorAvatar {
    * @param {boolean} listening
    */
   setListening(listening) {
-    // Listening is idle state (attentive listening posture)
+    // Listening is idle state (attentive listening posture, seated calmly)
+    this.state = 'idle';
+    this.pointingCompleteCallback = null;
     if (listening) {
-      this.setState('idle');
       const pill = this.container ? this.container.querySelector('#avatarStatusPill') : null;
       if (pill) {
         pill.className = 'badge badge-red';
@@ -138,6 +161,9 @@ export class DoctorAvatar {
     if (this.state === 'speaking') {
       pill.className = 'badge badge-blue';
       pill.innerHTML = '🔊 AI Attendant Speaking...';
+    } else if (this.state === 'pointing') {
+      pill.className = 'badge badge-amber';
+      pill.innerHTML = '👉 Tap Microphone on Right';
     } else {
       pill.className = 'badge badge-teal';
       pill.innerHTML = '● AI Clinical Attendant Ready';
@@ -221,42 +247,58 @@ export class DoctorAvatar {
    */
   _preloadFrames() {
     const total = this.options.totalFrames;
-
     const pad = (num) => String(num).padStart(3, '0');
 
+    const loadImage = (basePath, index, onLoaded) => {
+      const p = pad(index + 1);
+      const img = new Image();
+      let hasTriedJpg = false;
+      img.onload = () => {
+        if (onLoaded) onLoaded(img);
+      };
+      img.onerror = () => {
+        if (!hasTriedJpg) {
+          hasTriedJpg = true;
+          img.src = `${basePath}/ezgif-frame-${p}.jpg`;
+        }
+      };
+      // Primary format: webp, fallback to ezgif-frame jpg
+      img.src = `${basePath}/frame-${p}.webp`;
+      return img;
+    };
+
     // 1. Load first idle frame with high priority for instant first paint
-    const firstIdle = new Image();
-    firstIdle.src = `${this.options.idlePath}/frame-001.webp`;
-    firstIdle.onload = () => {
-      this.idleFrames[0] = firstIdle;
+    const firstIdle = loadImage(this.options.idlePath, 0, (img) => {
+      this.idleFrames[0] = img;
       this.idleLoadedCount++;
-      // Render immediate preview
-      this._drawFrame(firstIdle);
+      this._drawFrame(img);
       const overlay = this.container ? this.container.querySelector('#avatarLoadingOverlay') : null;
       if (overlay) {
         overlay.style.opacity = '0';
         setTimeout(() => overlay.remove(), 300);
       }
-    };
+    });
+    this.idleFrames[0] = firstIdle;
 
     // 2. Load the remaining idle frames
     for (let i = 1; i < total; i++) {
-      const img = new Image();
-      img.src = `${this.options.idlePath}/frame-${pad(i + 1)}.webp`;
-      img.onload = () => {
-        this.idleFrames[i] = img;
+      this.idleFrames[i] = loadImage(this.options.idlePath, i, () => {
         this.idleLoadedCount++;
-      };
+      });
     }
 
-    // 3. Load speaking frames concurrently
+    // 3. Load pointing frames concurrently
     for (let i = 0; i < total; i++) {
-      const img = new Image();
-      img.src = `${this.options.speakingPath}/frame-${pad(i + 1)}.webp`;
-      img.onload = () => {
-        this.speakingFrames[i] = img;
+      this.pointingFrames[i] = loadImage(this.options.pointingPath, i, () => {
+        this.pointingLoadedCount++;
+      });
+    }
+
+    // 4. Load speaking frames concurrently
+    for (let i = 0; i < total; i++) {
+      this.speakingFrames[i] = loadImage(this.options.speakingPath, i, () => {
         this.speakingLoadedCount++;
-      };
+      });
     }
   }
 
@@ -273,7 +315,30 @@ export class DoctorAvatar {
 
         // Advance frames based on actual elapsed time (drop frames smoothly if CPU is slow)
         const total = this.options.totalFrames;
-        this.currentFrameIdx = (this.currentFrameIdx + framesToAdvance) % total;
+
+        if (this.state === 'pointing') {
+          const nextIdx = this.currentFrameIdx + framesToAdvance;
+          if (nextIdx >= total) {
+            // Pointing animation complete! Transition back to IDLE
+            this.state = 'idle';
+            this.currentFrameIdx = 0;
+            this._updateStatusPill();
+            const cb = this.pointingCompleteCallback;
+            this.pointingCompleteCallback = null;
+            if (typeof cb === 'function') {
+              try {
+                cb();
+              } catch (err) {
+                console.error('Pointing callback error:', err);
+              }
+            }
+          } else {
+            this.currentFrameIdx = nextIdx;
+          }
+        } else {
+          // IDLE and SPEAKING loop seamlessly
+          this.currentFrameIdx = (this.currentFrameIdx + framesToAdvance) % total;
+        }
 
         this._render();
       }
@@ -285,7 +350,15 @@ export class DoctorAvatar {
   _render() {
     if (!this.ctx || !this.canvas) return;
 
-    const activeFrames = this.state === 'speaking' ? this.speakingFrames : this.idleFrames;
+    let activeFrames;
+    if (this.state === 'speaking') {
+      activeFrames = this.speakingFrames;
+    } else if (this.state === 'pointing') {
+      activeFrames = this.pointingFrames;
+    } else {
+      activeFrames = this.idleFrames;
+    }
+
     const fallbackFrames = this.idleFrames;
     const total = this.options.totalFrames;
 
@@ -295,8 +368,8 @@ export class DoctorAvatar {
 
     // Seamless loop smoothing:
     // When reaching the last 2 frames (148, 149), perform a gentle 2-frame crossfade
-    // into frame 0 to eliminate any visible jump between repetitions.
-    const isLoopBoundary = this.currentFrameIdx >= total - 2;
+    // into frame 0 to eliminate any visible jump between repetitions (for looping states).
+    const isLoopBoundary = this.currentFrameIdx >= total - 2 && this.state !== 'pointing';
     const targetFirstImg = activeFrames[0] || fallbackFrames[0];
 
     if (isLoopBoundary && targetFirstImg && targetFirstImg.complete) {
@@ -341,5 +414,6 @@ export class DoctorAvatar {
     // Clear frame references to assist garbage collection
     this.idleFrames.length = 0;
     this.speakingFrames.length = 0;
+    this.pointingFrames.length = 0;
   }
 }

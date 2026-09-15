@@ -2,6 +2,7 @@
  * MediKiosk Web — Screens 06-07: Conversational Voice Intake
  * Features multi-turn conversational question flow, AI4Bharat IndicF5 speech playback with
  * native WebSpeech failover, noise-resilient ASR, live conversation stream, dynamic clinical fact chips,
+ * 3D/2D Doctor Avatar with onboarding pointing animation & real-time synchronization,
  * and touch-typing with localized symptom chips.
  */
 
@@ -19,6 +20,8 @@ let activeRecorder = null;
 let isRecording = false;
 let avatarInstance = null;
 let autoPlayTimer = null;
+let onboardingTimer = null;
+let hasPointedOnboarding = false;
 let speechRecognizer = null;
 let inputMode = 'voice'; // 'voice' | 'typing'
 let currentQuestionText = '';
@@ -38,172 +41,195 @@ const OFFLINE_QUESTIONS = [
       en: 'Question 1 · Chief Complaint',
       ta: 'கேள்வி 1 · முக்கிய பிரச்சனை',
       te: 'ప్రశ్న 1 · ప్రధాన సమస్య',
-      mr: 'प्रश्न १ · मुख्य समस्या'
+      mr: 'प्रश्न १ · मुख्य तक्रार'
     },
     text: {
-      hi: 'नमस्ते, मैं अखिल भारतीय आयुर्वेद संस्थान का डिजिटल सहायक हूँ। आपको क्या परेशानी है? अपनी मुख्य शिकायत बताइए।',
-      en: 'Hello, I am the AIIA clinical assistant. What symptoms or primary health concerns are you experiencing today?',
-      ta: 'வணக்கம், நான் அகில இந்திய ஆயுர்வேத நிறுவனத்தின் டிஜிட்டல் உதவியாளர். உங்கள் முக்கிய பிரச்சனை என்ன?',
-      te: 'నమస్కారం, నేను అఖిల భారత ఆయుర్వేద సంస్థ డిజిటల్ సహాయకుడిని. మీ ప్రధాన సమస్య ఏమిటి?',
-      mr: 'नमस्कार, मी अखिल भारतीय आयुर्वेद संस्थेचा डिजिटल सहाय्यक आहे. तुमची मुख्य समस्या काय आहे?'
+      hi: 'नमस्ते! मैं डॉ. वर्मा हूँ। कृपया मुझे बताएं कि आपको क्या परेशानी या बीमारी महसूस हो रही है?',
+      en: 'Hello! I am Dr. Verma. Please tell me what main symptoms or discomfort you are experiencing today?',
+      ta: 'வணக்கம்! நான் டாக்டர் வர்மா. இன்று உங்களுக்கு என்ன உடல்நல பிரச்சனை உள்ளது என்று சொல்லுங்கள்?',
+      te: 'నమస్కారం! నేను డాక్టర్ వర్మ. ఈరోజు మీకు ఎలాంటి అనారోగ్య సమస్య ఉందో దయచేసి చెప్పండి?',
+      mr: 'नमस्कार! मी डॉ. वर्मा आहे. कृपया सांगा, आज तुम्हाला काय त्रास किंवा आजार जाणवत आहे?'
     }
   },
   {
     step: 'duration',
     badge: {
-      hi: 'प्रश्न २ · अवधि (Duration)',
-      en: 'Question 2 · Symptom Duration',
+      hi: 'प्रश्न २ · अवधि',
+      en: 'Question 2 · Duration',
       ta: 'கேள்வி 2 · காலம்',
-      te: 'ప్రశ్న 2 · వ్యవధి',
+      te: 'ప్రశ్న 2 · కాలవ్యవధి',
       mr: 'प्रश्न २ · कालावधी'
     },
     text: {
-      hi: 'यह समस्या कब से है? कितने दिन, हफ्ते या महीने से तकलीफ हो रही है?',
-      en: 'How long have you had this problem? Days, weeks, or months?',
-      ta: 'இந்தப் பிரச்சனை எவ்வளவு காலமாக உள்ளது? எத்தனை நாட்கள் அல்லது வாரங்கள்?',
-      te: 'ఈ సమస్య ఎంతకాలంగా ఉంది? ఎన్ని రోజులు లేదా వారాలుగా బాధపడుతున్నారు?',
-      mr: 'ही समस्या किती दिवसांपासून किंवा आठवड्यांपासून आहे?'
+      hi: 'यह समस्या आपको कितने दिनों या समय से हो रही है? क्या यह अचानक शुरू हुई थी?',
+      en: 'How long have you had this problem? Did it start suddenly or gradually?',
+      ta: 'இந்த பிரச்சனை உங்களுக்கு எத்தனை நாட்களாக உள்ளது? திடீரென தொடங்கியதா?',
+      te: 'ఈ సమస్య మీకు ఎన్ని రోజులుగా ఉంది? ఇది హఠాత్తుగా మొదలైందా?',
+      mr: 'हा त्रास तुम्हाला किती दिवसांपासून होत आहे? तो अचानक सुरू झाला होता का?'
     }
   },
   {
     step: 'severity',
     badge: {
-      hi: 'प्रश्न ३ · दर्द का स्तर (Severity)',
-      en: 'Question 3 · Severity Scale',
+      hi: 'प्रश्न ३ · तीव्रता',
+      en: 'Question 3 · Severity',
       ta: 'கேள்வி 3 · தீவிரம்',
       te: 'ప్రశ్న 3 · తీవ్రత',
       mr: 'प्रश्न ३ · तीव्रता'
     },
     text: {
-      hi: '१ से १० के पैमाने पर दर्द या परेशानी कितनी महसूस हो रही है?',
-      en: 'On a scale of 1 to 10, how severe is the pain or discomfort?',
-      ta: '1 முதல் 10 வரை வலி அல்லது அசௌகரியம் எவ்வளவு கடுமையானது?',
-      te: '1 నుండి 10 వరకు నొప్పి లేదా అసౌకర్యం ఎంత తీవ్రంగా ఉంది?',
-      mr: '१ ते १० च्या प्रमाणात वेदना किती तीव्र आहे?'
+      hi: 'दर्द या परेशानी कितनी तेज़ है? क्या इससे आपके रोज़मर्रा के कामों में रुकावट आ रही है?',
+      en: 'How severe is the pain or discomfort? Is it mild, moderate, or making daily activities difficult?',
+      ta: 'வலி அல்லது அசௌகரியம் எவ்வளவு தீவிரமாக உள்ளது? அன்றாட வேலைகளை பாதிக்கிறதா?',
+      te: 'నొప్పి లేదా అసౌకర్యం ఎంత తీవ్రంగా ఉంది? దైనందిన పనులకు ఇబ్బందిగా ఉందా?',
+      mr: 'त्रास किंवा वेदना किती तीव्र आहे? रोजच्या कामात अडथळा येत आहे का?'
+    }
+  },
+  {
+    step: 'associated_symptoms',
+    badge: {
+      hi: 'प्रश्न ४ · अन्य लक्षण',
+      en: 'Question 4 · Other Symptoms',
+      ta: 'கேள்வி 4 · பிற அறிகுறிகள்',
+      te: 'ప్రశ్న 4 · ఇతర లక్షణాలు',
+      mr: 'प्रश्न ४ · इतर लक्षणे'
+    },
+    text: {
+      hi: 'क्या इसके साथ बुखार, चक्कर, उल्टी, या सांस लेने में कोई तकलीफ भी है?',
+      en: 'Are you experiencing any other symptoms like fever, dizziness, nausea, or breathlessness?',
+      ta: 'இதனுடன் காய்ச்சல், தலைச்சுற்றல் அல்லது வாந்தி போன்ற அறிகுறிகள் ஏதேனும் உள்ளதா?',
+      te: 'దీనితో పాటు జ్వరం, మైకం లేదా వాంతులు వంటి ఇతర లక్షణాలు ఉన్నాయా?',
+      mr: 'यासोबत ताप, चक्कर येणे, उलटी किंवा श्वास घेण्यास त्रास होत आहे का?'
     }
   },
   {
     step: 'medications',
     badge: {
-      hi: 'प्रश्न ४ · वर्तमान दवाइयाँ',
-      en: 'Question 4 · Current Medications',
-      ta: 'கேள்வி 4 · மருந்துகள்',
-      te: 'ప్రశ్న 4 · మందులు',
-      mr: 'प्रश्न ४ · औषधे'
+      hi: 'प्रश्न ५ · पूर्व दवाइयां',
+      en: 'Question 5 · Prior Medications',
+      ta: 'கேள்வி 5 · மருந்துகள்',
+      te: 'ప్రశ్న 5 · ప్రస్తుత మందులు',
+      mr: 'प्रश्न ५ · औषधोपचार'
     },
     text: {
-      hi: 'क्या आप इस समय कोई दवाई ले रहे हैं? या हाल ही में कोई दवा बंद की है?',
-      en: 'Are you currently taking any medicines, or recently stopped any medications?',
-      ta: 'தற்போது ஏதேனும் மருந்துகள் எடுத்துக்கொள்கிறீர்களா?',
-      te: 'ప్రస్తుతం ఏవైనా మందులు వాడుతున్నారా?',
-      mr: 'सध्या तुम्ही कोणती औषधे घेत आहात का?'
-    }
-  },
-  {
-    step: 'allergies',
-    badge: {
-      hi: 'प्रश्न ५ · एलर्जी व इतिहास',
-      en: 'Question 5 · Allergies & History',
-      ta: 'கேள்வி 5 · ஒவ்வாமை',
-      te: 'ప్రశ్న 5 · అలర్జీలు',
-      mr: 'प्रश्न ५ · ॲलर्जी'
-    },
-    text: {
-      hi: 'क्या आपको किसी दवाई या खाद्य पदार्थ से एलर्जी है? या पहले से कोई बीमारी है?',
-      en: 'Do you have any drug or food allergies, or any chronic conditions like diabetes or BP?',
-      ta: 'உங்களுக்கு ஏதேனும் மருந்து அல்லது உணவு ஒவ்வாமை உள்ளதா?',
-      te: 'మీకు ఏదైనా మందు లేదా ఆహార అలర్జీ ఉందా?',
-      mr: 'तुम्हाला कोणत्याही औषधाची किंवा अन्नाची ॲलर्जी आहे का?'
+      hi: 'क्या आप पहले से बीपी, शुगर, थायराइड की कोई दवा ले रहे हैं? या हाल ही में कोई दवा बंद की है?',
+      en: 'Are you currently taking any medications for BP, diabetes, or other chronic conditions?',
+      ta: 'நீங்கள் தற்போது ரத்த அழுத்தம், சர்க்கரை நோய்க்கு ஏதேனும் மருந்துகள் எடுத்துக்கொள்கிறீர்களா?',
+      te: 'మీరు బీపీ, షుగర్ వంటి వాటికి ప్రస్తుతం ఏవైనా మందులు వాడుతున్నారా?',
+      mr: 'तुम्ही रक्तदाब, मधुमेह यासाठी कोणती नियमित औषधे घेत आहात का?'
     }
   }
 ];
 
 const SYMPTOM_CHIPS = {
   hi: [
-    { label: '🌡️ बुखार (Fever)', text: 'मुझे ३ दिन से तेज़ बुखार आ रहा है।' },
-    { label: '🤕 तेज़ सिरदर्द (Headache)', text: 'मेरे सिर में तेज़ दर्द और भारीपन है।' },
-    { label: '🦵 जोड़ों/घुटने में दर्द (Joint Pain)', text: 'मेरे घुटनों और जोड़ों में दर्द व सूजन है।' },
-    { label: '🤧 खांसी व जुकाम (Cough & Cold)', text: 'मुझे पिछले ४ दिनों से सूखी खांसी और जुकाम है।' },
-    { label: '🤢 पेट में दर्द (Stomach Pain)', text: 'मेरे पेट में दर्द और गैस की समस्या है।' },
-    { label: '⚡ कमजोरी व चक्कर (Weakness)', text: 'मुझे अत्यधिक कमजोरी और चक्कर महसूस हो रहे हैं।' },
-    { label: '🔴 त्वचा पर खुजली/दाने (Skin Rash)', text: 'मेरी त्वचा पर लाल दाने और खुजली हो रही है।' },
-    { label: '🫀 सीने में भारीपन (Chest Discomfort)', text: 'सीने में दबाव और भारीपन महसूस हो रहा है।' },
+    { label: '🔥 तेज़ बुखार', text: 'तेज़ बुखार और कंपकंपी' },
+    { label: '🤕 सिरदर्द', text: 'सिर में तेज़ दर्द' },
+    { label: '🤧 खांसी व ज़ुकाम', text: 'सूखी खांसी और गले में खराश' },
+    { label: '🤢 पेट दर्द', text: 'पेट में दर्द और मरोड़' },
+    { label: '🫁 सांस लेने में तकलीफ', text: 'सांस फूलना और भारीपन' },
+    { label: '⚡ सीने में दर्द', text: 'सीने में दबाव और बेचैनी' },
+    { label: '🦵 जोड़ों में दर्द', text: 'घुटनों और जोड़ों में दर्द व सूजन' },
+    { label: '💫 चक्कर व कमजोरी', text: 'चक्कर आना और अत्यधिक कमजोरी' }
   ],
   en: [
-    { label: '🌡️ High Fever (3 days)', text: 'I have had high fever and chills for 3 days.' },
-    { label: '🤕 Severe Headache', text: 'I am experiencing severe headache and throbbing pain.' },
-    { label: '🦵 Knee & Joint Pain', text: 'I have persistent pain and stiffness in my knees and joints.' },
-    { label: '🤧 Cough & Cold', text: 'I have dry cough, runny nose, and throat irritation for 4 days.' },
-    { label: '🤢 Abdominal / Stomach Pain', text: 'I have sharp stomach cramps and indigestion.' },
-    { label: '⚡ Weakness & Dizziness', text: 'I am feeling extreme fatigue, weakness, and dizziness.' },
-    { label: '🔴 Skin Rash & Itching', text: 'I have developed an itchy skin rash and redness.' },
-    { label: '🫀 Chest Discomfort', text: 'I feel discomfort and tightness in my chest.' },
+    { label: '🔥 High Fever', text: 'High fever with chills' },
+    { label: '🤕 Headache', text: 'Severe headache and pressure' },
+    { label: '🤧 Cough & Cold', text: 'Dry cough and sore throat' },
+    { label: '🤢 Stomach Ache', text: 'Abdominal cramps and pain' },
+    { label: '🫁 Shortness of Breath', text: 'Difficulty breathing and chest tightness' },
+    { label: '⚡ Chest Pain', text: 'Chest pain and discomfort' },
+    { label: '🦵 Joint Pain', text: 'Severe pain and stiffness in joints' },
+    { label: '💫 Dizziness', text: 'Feeling dizzy, lightheaded and fatigued' }
   ],
   ta: [
-    { label: '🌡️ காய்ச்சல் (Fever)', text: 'எனக்கு 3 நாட்களாக அதிக காய்ச்சல் உள்ளது.' },
-    { label: '🤕 தலைவலி (Headache)', text: 'எனக்கு கடுமையான தலைவலி உள்ளது.' },
-    { label: '🦵 மூட்டு வலி (Joint Pain)', text: 'எனக்கு முழங்கால் மற்றும் மூட்டுகளில் வலி உள்ளது.' },
-    { label: '🤧 இருமல் மற்றும் சளி (Cough)', text: 'எனக்கு இருமல் மற்றும் சளி உள்ளது.' },
-    { label: '🤢 வயிற்று வலி (Stomach Pain)', text: 'எனக்கு வயிற்று வலி மற்றும் செரிமானக் கோளாறு உள்ளது.' },
+    { label: '🔥 அதிக காய்ச்சல்', text: 'கடுமையான காய்ச்சல் மற்றும் நடுக்கம்' },
+    { label: '🤕 தலைவலி', text: 'கடுமையான தலைவலி' },
+    { label: '🤧 இருமல்', text: 'வறட்டு இருமல் மற்றும் தொண்டை வலி' },
+    { label: '🤢 வயிற்று வலி', text: 'வயிற்று வலி மற்றும் அசெளகரியம்' }
   ],
   te: [
-    { label: '🌡️ జ్వరం (Fever)', text: 'నాకు 3 రోజులుగా తీవ్రమైన జ్వరం వస్తోంది.' },
-    { label: '🤕 తలనొప్పి (Headache)', text: 'నాకు విపరీతమైన తలనొప్పిగా ఉంది.' },
-    { label: '🦵 కీళ్ల నొప్పులు (Joint Pain)', text: 'నాకు మోకాళ్ల నొప్పులు మరియు కీళ్ల నొప్పులు ఉన్నాయి.' },
-    { label: '🤧 దగ్గు మరియు జలుబు (Cough)', text: 'నాకు దగ్గు మరియు జలుబు ఉంది.' },
-    { label: '🤢 కడుపు నొప్పి (Stomach Pain)', text: 'నాకు కడుపులో నొప్పిగా ఉంది.' },
+    { label: '🔥 తీవ్ర జ్వరం', text: 'చలితో కూడిన తీవ్ర జ్వరం' },
+    { label: '🤕 తలనొప్పి', text: 'తీవ్రమైన తలనొప్పి' },
+    { label: '🤧 దగ్గు & జలుబు', text: 'పొడి దగ్గు మరియు గొంతు నొప్పి' },
+    { label: '🤢 కడుపు నొప్పి', text: 'కడుపులో విపరీతమైన నొప్పి' }
   ],
   mr: [
-    { label: '🌡️ ताप (Fever)', text: 'मला ३ दिवसांपासून तीव्र ताप येत आहे.' },
-    { label: '🤕 डोकेदुखी (Headache)', text: 'माझे डोके खूप दुखत आहे.' },
-    { label: '🦵 सांधेदुखी (Joint Pain)', text: 'माझ्या गुडघ्यांमध्ये आणि सांध्यांमध्ये वेदना आहेत.' },
-    { label: '🤧 खोकला व सर्दी (Cough)', text: 'मला खोकला आणि सर्दीचा त्रास आहे.' },
-    { label: '🤢 पोटदुखी (Stomach Pain)', text: 'माझे पोट दुखत आहे.' },
+    { label: '🔥 तीव्र ताप', text: 'थंडी वाजून तीव्र ताप येणे' },
+    { label: '🤕 डोकेदुखी', text: 'तीव्र डोकेदुखी' },
+    { label: '🤧 खोकला व सर्दी', text: 'कोरडा खोकला आणि घसा दुखणे' },
+    { label: '🤢 पोटदुखी', text: 'पोटात दुखणे व मळमळणे' }
   ]
 };
 
 export function renderKioskVoiceIntake() {
   const lang = store.getState().kiosk.language || 'hi';
-  const initialQuestion = OFFLINE_QUESTIONS[0].text[lang] || OFFLINE_QUESTIONS[0].text.hi;
-  const initialBadge = OFFLINE_QUESTIONS[0].badge[lang] || OFFLINE_QUESTIONS[0].badge.hi;
+  const promptText = i18n.t('voice_prompt', lang);
+  const subText = i18n.t('voice_sub', lang);
+
+  // Initialize initial question from offline question bank
+  const initialEntry = OFFLINE_QUESTIONS[0];
+  const initialBadge = initialEntry.badge[lang] || initialEntry.badge.hi;
+  const initialQuestion = initialEntry.text[lang] || initialEntry.text.hi;
 
   return `
-    <div class="kiosk-shell">
-      <div class="kiosk-split">
-        <!-- Left Pane: Attendant & Avatar -->
-        <div class="kiosk-left-pane">
-          <div class="kiosk-brand-card">
-            <div class="kiosk-step-indicator">
-              Screen 06 · Step 4 of 6 (Clinical Intake)
+    <div class="kiosk-flow-container animate-fade-in">
+      <!-- Top Navigation & Progress -->
+      <div class="kiosk-top-nav">
+        <a href="#/kiosk/care-stream" class="kiosk-back-btn" aria-label="Go Back">
+          ← ${i18n.t('back', lang)}
+        </a>
+        <div class="kiosk-progress-pills">
+          <span class="kiosk-step-pill completed">01</span>
+          <span class="kiosk-step-pill completed">02</span>
+          <span class="kiosk-step-pill completed">03</span>
+          <span class="kiosk-step-pill completed">04</span>
+          <span class="kiosk-step-pill completed">05</span>
+          <span class="kiosk-step-pill active">06</span>
+          <span class="kiosk-step-pill">07</span>
+          <span class="kiosk-step-pill">08</span>
+        </div>
+        <div class="kiosk-lang-indicator">${lang.toUpperCase()}</div>
+      </div>
+
+      <!-- Main Interactive Content: Left Avatar, Right Question & Live Intake -->
+      <div class="kiosk-split-screen" style="display:grid; grid-template-columns: 340px 1fr; gap:var(--space-4); margin-top:var(--space-2); min-height:560px;">
+        
+        <!-- Left Pane: AI Physician (Dr. Verma) with Live Audio Lip-Sync -->
+        <div class="kiosk-left-pane" style="background:var(--bg-surface); border:1px solid var(--border-light); border-radius:var(--radius-xl); padding:var(--space-3); display:flex; flex-direction:column; justify-content:space-between; box-shadow:var(--shadow-sm);">
+          <div>
+            <div style="display:flex; align-items:center; gap:var(--space-2); margin-bottom:var(--space-1);">
+              <span style="font-size:24px;">👨‍⚕️</span>
+              <div>
+                <h2 style="font-size:16px; font-weight:800; color:var(--text-primary); margin:0;">
+                  ${lang === 'en' ? 'Dr. Verma, MD' : 'डॉ. वर्मा (वरिष्ठ चिकित्सक)'}
+                </h2>
+                <div style="font-size:11px; color:var(--brand-primary); font-weight:700;">
+                  ● ${lang === 'en' ? 'AI Clinical Intake Specialist' : 'एआई ओपीडी परामर्श'}
+                </div>
+              </div>
             </div>
-            <h2 class="text-h2" style="margin-top:var(--space-3); font-size:20px;">AI Doctor Consultation</h2>
-            <p style="font-size:13px; color:var(--text-secondary); line-height:1.4;">
-              Dr. Verma conducts an adaptive clinical intake in your language. Listen to each question, then speak or tap your response.
+            
+            <p style="font-size:12px; color:var(--text-secondary); line-height:1.4; margin:4px 0 8px 0;">
+              ${lang === 'en'
+                ? 'Dr. Verma conducts an adaptive clinical intake in your language. Listen to each question, then speak or tap your response.'
+                : 'डॉ. वर्मा आपसे आपके स्वास्थ्य के बारे में पूछ रहे हैं। प्रश्न सुनें और बोलकर या लिखकर उत्तर दें।'}
             </p>
           </div>
 
-          <!-- Doctor Avatar Attendant -->
+          <!-- Doctor Avatar Display Canvas -->
           <div id="kioskVoiceAvatarContainer" style="margin:var(--space-2) 0; display:flex; justify-content:center;"></div>
 
-          <!-- Live Captured Facts Panel -->
-          <div style="background:var(--bg-surface); border:1px solid var(--border-default); border-radius:var(--radius-lg); padding:12px; margin-top:4px;">
+          <!-- Live Clinical Extracted Entity Chips -->
+          <div style="background:rgba(2,132,199,0.04); border:1px solid rgba(2,132,199,0.15); border-radius:var(--radius-md); padding:10px;">
             <div style="font-size:11px; font-weight:800; color:var(--brand-primary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-              <span>🩺 Recognized Clinical Facts</span>
-              <span id="factCountBadge" class="badge badge-green" style="font-size:10px; padding:1px 6px;">0 Captured</span>
+              <span>🩺 ${lang === 'en' ? 'Detected Symptoms' : 'पहचाने गए लक्षण'}:</span>
+              <span id="kioskFactCountBadge" class="badge badge-primary" style="font-size:10px; padding:1px 6px;">0</span>
             </div>
             <div id="kioskFactChipsLive" style="display:flex; flex-wrap:wrap; gap:6px; min-height:36px; align-items:center;">
-              <span style="font-size:12px; color:var(--text-muted); font-style:italic;">
+              <span style="font-size:11px; color:var(--text-muted); font-style:italic;">
                 ${lang === 'en' ? 'Facts will appear here as you speak...' : 'बोलने पर लक्षण यहाँ दिखाई देंगे...'}
               </span>
-            </div>
-          </div>
-
-          <div style="display:flex; flex-direction:column; gap:var(--space-2); margin-top:8px;">
-            <div class="kiosk-audio-help-box">
-              <span style="font-size:20px;">🔊</span>
-              <div style="font-size:12px;">
-                <strong>Dual Voice Engine:</strong> AI4Bharat IndicF5 on-device neural voice + WebSpeech offline failover.
-              </div>
             </div>
           </div>
         </div>
@@ -227,6 +253,13 @@ export function renderKioskVoiceIntake() {
               </div>
             </div>
 
+            <!-- Upstream Onboarding Microphone Instruction Box -->
+            <div id="kioskMicrophoneInstructionBox" style="margin-bottom:var(--space-1); padding:8px 16px; border-radius:12px; background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); display:inline-block; transition:all 0.3s ease; text-align:center;">
+              <p id="kioskMicrophoneInstruction" style="margin:0; font-size:14px; font-weight:700; color:var(--brand-primary); line-height:1.4;">
+                👉 ${subText}
+              </p>
+            </div>
+
             <!-- Conversation Stream History -->
             <div id="kioskConversationStream" style="max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px 12px; background: rgba(241, 245, 249, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);">
               <div class="chat-bubble doctor" style="background: #DBEAFE; color: #1E3A8A; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 12px 12px 12px 2px; align-self: flex-start; max-width: 85%;">
@@ -238,26 +271,24 @@ export function renderKioskVoiceIntake() {
             <div id="kioskVoiceModeContainer" class="voice-recorder-container" style="display:flex; flex-direction:column; align-items:center; width:100%; margin-top:2px;">
               <div class="mic-btn-wrapper">
                 <button id="btnKioskMic" class="mic-btn" aria-label="Tap to Record Speech">
-                  <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                    <line x1="12" y1="19" x2="12" y2="22"></line>
-                  </svg>
+                  <span class="mic-icon" style="font-size:32px;">🎙️</span>
+                  <div class="pulse-ring ring-1"></div>
+                  <div class="pulse-ring ring-2"></div>
                 </button>
-                <div class="mic-halo mic-halo-1"></div>
-                <div class="mic-halo mic-halo-2"></div>
               </div>
 
-              <!-- Frequency Visualizer Canvas -->
-              <canvas id="kioskWaveformCanvas" class="waveform-canvas" width="220" height="38"></canvas>
+              <div id="kioskMicStatusText" class="mic-status-label" style="font-size:15px; font-weight:700; margin-top:8px;">
+                ${lang === 'en' ? 'Tap microphone to speak' : 'बोलने के लिए माइक दबाएं'}
+              </div>
 
-              <div id="kioskMicStatusText" style="font-size:14px; font-weight:700; color:var(--brand-primary); margin:4px 0 8px;">
-                ${i18n.t('tap_to_talk', lang)}
+              <!-- Real-time WebAudio Waveform Visualizer -->
+              <div class="audio-waveform-container" style="width:100%; max-width:380px; height:44px; margin-top:4px;">
+                <canvas id="kioskWaveformCanvas" width="380" height="44" style="width:100%; height:100%; border-radius:var(--radius-md);"></canvas>
               </div>
             </div>
 
-            <!-- Mode 2: In-UI Touch Typing & Symptom Selector Container -->
-            <div id="kioskTypingModeContainer" class="kiosk-typing-card" style="display:none; margin-bottom:4px;">
+            <!-- Mode 2: Touch Typing Mode Container -->
+            <div id="kioskTypingModeContainer" style="display:none; flex-direction:column; width:100%; background:var(--bg-card); border:1px solid var(--border-medium); border-radius:var(--radius-lg); padding:12px; box-shadow:var(--shadow-sm);">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <label for="kioskTypingInput" style="font-weight:700; font-size:13px; color:var(--text-primary);">
                   ⌨️ ${lang === 'en' ? 'Type or Select Your Symptoms' : 'लक्षण लिखें या नीचे से चुनें'}:
@@ -332,7 +363,133 @@ export async function initKioskVoiceIntake() {
   const chipsContainer = document.getElementById('kioskSymptomChips');
   const questionCardText = document.getElementById('kioskDoctorQuestionText');
   const questionBadge = document.getElementById('kioskQuestionStepBadge');
-  const conversationStream = document.getElementById('kios  // Add chat bubble to conversation stream
+  const conversationStream = document.getElementById('kioskConversationStream');
+  const instructionBox = document.getElementById('kioskMicrophoneInstructionBox');
+
+  inputMode = 'voice';
+  let recordedPatientText = '';
+  currentTurnIndex = 0;
+  conversationHistory = [];
+
+  const initialEntry = OFFLINE_QUESTIONS[0];
+  currentQuestionText = initialEntry.text[lang] || initialEntry.text.hi;
+  currentAudioBase64 = null;
+
+  // 1. Doctor Avatar starts strictly in IDLE / LISTENING animation.
+  avatarInstance = new DoctorAvatar('kioskVoiceAvatarContainer');
+  avatarInstance.mount();
+  avatarInstance.setState('idle');
+
+  visualizer = new AudioVisualizer(canvas);
+
+  // 2. INITIAL MICROPHONE INSTRUCTION (Onboarding pointing guidance):
+  // When the UI loads:
+  // → Play POINTING animation once. Doctor points to the microphone button on the right.
+  // → After completion, transition back to IDLE.
+  onboardingTimer = setTimeout(() => {
+    if (hasPointedOnboarding || !avatarInstance || isRecording) return;
+    hasPointedOnboarding = true;
+
+    if (micBtn) {
+      micBtn.classList.add('mic-btn-highlight');
+    }
+    if (instructionBox) {
+      instructionBox.style.boxShadow = '0 0 0 4px rgba(2,132,199,0.2)';
+      instructionBox.style.background = 'rgba(2,132,199,0.12)';
+    }
+
+    avatarInstance.playPointingOnce(() => {
+      if (avatarInstance) {
+        avatarInstance.setState('idle');
+      }
+      if (micBtn) {
+        micBtn.classList.remove('mic-btn-highlight');
+      }
+      if (instructionBox) {
+        instructionBox.style.boxShadow = '';
+        instructionBox.style.background = 'rgba(2,132,199,0.06)';
+      }
+    });
+  }, 700);
+
+  // Audio Question Playback Helper
+  function playCurrentQuestion() {
+    if (!currentQuestionText) return;
+    tts.speak(currentQuestionText, lang, currentAudioBase64);
+  }
+
+  // Hear question button (optional user-invoked audio guidance)
+  const hearBtn = document.getElementById('btnHearIntakeQuestion');
+  if (hearBtn) {
+    hearBtn.addEventListener('click', () => {
+      playCurrentQuestion();
+    });
+  }
+
+  // Ensure Call Session is initialized with backend
+  let sessionId = store.getState().kiosk.sessionId;
+  const encounterId = store.getState().kiosk.encounterId;
+
+  if (!sessionId && encounterId) {
+    try {
+      const res = await kioskApi.startCallSession(encounterId, lang);
+      sessionId = res.session_id;
+      store.updateKioskIntake({ sessionId });
+    } catch (e) {
+      console.warn('Call session bootstrap fallback:', e);
+      sessionId = `sess-${Date.now().toString(36)}`;
+      store.updateKioskIntake({ sessionId });
+    }
+  }
+
+  // Populate localized symptom chips
+  const chips = SYMPTOM_CHIPS[lang] || SYMPTOM_CHIPS.hi;
+  if (chipsContainer) {
+    chipsContainer.innerHTML = chips.map((c, idx) => `
+      <button type="button" class="kiosk-chip-btn" data-index="${idx}">
+        ${c.label}
+      </button>
+    `).join('');
+
+    chipsContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.kiosk-chip-btn');
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.index, 10);
+      const chip = chips[idx];
+      if (!chip) return;
+
+      btn.classList.toggle('selected');
+      const currentVal = typingInput ? typingInput.value.trim() : '';
+      const newVal = currentVal ? `${currentVal} ${chip.text}` : chip.text;
+      if (typingInput) typingInput.value = newVal;
+      updateTranscriptDisplay(newVal);
+    });
+  }
+
+  // Helper to update transcript and enable action buttons
+  function updateTranscriptDisplay(text) {
+    recordedPatientText = text.trim();
+    if (recordedPatientText) {
+      if (transcriptCard) {
+        transcriptCard.textContent = recordedPatientText;
+        transcriptCard.style.color = 'var(--text-primary)';
+        transcriptCard.style.fontStyle = 'normal';
+      }
+      if (submitBtn) submitBtn.disabled = false;
+      if (doneBtn) doneBtn.disabled = false;
+    } else {
+      if (transcriptCard) {
+        transcriptCard.innerHTML = `
+          <span style="color:var(--text-muted); font-style:italic;">
+            ${i18n.t('live_transcript_placeholder', lang)}
+          </span>
+        `;
+      }
+      if (submitBtn) submitBtn.disabled = true;
+    }
+  }
+
+  // Add chat bubble to conversation stream
   function addChatBubble(sender, text, bubbleId = null) {
     if (!conversationStream || !text) return;
     const bubble = document.createElement('div');
@@ -347,6 +504,35 @@ export async function initKioskVoiceIntake() {
     }
     conversationStream.appendChild(bubble);
     conversationStream.scrollTop = conversationStream.scrollHeight;
+  }
+
+  // Helper to render live detected fact chips
+  function updateFactChipsDisplay() {
+    const chipsEl = document.getElementById('kioskFactChipsLive');
+    const badgeEl = document.getElementById('kioskFactCountBadge');
+    const facts = store.getState().kiosk.extractedFacts || [];
+
+    if (badgeEl) badgeEl.textContent = facts.length;
+    if (!chipsEl) return;
+
+    if (facts.length === 0) {
+      chipsEl.innerHTML = `
+        <span style="font-size:11px; color:var(--text-muted); font-style:italic;">
+          ${lang === 'en' ? 'Facts will appear here as you speak...' : 'बोलने पर लक्षण यहाँ दिखाई देंगे...'}
+        </span>
+      `;
+      return;
+    }
+
+    chipsEl.innerHTML = facts.map(f => {
+      const icon = f.category === 'chief_complaint' ? '🩺' : f.category === 'symptom' ? '⏱️' : '💊';
+      return `
+        <span class="badge badge-teal" style="font-size:11px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+          <span>${icon}</span>
+          <span>${f.value}</span>
+        </span>
+      `;
+    }).join('');
   }
 
   // Typing textarea live input listener
@@ -428,16 +614,34 @@ export async function initKioskVoiceIntake() {
       if (!isRecording) {
         tts.stop();
 
+        // If onboarding pointing timer is pending, clear it
+        if (onboardingTimer) {
+          clearTimeout(onboardingTimer);
+          onboardingTimer = null;
+        }
+        hasPointedOnboarding = true;
+
         // START RECORDING
         isRecording = true;
         micBtn.classList.add('active');
+        micBtn.classList.remove('mic-btn-highlight');
+        if (instructionBox) {
+          instructionBox.style.boxShadow = '';
+          instructionBox.style.background = 'rgba(2,132,199,0.06)';
+        }
         statusText.textContent = lang === 'en'
           ? 'Listening... Speak naturally (will auto-submit when done)'
           : 'सुन रहा हूँ... बोलिए (बोलने के बाद स्वतः दर्ज होगा)';
         statusText.style.color = 'var(--status-danger)';
         sounds.playStartListening();
 
-        if (avatarInstance) avatarInstance.setListening(true);
+        // PATIENT SPEAKING:
+        // When the patient activates the microphone and is speaking:
+        // → IDLE / LISTENING animation.
+        // → Doctor remains seated, attentive, breathing/blinking naturally.
+        if (avatarInstance) {
+          avatarInstance.setListening(true);
+        }
 
         try {
           activeRecorder = new AudioRecorder();
@@ -678,35 +882,39 @@ export async function initKioskVoiceIntake() {
       if (isRecording) {
         stopRecordingAndProcess();
       }
+      const textToSave = recordedPatientText || (typingInput ? typingInput.value.trim() : '');
+      if (textToSave) {
+        store.updateKioskIntake({ patientWords: textToSave });
+      }
       window.location.hash = '#/kiosk/summary';
     });
   }
+
+  // Initial display setup
+  updateFactChipsDisplay();
+  updateTranscriptDisplay('');
 }
 
-/**
- * Intelligent Dynamic Clinical Fact Parser
- * Parses patient words to extract chief complaint, duration, and pain severity.
- */
 function extractClinicalFactsFromText(patientWords, lang) {
   const text = (patientWords || '').toLowerCase();
-
-  // 1. Chief Complaint / Problem
-  let problem = null;
+  
+  // 1. Chief Complaint identification
+  let problem = 'General Health Consultation';
   if (/fever|बुखार|காய்ச்சல்|జ్వరం|ताप/.test(text)) {
-    problem = lang === 'en' ? 'Fever' : 'बुखार (Fever)';
-  } else if (/headache|सिरदर्द|தலைவலி|తలనొప్పి|डोकेदुखी/.test(text)) {
-    problem = lang === 'en' ? 'Severe Headache' : 'सिरदर्द (Headache)';
-  } else if (/knee|joint|घुटने|जोड़ों|மூட்டு|కీళ్ల|गुडघा/.test(text)) {
-    problem = lang === 'en' ? 'Joint & Knee Pain' : 'जोड़ों व घुटने में दर्द (Joint Pain)';
-  } else if (/cough|cold|खांसी|जुकाम|இருமல்|దగ్గు|खोकला/.test(text)) {
-    problem = lang === 'en' ? 'Cough & Cold' : 'खांसी-जुकाम (Cough & Cold)';
-  } else if (/stomach|abdomen|पेट|வயிறு|కడుపు|पोट/.test(text)) {
-    problem = lang === 'en' ? 'Abdominal Pain' : 'पेट में दर्द (Abdominal Pain)';
-  } else if (/chest|सीना|छाती|மார்பு|ఛాతీ/.test(text)) {
-    problem = lang === 'en' ? 'Chest Discomfort' : 'सीने में भारीपन (Chest Discomfort)';
+    problem = lang === 'en' ? 'Acute Febrile Illness' : 'तेज़ बुखार (High Fever)';
+  } else if (/cough|cold|खांसी|सर्दी|இருமல்|దగ్గు|खोकला/.test(text)) {
+    problem = lang === 'en' ? 'Upper Respiratory Tract Infection' : 'खांसी व ज़ुकाम (Cough & Cold)';
+  } else if (/chest|breath|सांस|छाती|மார்பு|ఛాతీ|छातीत/.test(text)) {
+    problem = lang === 'en' ? 'Chest Discomfort / Dyspnea' : 'सीने में दर्द या सांस फूलना (Chest Pain)';
+  } else if (/headache|head|सिरदर्द|सिर|தலைவலி|తలనొప్పి|डोकेदुखी/.test(text)) {
+    problem = lang === 'en' ? 'Cephalea (Headache)' : 'सिरदर्द (Severe Headache)';
+  } else if (/stomach|abdomen|vomit|diarrhea|पेट|उल्टी|दस्त|வயிறு|కడుపు|पोट/.test(text)) {
+    problem = lang === 'en' ? 'Acute Gastroenteritis' : 'पेट दर्द व पाचन विकार (Stomach Pain)';
+  } else if (/joint|knee|bone|गठिया|जोड़ों|घुटने|மூட்டு|కీళ్ల|सांधे/.test(text)) {
+    problem = lang === 'en' ? 'Arthralgia / Joint Pain' : 'जोड़ों व घुटनों में दर्द (Joint Pain)';
   } else if (/skin|rash|itching|खुजली|त्वचा|தோல்|చర్మ|खाज/.test(text)) {
     problem = lang === 'en' ? 'Skin Rash & Itching' : 'त्वचा एलर्जी व खुजली (Skin Rash)';
-  } else if (/weakness|fatigue|dizziness|कमजोरी|चक्कर|களைப்பு|నీరసం|थकवा/.test(text)) {
+  } else if (/weakness|fatigue|dizziness|कमजोरी|चक्कर|களைப்பு|నీரசம்|थकवा/.test(text)) {
     problem = lang === 'en' ? 'General Weakness' : 'कमजोरी व थकान (Weakness)';
   } else {
     problem = patientWords.length > 40 ? patientWords.substring(0, 38) + '...' : patientWords;
@@ -741,6 +949,12 @@ function extractClinicalFactsFromText(patientWords, lang) {
 }
 
 export function destroyKioskVoiceIntake() {
+  if (onboardingTimer) {
+    clearTimeout(onboardingTimer);
+    onboardingTimer = null;
+  }
+  hasPointedOnboarding = false;
+
   if (autoPlayTimer) {
     clearTimeout(autoPlayTimer);
     autoPlayTimer = null;
@@ -753,143 +967,6 @@ export function destroyKioskVoiceIntake() {
   if (activeRecorder) {
     try { activeRecorder.cleanup(); } catch (_) {}
     activeRecorder = null;
-  }
-  if (avatarInstance) {
-    avatarInstance.destroy();
-    avatarInstance = null;
-  }
-  if (visualizer) {
-    visualizer.stop();
-    visualizer = null;
-  }
-  isRecording = false;
-}��ेजें'} →`;
-    }
-
-    if (isCompleted) {
-      const closingSpeech = lang === 'en'
-        ? 'Thank you. I have recorded your symptoms. Let us now review your clinical summary.'
-        : 'धन्यवाद। मैंने आपकी सभी स्वास्थ्य जानकारी दर्ज कर ली है। अब कृपया सारांश की पुष्टि करें।';
-      
-      if (questionCardText) questionCardText.textContent = `"${closingSpeech}"`;
-      if (statusText) {
-        statusText.textContent = 'Intake complete! Moving to summary...';
-        statusText.style.color = 'var(--status-success)';
-      }
-      
-      tts.speak(closingSpeech, lang, nextAudioBase64);
-      setTimeout(() => {
-        window.location.hash = '#/kiosk/summary';
-      }, 2500);
-      return;
-    }
-
-    // Advance to next question
-    currentQuestionText = nextQuestion;
-    currentAudioBase64 = nextAudioBase64;
-
-    const currentBadgeText = (OFFLINE_QUESTIONS[currentTurnIndex] && OFFLINE_QUESTIONS[currentTurnIndex].badge[lang])
-      || `Question ${currentTurnIndex + 1}`;
-    
-    if (questionBadge) questionBadge.textContent = currentBadgeText;
-    if (questionCardText) questionCardText.textContent = `"${currentQuestionText}"`;
-    addChatBubble('doctor', currentQuestionText);
-
-    if (statusText) {
-      statusText.textContent = lang === 'en'
-        ? 'Listening... speak or type your answer'
-        : 'बोलें या नीचे लिखें (अगला उत्तर)';
-      statusText.style.color = 'var(--brand-primary)';
-    }
-
-    // Play new question aloud
-    playCurrentQuestion();
-  }
-
-  if (submitBtn) {
-    submitBtn.addEventListener('click', processTurn);
-  }
-
-  // Done button: Proceed immediately to summary verification
-  if (doneBtn) {
-    doneBtn.addEventListener('click', () => {
-      tts.stop();
-      if (isRecording && micBtn) micBtn.click();
-      window.location.hash = '#/kiosk/summary';
-    });
-  }
-}
-
-/**
- * Intelligent Dynamic Clinical Fact Parser
- * Parses patient words to extract chief complaint, duration, and pain severity.
- */
-function extractClinicalFactsFromText(patientWords, lang) {
-  const text = (patientWords || '').toLowerCase();
-
-  // 1. Chief Complaint / Problem
-  let problem = null;
-  if (/fever|बुखार|காய்ச்சல்|జ్వరం|ताप/.test(text)) {
-    problem = lang === 'en' ? 'Fever' : 'बुखार (Fever)';
-  } else if (/headache|सिरदर्द|தலைவலி|తలనొప్పి|डोकेदुखी/.test(text)) {
-    problem = lang === 'en' ? 'Severe Headache' : 'सिरदर्द (Headache)';
-  } else if (/knee|joint|घुटने|जोड़ों|மூட்டு|కీళ్ల|गुडघा/.test(text)) {
-    problem = lang === 'en' ? 'Joint & Knee Pain' : 'जोड़ों व घुटने में दर्द (Joint Pain)';
-  } else if (/cough|cold|खांसी|जुकाम|இருமல்|దగ్గు|खोकला/.test(text)) {
-    problem = lang === 'en' ? 'Cough & Cold' : 'खांसी-जुकाम (Cough & Cold)';
-  } else if (/stomach|abdomen|पेट|வயிறு|కడుపు|पोट/.test(text)) {
-    problem = lang === 'en' ? 'Abdominal Pain' : 'पेट में दर्द (Abdominal Pain)';
-  } else if (/chest|सीना|छाती|மார்பு|ఛాతీ/.test(text)) {
-    problem = lang === 'en' ? 'Chest Discomfort' : 'सीने में भारीपन (Chest Discomfort)';
-  } else if (/skin|rash|itching|खुजली|त्वचा|தோல்|చర్మ|खाज/.test(text)) {
-    problem = lang === 'en' ? 'Skin Rash & Itching' : 'त्वचा एलर्जी व खुजली (Skin Rash)';
-  } else if (/weakness|fatigue|dizziness|कमजोरी|चक्कर|களைப்பு|నీరసం|थकवा/.test(text)) {
-    problem = lang === 'en' ? 'General Weakness' : 'कमजोरी व थकान (Weakness)';
-  } else {
-    problem = patientWords.length > 40 ? patientWords.substring(0, 38) + '...' : patientWords;
-  }
-
-  // 2. Duration
-  let duration = lang === 'en' ? 'Recent onset (1-3 days)' : 'हाल ही में (१-३ दिन)';
-  const dayMatch = text.match(/(\d+)\s*(day|दिन|நாட்கள்|రోజులు|दिवस)/);
-  if (dayMatch) {
-    duration = `${dayMatch[1]} ${lang === 'en' ? 'days' : 'दिनों से'}`;
-  } else if (/week|हफ़्ते|सप्ताह|வாரம்|వారం/.test(text)) {
-    duration = lang === 'en' ? '1-2 weeks' : '१-२ सप्ताह से';
-  } else if (/morning|सुबह|காலை|ఉదయం|सकाळ/.test(text)) {
-    duration = lang === 'en' ? 'Since morning' : 'आज सुबह से';
-  } else if (/yesterday|कल|நேற்று|నిన్న/.test(text)) {
-    duration = lang === 'en' ? 'Since yesterday' : 'कल से';
-  }
-
-  // 3. Severity
-  let severity = lang === 'en' ? 'Moderate (5/10)' : 'मध्यम (५/१०)';
-  if (/severe|तेज़|तीव्र|अत्यधिक|கடுமையான|తీవ్రమైన|तीव्र/.test(text)) {
-    severity = lang === 'en' ? 'Severe (8/10)' : 'तेज़ (८/१०)';
-  } else if (/mild|हल्का|லேசான|తేలికపాటి|सौम्य/.test(text)) {
-    severity = lang === 'en' ? 'Mild (3/10)' : 'हल्का (३/१०)';
-  }
-
-  return [
-    { category: 'chief_complaint', field: 'problem', value: problem },
-    { category: 'symptom', field: 'duration', value: duration },
-    { category: 'symptom', field: 'severity', value: severity }
-  ];
-}
-
-export function destroyKioskVoiceIntake() {
-  if (autoPlayTimer) {
-    clearTimeout(autoPlayTimer);
-    autoPlayTimer = null;
-  }
-  tts.stop();
-  if (speechRecognizer) {
-    try { speechRecognizer.stop(); } catch (_) {}
-    speechRecognizer = null;
-  }
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    try { mediaRecorder.stop(); } catch (_) {}
-    mediaRecorder = null;
   }
   if (avatarInstance) {
     avatarInstance.destroy();
