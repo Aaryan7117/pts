@@ -219,6 +219,31 @@ async def _create_tables(db: aiosqlite.Connection):
         CREATE INDEX IF NOT EXISTS idx_users_abha ON users(abha_id);
         CREATE INDEX IF NOT EXISTS idx_users_mobile ON users(mobile);
         CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+        -- ============================================================
+        -- CONSENTS: DPDP compliance audit log for patient consent (B7)
+        -- ============================================================
+        CREATE TABLE IF NOT EXISTS consents (
+            id              TEXT PRIMARY KEY,
+            encounter_id    TEXT NOT NULL REFERENCES encounters(id),
+            granted_at      TEXT DEFAULT (datetime('now')),
+            language        TEXT DEFAULT 'hi',
+            consent_version TEXT DEFAULT '1.0',
+            channel         TEXT DEFAULT 'mobile_byod',
+            created_at      TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_consents_encounter ON consents(encounter_id);
+
+        -- ============================================================
+        -- IDEMPOTENCY KEYS: Prevents duplicate encounters / turns (B5)
+        -- ============================================================
+        CREATE TABLE IF NOT EXISTS idempotency_keys (
+            key             TEXT PRIMARY KEY,
+            response_json   TEXT NOT NULL,
+            status_code     INTEGER DEFAULT 200,
+            created_at      TEXT DEFAULT (datetime('now'))
+        );
     """)
 
     # Run safe migrations for existing tables
@@ -236,6 +261,10 @@ async def _run_migrations(db: aiosqlite.Connection):
     # Migrations on encounters table
     cursor = await db.execute("PRAGMA table_info(encounters)")
     cols = [row[1] for row in await cursor.fetchall()]
+    if "bearer_token" not in cols:
+        await db.execute("ALTER TABLE encounters ADD COLUMN bearer_token TEXT")
+    if "token_expires_at" not in cols:
+        await db.execute("ALTER TABLE encounters ADD COLUMN token_expires_at TEXT")
     if "abha_id" not in cols:
         await db.execute("ALTER TABLE encounters ADD COLUMN abha_id TEXT")
     if "verified_by_doctor_id" not in cols:

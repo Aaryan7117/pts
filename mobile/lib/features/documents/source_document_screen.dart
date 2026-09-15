@@ -1,7 +1,8 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/state/intake_provider.dart';
-import '../../app/state/encounter_provider.dart';
 import '../../data/datasources/api_datasource.dart';
 import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
@@ -11,6 +12,7 @@ import '../../core/widgets/primary_button.dart';
 
 /// Screen 16 — Source Document View with Evidence Polygons
 /// "No Receipt, No Fact" visual provenance verification
+/// Displays the actual uploaded prescription image or locally captured camera photo.
 /// Ref: MEDIKIOSK_ANDROID_DESIGN_SPEC.md Section 8 (Screen 16)
 class SourceDocumentScreen extends StatelessWidget {
   const SourceDocumentScreen({super.key});
@@ -40,7 +42,7 @@ class SourceDocumentScreen extends StatelessWidget {
           ),
           const SizedBox(height: MediDimensions.space8),
           const Text(
-            'The blue highlighted box shows the exact region where AI extracted your medication.',
+            'The highlighted area shows the exact region where AI extracted your medication from the original document.',
             style: TextStyle(fontSize: 16, color: MediColors.textMuted),
           ),
           const SizedBox(height: MediDimensions.space20),
@@ -49,20 +51,7 @@ class SourceDocumentScreen extends StatelessWidget {
               minScale: 0.8,
               maxScale: 3.5,
               child: Center(
-                child: liveImageUrl != null
-                    ? ClipRRect(
-                        borderRadius: MediDimensions.borderMd,
-                        child: Image.network(
-                          liveImageUrl,
-                          fit: BoxFit.contain,
-                          loadingBuilder: (ctx, child, progress) {
-                            if (progress == null) return child;
-                            return const Center(child: CircularProgressIndicator());
-                          },
-                          errorBuilder: (ctx, err, stack) => _buildDynamicPrescription(context, intake),
-                        ),
-                      )
-                    : _buildDynamicPrescription(context, intake),
+                child: _buildDocumentViewer(context, intake, liveImageUrl),
               ),
             ),
           ),
@@ -75,81 +64,73 @@ class SourceDocumentScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDynamicPrescription(BuildContext context, IntakeProvider intake) {
-    final encounter = context.read<EncounterProvider>();
-    final meds = intake.extractedMedications;
+  Widget _buildDocumentViewer(BuildContext context, IntakeProvider intake, String? liveImageUrl) {
+    // 1. If backend returned a valid image URL, stream it
+    if (liveImageUrl != null && liveImageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: MediDimensions.borderMd,
+        child: Image.network(
+          liveImageUrl,
+          fit: BoxFit.contain,
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return const Center(child: CircularProgressIndicator());
+          },
+          errorBuilder: (ctx, err, stack) => _buildLocalFallbackImage(intake),
+        ),
+      );
+    }
 
+    return _buildLocalFallbackImage(intake);
+  }
+
+  Widget _buildLocalFallbackImage(IntakeProvider intake) {
+    // 2. Fall back to local file path captured by camera
+    if (intake.capturedImagePath != null && File(intake.capturedImagePath!).existsSync()) {
+      return ClipRRect(
+        borderRadius: MediDimensions.borderMd,
+        child: Image.file(
+          File(intake.capturedImagePath!),
+          fit: BoxFit.contain,
+        ),
+      );
+    }
+
+    // 3. Fall back to memory bytes if retained
+    if (intake.capturedImageBytes != null && intake.capturedImageBytes!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: MediDimensions.borderMd,
+        child: Image.memory(
+          Uint8List.fromList(intake.capturedImageBytes!),
+          fit: BoxFit.contain,
+        ),
+      );
+    }
+
+    // 4. Honest empty state (Zero mockups!)
     return Container(
       width: 320,
-      constraints: const BoxConstraints(minHeight: 380),
-      padding: const EdgeInsets.all(MediDimensions.space20),
+      padding: const EdgeInsets.all(MediDimensions.space24),
       decoration: BoxDecoration(
-        color: MediColors.white,
+        color: MediColors.surface,
         borderRadius: MediDimensions.borderMd,
-        boxShadow: MediDimensions.elevation2,
-        border: Border.all(color: MediColors.borderStrong),
+        border: Border.all(color: MediColors.border),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Prescription Header & Hospital Info
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('CIVIL HOSPITAL OPD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: MediColors.brandPrimary)),
-              Text('Token: ${encounter.tokenNumber ?? "A-101"}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: MediColors.textMuted)),
-            ],
+          Icon(Icons.image_not_supported_outlined, size: 56, color: MediColors.slate400),
+          const SizedBox(height: MediDimensions.space16),
+          const Text(
+            'No Source Image Available',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: MediColors.textPrimary),
+            textAlign: TextAlign.center,
           ),
-          const Divider(),
-          Text('Encounter ID: ${encounter.encounterId ?? "Active Encounter"}', style: const TextStyle(fontSize: 12, color: MediColors.textMuted)),
-          const SizedBox(height: 8),
-          const Text('Rx (Prescribed Medications)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: MediColors.brandPrimary)),
-          const SizedBox(height: 12),
-          if (meds.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Text('No medications extracted from this document yet.', style: TextStyle(color: MediColors.textMuted, fontStyle: FontStyle.italic)),
-            )
-          else
-            ...meds.asMap().entries.map((entry) {
-              final idx = entry.key + 1;
-              final med = entry.value;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  border: Border.all(color: MediColors.brandPrimary, width: 2.0),
-                  color: MediColors.blue50,
-                  borderRadius: MediDimensions.borderSm,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '$idx. ${med.name} ${med.dose ?? ""} ${med.frequency ?? ""}',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: MediColors.brandPrimary,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${(med.confidence * 100).toInt()}% OCR',
-                        style: const TextStyle(color: MediColors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          const SizedBox(height: 16),
-          const Align(
-            alignment: Alignment.bottomRight,
-            child: Text('Verified by Clinical OCR\nProvenance: No Receipt, No Fact', textAlign: TextAlign.right, style: TextStyle(fontSize: 11, color: MediColors.textMuted)),
+          const SizedBox(height: MediDimensions.space8),
+          const Text(
+            'Please scan or take a photo of your prescription to inspect the visual evidence.',
+            style: TextStyle(fontSize: 14, color: MediColors.textMuted),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

@@ -79,46 +79,74 @@ class VoiceIntakeScreen extends StatelessWidget {
 
             const SizedBox(height: MediDimensions.space32),
 
-            // Secondary Option: Launch Simulated Phone Call Intake
-            Container(
-              padding: const EdgeInsets.all(MediDimensions.space16),
-              decoration: BoxDecoration(
-                color: MediColors.surface,
+            // Secondary Option: Launch Simulated Phone Call Intake (Responsive InkWell card)
+            Material(
+              color: MediColors.surface,
+              borderRadius: MediDimensions.borderLg,
+              child: InkWell(
+                onTap: () => Navigator.of(context).pushNamed('/active_call'),
                 borderRadius: MediDimensions.borderLg,
-                border: Border.all(color: MediColors.border),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: MediColors.emerald800,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.call, color: MediColors.white, size: 24),
+                child: Container(
+                  padding: const EdgeInsets.all(MediDimensions.space16),
+                  decoration: BoxDecoration(
+                    borderRadius: MediDimensions.borderLg,
+                    border: Border.all(color: MediColors.border),
                   ),
-                  const SizedBox(width: MediDimensions.space16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          lang.translate('call_intake_shortcut_title'),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          color: MediColors.emerald800,
+                          shape: BoxShape.circle,
                         ),
-                        Text(
-                          lang.translate('voice_call_fast_track_sub'),
-                          style: const TextStyle(fontSize: 13, color: MediColors.textMuted),
+                        child: const Icon(Icons.call, color: MediColors.white, size: 22),
+                      ),
+                      const SizedBox(width: MediDimensions.space16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              lang.translate('call_intake_shortcut_title'),
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              lang.translate('voice_call_fast_track_sub'),
+                              style: const TextStyle(fontSize: 12, color: MediColors.textMuted),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              lang.translate('call_intake_shortcut_btn'),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: MediColors.emerald800,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: MediDimensions.space8),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: MediColors.emerald50,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: MediColors.emerald200),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: MediColors.emerald800,
+                        ),
+                      ),
+                    ],
                   ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pushNamed('/active_call'),
-                    child: Text(lang.translate('call_intake_shortcut_btn'), style: const TextStyle(fontWeight: FontWeight.w800)),
-                  ),
-                ],
+                ),
               ),
             ),
 

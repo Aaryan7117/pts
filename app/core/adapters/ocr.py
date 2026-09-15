@@ -92,14 +92,44 @@ class OCRService:
 
         try:
             import numpy as np
-            from PIL import Image
+            from PIL import Image, ImageOps, ImageEnhance
 
-            # Load image from bytes
+            # Load image from bytes with EXIF orientation correction (phone camera fix)
             image = Image.open(io.BytesIO(image_bytes))
+            try:
+                image = ImageOps.exif_transpose(image)
+            except Exception as e:
+                logger.debug(f"Exif transpose skipped: {e}")
+            image = image.convert("RGB")
             img_array = np.array(image)
 
             # Run RapidOCR
             result, elapse = self._engine(img_array)
+
+            # Fallback 1: If 0 lines detected, enhance contrast and sharpness (common on mobile prescription captures)
+            if not result:
+                try:
+                    enhanced = ImageEnhance.Contrast(image).enhance(1.6)
+                    enhanced = ImageEnhance.Sharpness(enhanced).enhance(1.4)
+                    res_enh, _ = self._engine(np.array(enhanced))
+                    if res_enh:
+                        result = res_enh
+                        logger.info("RapidOCR succeeded on contrast-enhanced prescription image")
+                except Exception as e:
+                    logger.debug(f"Contrast enhancement fallback skipped: {e}")
+
+            # Fallback 2: Multi-orientation detection if still no text detected (phone held sideways)
+            if not result:
+                for angle in [90, 270, 180]:
+                    try:
+                        rotated = image.rotate(angle, expand=True)
+                        res_rot, _ = self._engine(np.array(rotated))
+                        if res_rot and len(res_rot) > 0:
+                            result = res_rot
+                            logger.info(f"RapidOCR succeeded after {angle}° rotation")
+                            break
+                    except Exception as e:
+                        logger.debug(f"Rotation fallback {angle}° skipped: {e}")
 
             if result is None:
                 logger.warning("RapidOCR returned no results for this image.")
@@ -165,9 +195,14 @@ class OCRService:
             Path to the saved highlighted image.
         """
         try:
-            from PIL import Image, ImageDraw
+            from PIL import Image, ImageDraw, ImageOps
 
             image = Image.open(io.BytesIO(image_bytes))
+            try:
+                image = ImageOps.exif_transpose(image)
+            except Exception:
+                pass
+            image = image.convert("RGB")
             draw = ImageDraw.Draw(image, "RGBA")
 
             # First, we need the OCR results to get bounding boxes
@@ -215,9 +250,14 @@ class OCRService:
             Path to the saved highlighted image.
         """
         try:
-            from PIL import Image, ImageDraw
+            from PIL import Image, ImageDraw, ImageOps
 
             image = Image.open(io.BytesIO(image_bytes))
+            try:
+                image = ImageOps.exif_transpose(image)
+            except Exception:
+                pass
+            image = image.convert("RGB")
             draw = ImageDraw.Draw(image, "RGBA")
             width, height = image.size
 

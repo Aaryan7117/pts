@@ -156,7 +156,7 @@ class _ActiveVoiceCaptureScreenState extends State<ActiveVoiceCaptureScreen> {
                       if (_textController.text.isNotEmpty)
                         GestureDetector(
                           onTap: () => setState(() => _textController.clear()),
-                          child: const Text('Clear', style: TextStyle(color: MediColors.red600, fontWeight: FontWeight.w600, fontSize: 13)),
+                          child: Text(lang.translate('clear'), style: const TextStyle(color: MediColors.red600, fontWeight: FontWeight.w600, fontSize: 13)),
                         ),
                     ],
                   ),

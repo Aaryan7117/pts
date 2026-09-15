@@ -10,7 +10,6 @@ import '../../core/widgets/primary_button.dart';
 import '../../core/widgets/secondary_button.dart';
 import '../../data/models/queue_status.dart';
 import '../../data/repositories/intake_repository.dart';
-import '../../data/datasources/mock_datasource.dart';
 
 /// Screen 19 — Department Routing & Queue Token Tracker
 /// Large high-visibility token card with live position and wait estimate
@@ -26,6 +25,7 @@ class _QueueScreenState extends State<QueueScreen> {
   final IntakeRepository _repository = IntakeRepository();
   QueueStatusResponse? _queueData;
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -37,9 +37,12 @@ class _QueueScreenState extends State<QueueScreen> {
 
   Future<void> _fetchQueueStatus() async {
     final encounter = context.read<EncounterProvider>();
-    final token = encounter.tokenNumber ?? 'A-104';
+    final token = encounter.tokenNumber ?? 'PENDING';
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final res = await _repository.getQueueStatus(token);
       if (mounted) {
@@ -48,10 +51,10 @@ class _QueueScreenState extends State<QueueScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() {
-          _queueData = MockDataSource.getMockQueueStatus();
+          _errorMessage = 'Offline: Unable to reach OPD Queue Server. Showing local token.';
           _isLoading = false;
         });
       }
@@ -63,8 +66,16 @@ class _QueueScreenState extends State<QueueScreen> {
     final lang = context.watch<LanguageProvider>();
     final encounter = context.watch<EncounterProvider>();
 
-    final token = encounter.tokenNumber ?? 'A-104';
-    final queueData = _queueData ?? MockDataSource.getMockQueueStatus();
+    final token = encounter.tokenNumber ?? '--';
+    final queueData = _queueData ??
+        QueueStatusResponse(
+          token: token,
+          department: encounter.department,
+          status: encounter.tokenNumber != null ? 'WAITING' : 'REGISTRATION_REQUIRED',
+          patientsAhead: 0,
+          estimatedWaitMinutes: 0,
+          doctorRoom: 'OPD Desk',
+        );
 
     return MediScaffold(
       title: lang.translate('queue_title'),
@@ -74,6 +85,28 @@ class _QueueScreenState extends State<QueueScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (_errorMessage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: MediDimensions.space16),
+                padding: const EdgeInsets.all(MediDimensions.space12),
+                decoration: BoxDecoration(
+                  color: MediColors.amber100,
+                  borderRadius: MediDimensions.borderMd,
+                  border: Border.all(color: MediColors.amber600),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.wifi_off_rounded, color: MediColors.amber800, size: 20),
+                    const SizedBox(width: MediDimensions.space8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: MediColors.amber900, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Oversized Token Card
             Container(
               width: double.infinity,

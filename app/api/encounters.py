@@ -4,15 +4,20 @@ POST /api/encounters/bootstrap — Initializes a new patient encounter.
 """
 
 import uuid
+import json
 import logging
-from fastapi import APIRouter, Depends
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException
 from app.database import get_db
 from app.schemas.encounter import (
     EncounterBootstrapRequest,
     EncounterBootstrapResponse,
     EncounterSummary,
+    EncounterFullStateResponse,
     EncounterStatusUpdate,
     EncounterLanguageUpdate,
+    ConsentRequest,
+    ConsentResponse,
     SUPPORTED_LANGUAGES
 )
 
@@ -47,19 +52,22 @@ async def bootstrap_encounter(request: EncounterBootstrapRequest, db=Depends(get
     """
     Initialize a new patient encounter.
 
-    Creates an encounter record, assigns a queue token, and returns
-    supported languages. This is the first API call from any intake channel.
+    Creates an encounter record, assigns an encounter bearer token (B1),
+    and returns supported languages. This is the first API call from any intake channel.
     """
     encounter_id = f"enc-{uuid.uuid4().hex[:8]}"
-    patient_id = f"pat-{uuid.uuid4().hex[:8]}"
+    patient_id = request.patient_id or f"pat-{uuid.uuid4().hex[:8]}"
     token = await _generate_unique_token(db, request.qr_token)
+    bearer_token = f"enc_sec_{uuid.uuid4().hex}"
+    token_expires_at = (datetime.utcnow() + timedelta(minutes=30)).isoformat()
+    channel = request.get_channel()
 
     await db.execute(
         """
-        INSERT INTO encounters (id, patient_id, token_number, language, channel, status)
-        VALUES (?, ?, ?, ?, ?, 'BOOTSTRAPPED')
+        INSERT INTO encounters (id, patient_id, token_number, language, channel, status, bearer_token, token_expires_at)
+        VALUES (?, ?, ?, ?, ?, 'BOOTSTRAPPED', ?, ?)
         """,
-        (encounter_id, patient_id, token, request.language, request.device_channel)
+        (encounter_id, patient_id, token, request.language, channel, bearer_token, token_expires_at)
     )
 
     await db.execute(
@@ -75,52 +83,133 @@ async def bootstrap_encounter(request: EncounterBootstrapRequest, db=Depends(get
         INSERT INTO audit_log (encounter_id, actor, action, details)
         VALUES (?, 'system', 'encounter_bootstrapped', ?)
         """,
-        (encounter_id, f'{{"channel": "{request.device_channel}", "language": "{request.language}"}}')
+        (encounter_id, json.dumps({"channel": channel, "language": request.language, "bearer_token_issued": True}))
     )
 
     await db.commit()
 
-    logger.info(f"Encounter bootstrapped: {encounter_id} (token={token}, channel={request.device_channel})")
+    logger.info(f"Encounter bootstrapped: {encounter_id} (token={token}, channel={channel})")
 
     return EncounterBootstrapResponse(
         encounter_id=encounter_id,
         patient_id=patient_id,
         token_number=token,
+        bearer_token=bearer_token,
         status="BOOTSTRAPPED",
         supported_languages=SUPPORTED_LANGUAGES
     )
 
 
-@router.get("/{encounter_id}", response_model=EncounterSummary)
+@router.post("/{encounter_id}/consent", response_model=ConsentResponse)
+async def record_encounter_consent(encounter_id: str, request: ConsentRequest, db=Depends(get_db)):
+    """Record patient informed consent for DPDP compliance (B7)."""
+    cursor = await db.execute("SELECT id FROM encounters WHERE id = ?", (encounter_id,))
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Encounter not found")
+
+    consent_id = f"cst-{uuid.uuid4().hex[:8]}"
+    granted_at = request.granted_at or datetime.utcnow().isoformat()
+
+    await db.execute(
+        """
+        INSERT INTO consents (id, encounter_id, granted_at, language, consent_version, channel)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (consent_id, encounter_id, granted_at, request.language, request.consent_version, request.channel)
+    )
+    await db.execute(
+        """
+        INSERT INTO audit_log (encounter_id, actor, action, details)
+        VALUES (?, 'patient', 'consent_granted', ?)
+        """,
+        (encounter_id, json.dumps({
+            "consent_id": consent_id,
+            "version": request.consent_version,
+            "language": request.language,
+            "channel": request.channel
+        }))
+    )
+    await db.commit()
+    logger.info(f"Consent recorded for encounter {encounter_id} (version={request.consent_version})")
+
+    return ConsentResponse(
+        encounter_id=encounter_id,
+        status="CONSENT_RECORDED",
+        consent_version=request.consent_version,
+        recorded_at=granted_at
+    )
+
+
+@router.get("/{encounter_id}", response_model=EncounterFullStateResponse)
 async def get_encounter(encounter_id: str, db=Depends(get_db)):
-    """Get encounter details by ID."""
+    """Get full encounter details and rehydration state (B6)."""
     row = await db.execute(
         "SELECT * FROM encounters WHERE id = ?", (encounter_id,)
     )
     encounter = await row.fetchone()
 
     if not encounter:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Encounter not found")
 
-    # Count facts
-    fact_count_row = await db.execute(
-        "SELECT COUNT(*) as cnt FROM clinical_facts WHERE encounter_id = ?",
+    encounter_dict = dict(encounter)
+
+    # Fetch facts
+    facts_cursor = await db.execute(
+        "SELECT * FROM clinical_facts WHERE encounter_id = ? ORDER BY created_at ASC",
         (encounter_id,)
     )
-    fact_count = (await fact_count_row.fetchone())["cnt"]
+    facts = [dict(r) for r in await facts_cursor.fetchall()]
 
-    return EncounterSummary(
-        encounter_id=encounter["id"],
-        token_number=encounter["token_number"],
-        channel=encounter["channel"],
-        language=encounter["language"],
-        status=encounter["status"],
-        severity_badge=encounter["severity_badge"],
-        department=encounter["department"],
-        created_at=encounter["created_at"],
-        fact_count=fact_count,
-        has_red_flags=encounter["severity_badge"] == "RED"
+    # Fetch documents
+    docs_cursor = await db.execute(
+        "SELECT id, document_type, ocr_status, highlighted_path, created_at FROM documents WHERE encounter_id = ?",
+        (encounter_id,)
+    )
+    documents = [dict(r) for r in await docs_cursor.fetchall()]
+
+    # Fetch active call session
+    session_cursor = await db.execute(
+        "SELECT * FROM call_sessions WHERE encounter_id = ? ORDER BY created_at DESC LIMIT 1",
+        (encounter_id,)
+    )
+    session_row = await session_cursor.fetchone()
+    call_session = dict(session_row) if session_row else None
+
+    # Fetch queue status
+    queue_cursor = await db.execute(
+        "SELECT position FROM queue_tokens WHERE encounter_id = ? AND status = 'WAITING'",
+        (encounter_id,)
+    )
+    queue_row = await queue_cursor.fetchone()
+    queue_pos = queue_row["position"] if queue_row else None
+    wait_est = queue_pos * 5 if queue_pos else None
+
+    # Parse ayush_intake if present
+    ayush_data = None
+    if "ayush_intake" in encounter_dict and encounter_dict["ayush_intake"]:
+        try:
+            ayush_data = json.loads(encounter_dict["ayush_intake"])
+        except Exception:
+            ayush_data = None
+
+    return EncounterFullStateResponse(
+        encounter_id=encounter_dict["id"],
+        patient_id=encounter_dict.get("patient_id"),
+        token_number=encounter_dict["token_number"],
+        channel=encounter_dict.get("channel", "kiosk"),
+        language=encounter_dict.get("language", "hi"),
+        status=encounter_dict["status"],
+        severity_badge=encounter_dict.get("severity_badge", "GREEN"),
+        department=encounter_dict.get("department", "General Medicine"),
+        created_at=encounter_dict.get("created_at"),
+        fact_count=len(facts),
+        has_red_flags=encounter_dict.get("severity_badge") == "RED",
+        clinical_facts=facts,
+        documents=documents,
+        active_call_session=call_session,
+        ayush_intake=ayush_data,
+        queue_position=queue_pos,
+        estimated_wait_minutes=wait_est
     )
 
 

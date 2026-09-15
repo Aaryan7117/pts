@@ -74,7 +74,7 @@ class CompletionScreen extends StatelessWidget {
                   Text(lang.translate('opd_ticket_issued'), style: const TextStyle(fontSize: 13, color: MediColors.textMuted, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Text(
-                    encounter.tokenNumber ?? 'A-104',
+                    encounter.tokenNumber ?? '--',
                     style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: MediColors.brandPrimary),
                   ),
                   Text(

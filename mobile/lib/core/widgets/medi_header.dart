@@ -48,15 +48,25 @@ class MediHeader extends StatelessWidget implements PreferredSizeWidget {
               tooltip: 'Back',
             )
           else ...[
-            // MediKiosk Medical Cross Mark
+            // MediKiosk Brand Mark (Official Website Logo)
             Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: MediColors.brandPrimary,
+                color: MediColors.white,
                 borderRadius: MediDimensions.borderMd,
+                border: Border.all(color: MediColors.border, width: 1.0),
               ),
-              child: const Icon(Icons.medical_services_rounded, color: MediColors.white, size: 24),
+              padding: const EdgeInsets.all(4.0),
+              child: Image.asset(
+                'assets/images/medikiosk-mark.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.local_hospital_rounded,
+                  color: MediColors.brandPrimary,
+                  size: 24,
+                ),
+              ),
             ),
             const SizedBox(width: MediDimensions.space12),
           ],

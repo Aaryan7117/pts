@@ -1,0 +1,230 @@
+# Implementation Plan: MediKiosk Web & Mobile Revamp & Contract Alignment
+
+Revamp the MediKiosk web and mobile interfaces to adopt the canonical **Light Medical Glassmorphism Design System** (ReliaCare-inspired theme: Cream/Sage canvas, Lime `#A3E635` primary CTA with Deep Forest `#064E3B` text, frosted glass surfaces, Lora display + DM Sans body typography, official MediKiosk mark, and strict no-emoji Material Symbols). Concurrently, resolve backend contract drift in `app/` (Modifications B1–B7) and establish an enforceable, ticketed execution plan with testable checkpoints per phase.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Contract Reconciliation & Scope Decisions:**
+> 1. **Backend Compatibility Preserved:** The backend in `app/` will be enhanced with B1–B7 without breaking existing desktop kiosk or doctor dashboard routes.
+> 2. **Audio Streaming Optimization (B3):** Audio turns will return both `next_question_audio_url` (direct streaming file) and `next_question_audio_base64` (fallback), preventing mobile stutter on 4G connections.
+> 3. **Strict No-Emoji & No-Mock Policy:** All emojis in UI components and screens will be purged in favor of canonical Material Symbols / Lucide SVG icons. All mock fixture fallbacks in shipped code paths will be eliminated.
+> 4. **Scope Freeze:** As documented in `DOCS/Mobile Revamp/MediKiosk_Android_Revamp_Roadmap.md`, 3D indoor wayfinding maps and BLE sensor pairing remain de-scoped; navigation is consolidated into high-contrast room direction cards.
+
+---
+
+## Open Questions
+
+None at this stage. All requirements have been reconciled against `DOCS/MediKiosk_Master_Context.md`, `DOCS/Mobile Revamp/MediKiosk_Android_Revamp_Roadmap.md`, and the active codebase in `app/` and `frontend/`.
+
+---
+
+## Proposed Changes
+
+### 1. Backend Core & API Contracts (`app/`)
+
+Implement the 7 verified backend modifications (B1–B7) required for robust, secure mobile BYOD and web intake.
+
+#### [MODIFY] [encounter.py](file:///home/conste/repos/pts/app/schemas/encounter.py)
+- Update `EncounterBootstrapRequest` to support `channel: Literal["kiosk", "android_byod", "mobile_byod", "ivr_phone", "web_kiosk"]` with alias `device_channel`.
+- Add `patient_id` as an optional parameter alongside `qr_token`.
+- Add `bearer_token: str` to `EncounterBootstrapResponse` (B1).
+
+#### [MODIFY] [encounters.py](file:///home/conste/repos/pts/app/api/encounters.py)
+- **B1**: Issue a short-lived opaque encounter bearer token on `bootstrap`, stored with 30-minute TTL. Validate token on encounter-scoped operations.
+- **B4**: Handle `mobile_byod` and resolve patient identity via `patient_id` or `qr_token`.
+- **B6**: Extend `GET /api/encounters/{id}` to return full rehydration state (facts, turn progress, attached documents, triage severity, call session).
+- **B7**: Add `POST /api/encounters/{id}/consent` endpoint receiving `{granted_at, language, consent_version, channel}` and persisting a DPDP audit record.
+
+#### [MODIFY] [call_sessions.py](file:///home/conste/repos/pts/app/api/call_sessions.py) & [call_session.py](file:///home/conste/repos/pts/app/schemas/call_session.py)
+- **B3**: Write synthesized TTS audio turn files to `./static/audio/` and return `next_question_audio_url` in `AudioTurnResponse` alongside `next_question_audio_base64`.
+
+#### [MODIFY] [documents.py](file:///home/conste/repos/pts/app/api/documents.py)
+- **B2**: Ensure both single document upload (`POST /api/documents/upload`) and batch upload consistently return `extracted_medications`, `flagged_interactions`, and `highlighted_image_url` for patient verification.
+
+#### [NEW] [idempotency.py](file:///home/conste/repos/pts/app/core/middleware/idempotency.py)
+- **B5**: Fast idempotent request interceptor checking `Idempotency-Key` header on mutating calls (`bootstrap`, `audio-turn`, `documents/upload`), storing key-to-response mappings in SQLite for 24h to prevent duplicate records during flaky mobile reconnections.
+
+---
+
+### 2. Web Interface & Interactive Mobile Simulator (`frontend/`)
+
+#### [MODIFY] [mobile.html](file:///home/conste/repos/pts/frontend/mobile.html)
+- Revamp the interactive Android/mobile app preview to adopt the new Light Medical design system:
+  - Replace dark navy `#0B132B` and teal `#0D9488` with cream/sage canvas (`#F8FAF5`), vibrant lime primary CTA (`#A3E635`) with dark forest text (`#064E3B`, 7.6:1 AAA contrast), and frosted glass cards.
+  - Update typography to Lora display + DM Sans body.
+  - Integrate the official `medikiosk-mark.png` brand logo.
+  - Eliminate all emojis, replacing them with proper SVG Material Symbols.
+  - Connect actions directly to the live FastAPI backend.
+
+#### [MODIFY] [design-tokens.css](file:///home/conste/repos/pts/frontend/css/design-tokens.css) & [components.css](file:///home/conste/repos/pts/frontend/css/components.css)
+- Verify and lock tokens across all web views to guarantee full WCAG 2.2 AAA contrast (7:1 for normal text, 4.5:1 for large text).
+- Add high-contrast mode fallback rules for clinical accessibility.
+
+#### [MODIFY] [api.js](file:///home/conste/repos/pts/frontend/js/api.js)
+- Wire B1 encounter token handling and B5 idempotency headers into the frontend API client.
+
+---
+
+### 3. Android Mobile Application (`mobile/`)
+
+#### [MODIFY] [pubspec.yaml](file:///home/conste/repos/pts/mobile/pubspec.yaml)
+- Add `google_fonts: ^6.1.0` (for Lora, DM Sans, Noto Sans).
+- Ensure Dio network client and WorkManager background sync dependencies are configured.
+
+#### [MODIFY] [colors.dart](file:///home/conste/repos/pts/mobile/lib/app/theme/colors.dart) & [app_theme.dart](file:///home/conste/repos/pts/mobile/lib/app/theme/app_theme.dart)
+- Implement the exact 3-layer design tokens specified in `MEDIKIOSK_ANDROID_DESIGN_SPEC.md` v4.0.0.
+- Setup Lora and DM Sans text themes with Indic diacritic line-height protection (1.45–1.65).
+
+#### [DELETE] Legacy Bloat Modules
+- Delete unused/out-of-scope packages per Roadmap §3: `services/`, `map/`, and any BLE sensor mock stubs.
+
+---
+
+## Enforceable Implementation Tickets
+
+```mermaid
+graph TD
+    T001[T-001: Backend B1, B4, B7 Core APIs] --> T002[T-002: Backend B3 Audio Streaming & B5 Idempotency]
+    T002 --> C0[CHECKPOINT 0: Contract Verification via curl]
+    C0 --> T010[T-010: Web mobile.html Simulator Revamp]
+    C0 --> T011[T-011: Zero-Mock Data Audit & Grep Gate]
+    T010 --> T020[T-020: Onboarding, Language & Consent Flow]
+    T011 --> T020
+    T020 --> T021[T-021: Conversational Voice Turn & Audio Streaming]
+    T021 --> T022[T-022: Closed-Loop Explain-Back Verification]
+    T022 --> C2[CHECKPOINT 2: Voice Intake to Doctor Queue Slice]
+    C2 --> T030[T-030: Document Upload & Line-Cited OCR]
+    T030 --> T031[T-031: Bounding-Box Evidence Viewer]
+    T031 --> T040[T-040: AYUSH Dashavidha Pariksha Module]
+    T040 --> T041[T-041: Real-time OPD Queue Tracker]
+    T041 --> C4[CHECKPOINT 4: Complete Patient Journey Verified]
+```
+
+### Phase 0: Contract Truth & Backend Modifications
+
+#### Ticket T-001: Implement Backend Modifications B1, B4, B7
+- **Work:**
+  - Add encounter bearer token generation and verification in `app/api/encounters.py` (B1).
+  - Update `POST /api/encounters/bootstrap` to accept `channel: "mobile_byod"`, handle `patient_id` or `qr_token`, and return `supported_languages[]` (B4).
+  - Add `POST /api/encounters/{id}/consent` to persist patient consent records (B7).
+- **Done When:** `curl -X POST http://localhost:8000/api/encounters/bootstrap` returns `bearer_token`, `encounter_id`, `token_number`, and supported languages.
+
+#### Ticket T-002: Implement Backend Audio Streaming (B3), Idempotency (B5), and Rehydration (B6)
+- **Work:**
+  - Update `POST /api/call/audio-turn` to save synthesized TTS WAV to static and return `next_question_audio_url` (B3).
+  - Add `Idempotency-Key` interceptor storing key/response pairs for 24 hours (B5).
+  - Extend `GET /api/encounters/{id}` to return complete encounter state for session resumption (B6).
+- **Done When:** Making an audio turn returns a valid playable URL at `http://localhost:8000/static/audio/...`; re-sending the same request with identical `Idempotency-Key` returns cached result without duplicate DB inserts.
+
+#### Ticket T-003: Contract Test Harness & Checkpoint 0
+- **Work:**
+  - Create a lightweight verification script `scripts/verify_contracts.py` running the complete sequence: Bootstrap $\rightarrow$ Consent $\rightarrow$ Call Session Start $\rightarrow$ Audio Turn $\rightarrow$ Document Upload $\rightarrow$ Complete.
+- **Done When (CHECKPOINT 0):** Script exits 0 with all HTTP 200 responses and validated JSON shapes matching `MEDIKIOSK_ANDROID_DESIGN_SPEC.md` and `DOCS/Mobile Revamp/MediKiosk_Android_Revamp_Roadmap.md`.
+
+---
+
+### Phase 1: Design Standard & Foundation Hardening
+
+#### Ticket T-010: Revamp `frontend/mobile.html` Interactive Simulator
+- **Work:**
+  - Re-skin the entire mobile simulator to match the ReliaCare Light Medical Glassmorphism aesthetic.
+  - Implement cream canvas (`#F8FAF5`), vibrant lime CTA (`#A3E635`) with dark forest text (`#064E3B`), and frosted glass cards.
+  - Apply Lora display headings and DM Sans body typography.
+  - Replace all emoji icons with standard SVG icons (no emojis, no AI slop).
+  - Ensure all interactions hit the live backend endpoints.
+- **Done When:** Visual preview in browser at `http://localhost:5173/mobile.html` is identical in aesthetic, color, typography, and iconography to the Web Kiosk and Doctor portals.
+
+#### Ticket T-011: No-Mock-Data Audit & Grep Gate
+- **Work:**
+  - Scan `frontend/` and `mobile/` for dummy mock data or canned clinical facts in production paths.
+  - Configure CI grep rule: `grep -rniE "mock|dummy|fake|sample|lorem" lib/` returning 0 hits in shipped code.
+- **Done When:** Build gate passes cleanly; offline mode presents honest "Local Edge Mode / Draft Cached" status rather than invented facts.
+
+---
+
+### Phase 2: Core Vertical Slice (Intake to Doctor Queue)
+
+#### Ticket T-020: Onboarding, Language Selection & Consent Flow
+- **Work:**
+  - Wire language selection to server-provided `supported_languages[]` (setting both client locale and backend call language).
+  - Wire consent accept to `POST /api/encounters/{id}/consent`.
+  - Wire QR scan / mobile ID to bootstrap.
+- **Done When:** Completing onboarding creates a verified audit record in the database and advances to intake.
+
+#### Ticket T-021: Conversational Voice Turn & Audio Streaming
+- **Work:**
+  - Implement active voice recording screen with 9-bar dynamic waveform.
+  - Stream audio to `/api/call/audio-turn`.
+  - Stream incoming TTS audio directly from `next_question_audio_url` with auto-play.
+  - Render live rolling transcript and auto-fill extracted symptom cards.
+- **Done When:** Speaking symptoms into device/simulator returns live transcript, auto-fills symptom cards, and plays spoken doctor follow-up question without delay.
+
+#### Ticket T-022: Closed-Loop Explain-Back Verification
+- **Work:**
+  - Implement summary confirmation screen presenting captured facts.
+  - Include TTS audio readout button.
+  - Implement oversized Green **[YES, THAT'S RIGHT]** (`#047857`) and Red **[NO, SAY AGAIN]** (`#C83A3A`) buttons.
+  - Confirming advances encounter state to `PATIENT_CONFIRMED`.
+- **Done When (CHECKPOINT 2):** Patient completes voice intake, confirms facts, and case immediately pops up on the Doctor Queue (`#/doctor/queue`) with correct severity badge.
+
+---
+
+### Phase 3: Document Intelligence & Evidence Traceability
+
+#### Ticket T-030: Document Camera Capture & Upload
+- **Work:**
+  - Connect camera capture to `POST /api/documents/upload` with multipart fields (`encounter_id`, `file`, `document_type`).
+  - Display sweeping laser animation during OCR processing.
+- **Done When:** Real paper prescription upload returns parsed medications and line citations.
+
+#### Ticket T-031: Bounding-Box Evidence Viewer ("No Receipt, No Fact")
+- **Work:**
+  - Implement evidence inspection modal.
+  - Tapping `[View Evidence]` on an extracted medicine pans/zooms to the source document and displays a golden amber bounding box (`#F59E0B`) around the exact handwriting.
+- **Done When (CHECKPOINT 3):** Clicking evidence on both patient view and doctor consultation cockpit highlights the exact source lines.
+
+---
+
+### Phase 4: AYUSH Module, OPD Queue & Privacy Reset
+
+#### Ticket T-040: AYUSH Dashavidha Pariksha Module
+- **Work:**
+  - Implement structured Ayurvedic lifestyle intake (Agni, Koshtha, Nidra, Ahara-Vihara).
+  - Send structured fields to `/api/ayush` or encounter payload.
+- **Done When:** AYUSH findings render in the Doctor Consultation Cockpit under the dedicated AYUSH section.
+
+#### Ticket T-041: Real-Time Queue Tracker & Privacy Reset
+- **Work:**
+  - Implement queue status card polling `GET /api/queue/status/{token}` with room navigation text.
+  - Implement 10-second automated countdown timer on completion screen that purges local state and returns to Screen 01.
+- **Done When (CHECKPOINT 4):** Full end-to-end journey from Welcome $\rightarrow$ Voice Intake $\rightarrow$ Rx Scan $\rightarrow$ Token Issuance $\rightarrow$ Doctor Review $\rightarrow$ Auto-Reset functions flawlessly.
+
+---
+
+## Verification Plan
+
+### Automated Verification
+1. **Contract Test Suite:**
+   ```bash
+   python scripts/verify_contracts.py
+   ```
+   Validates every API request/response against Pydantic schemas.
+2. **No-Mock Grep Gate:**
+   ```bash
+   grep -rniE "mock|dummy|fake|sample|lorem" mobile/lib/ --include="*.dart" | grep -v "_test.dart"
+   ```
+3. **Frontend Build & Lint:**
+   ```bash
+   cd frontend && npm run build
+   ```
+
+### Manual Verification
+1. **Visual Theme Inspection:** Open `http://localhost:5173/` and `http://localhost:5173/mobile.html` to confirm identical Light Medical aesthetic, Lora + DM Sans typography, lime accents, frosted glass styling, official logo, and zero emojis.
+2. **Voice Intake Flow:** Complete a Hindi audio intake turn in the simulator; verify audio plays and facts appear.
+3. **Doctor Verification:** Open `http://localhost:5173/#/doctor/queue`, open the case, verify extracted facts and bounding boxes.
+
+
+

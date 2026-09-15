@@ -110,8 +110,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files (uploaded prescriptions & evidence-boxed images)
-Path("./static").mkdir(exist_ok=True)
+# Idempotency middleware for preventing duplicate mutations from mobile retries (B5)
+from app.core.middleware import IdempotencyMiddleware
+app.add_middleware(IdempotencyMiddleware)
+
+# Mount static files (uploaded prescriptions, evidence-boxed images & streaming audio)
+Path("./static/uploads").mkdir(parents=True, exist_ok=True)
+Path("./static/evidence").mkdir(parents=True, exist_ok=True)
+Path("./static/audio").mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # === Register API Routers ===

@@ -30,6 +30,9 @@ class LanguageProvider extends ChangeNotifier {
       'emergency_assistance_btn': 'Emergency? Tap for immediate assistance',
       'voice_call_fast_track_title': '1-Tap AI Voice Call',
       'voice_call_fast_track_sub': 'Skip forms and speak symptoms directly to AI',
+      'helpline_card_title': '2G Toll-Free Phone Intake',
+      'helpline_card_sub': 'For family with keypad phones: Dial 1800-890-AYUSH (Toll-Free, zero internet)',
+      'clear': 'Clear',
 
       // Language Selection
       'select_language': 'Select Your Language',
@@ -108,6 +111,7 @@ class LanguageProvider extends ChangeNotifier {
       'followup_title': 'Follow-Up Question',
       'followup_sub': 'Please answer this quick question to help your doctor understand better.',
       'confirm_answer': 'Confirm Answer',
+      'skip_to_summary': 'Skip directly to Summary',
 
       // Processing
       'processing': 'Understanding Symptoms...',
@@ -245,6 +249,9 @@ class LanguageProvider extends ChangeNotifier {
       'emergency_assistance_btn': 'आपातकालीन सहायता चाहिए? यहाँ दबाएं',
       'voice_call_fast_track_title': '1-टैप एआई फोन कॉल',
       'voice_call_fast_track_sub': 'फॉर्म भरे बिना सीधे एआई डॉक्टर से बोलकर बताएं',
+      'helpline_card_title': '2G टोल-फ्री फोन इनटेक',
+      'helpline_card_sub': 'कीपैड फोन वाले परिवार के लिए: 1800-890-AYUSH पर डायल करें (मुफ्त, बिना इंटरनेट)',
+      'clear': 'हटाएं',
 
       // Language Selection
       'select_language': 'अपनी भाषा चुनें',
@@ -323,6 +330,7 @@ class LanguageProvider extends ChangeNotifier {
       'followup_title': 'आवश्यक अनुवर्ती प्रश्न',
       'followup_sub': 'डॉक्टर की बेहतर समझ के लिए कृपया इस प्रश्न का उत्तर दें।',
       'confirm_answer': 'उत्तर की पुष्टि करें',
+      'skip_to_summary': 'सीधे सारांश पर जाएं',
 
       // Processing
       'processing': 'जानकारी समझ रहे हैं...',
@@ -460,6 +468,9 @@ class LanguageProvider extends ChangeNotifier {
       'emergency_assistance_btn': 'அவசர சிகிச்சையா? உடனே தட்டவும்',
       'voice_call_fast_track_title': '1-தட்டல் குரல் அழைப்பு',
       'voice_call_fast_track_sub': 'படிவங்கள் இல்லாமல் நேரடியாக AI மருத்துவரிடம் பேசுங்கள்',
+      'helpline_card_title': '2G இலவச கட்டண தொலைபேசி பதிவு',
+      'helpline_card_sub': 'கீபேட் போன்களுக்கு: 1800-890-AYUSH அழைக்கவும் (இலவசம், இணையம் தேவையில்லை)',
+      'clear': 'அழி',
 
       // Language Selection
       'select_language': 'உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்',
@@ -537,6 +548,7 @@ class LanguageProvider extends ChangeNotifier {
       'followup_title': 'துணை கேள்வி',
       'followup_sub': 'மருத்துவருக்குத் துல்லியமாகப் புரிய இந்த கேள்விக்கு பதிலளிக்கவும்.',
       'confirm_answer': 'பதிலை உறுதிப்படுத்தவும்',
+      'skip_to_summary': 'நேரடியாக சுருக்கத்திற்குச் செல்லவும்',
 
       // Processing
       'processing': 'செயலாக்குகிறது...',
@@ -673,6 +685,9 @@ class LanguageProvider extends ChangeNotifier {
       'emergency_assistance_btn': 'అత్యవసరమా? సహాయం కోసం ఇక్కడ నొక్కండి',
       'voice_call_fast_track_title': '1-ట్యాప్ వాయిస్ కాల్',
       'voice_call_fast_track_sub': 'ఫారమ్‌లు లేకుండా నేరుగా AI వైద్యుడితో మాట్లాడండి',
+      'helpline_card_title': '2G టోల్-ఫ్రీ ఫోన్ నమోదు',
+      'helpline_card_sub': 'కీప్యాడ్ ఫోన్ల కోసం: 1800-890-AYUSH కు డయల్ చేయండి (ఉచితం, ఇంటర్నెట్ అవసరం లేదు)',
+      'clear': 'తొలగించు',
 
       // Language Selection
       'select_language': 'మీ భాషను ఎంచుకోండి',
@@ -750,6 +765,7 @@ class LanguageProvider extends ChangeNotifier {
       'followup_title': 'అదనపు ప్రశ్న',
       'followup_sub': 'వైద్యుడికి స్పష్టంగా అర్థం కావడానికి దయచేసి ఈ ప్రశ్నకు సమాధానం ఇవ్వండి.',
       'confirm_answer': 'సమాధానాన్ని నిర్ధారించండి',
+      'skip_to_summary': 'నేరుగా సారాంశానికి వెళ్లండి',
 
       // Processing
       'processing': 'విశ్లేషిస్తున్నాము...',
@@ -886,6 +902,9 @@ class LanguageProvider extends ChangeNotifier {
       'emergency_assistance_btn': 'तातडीची मदत हवी आहे का? येथे दाबा',
       'voice_call_fast_track_title': '१-टॅप व्हॉइस कॉल',
       'voice_call_fast_track_sub': 'फॉर्म न भरता थेट AI डॉक्टरांशी बोलून सांगा',
+      'helpline_card_title': '2G टोल-फ्री फोन नोंदणी',
+      'helpline_card_sub': 'कीपॅड फोनसाठी: 1800-890-AYUSH डायल करा (विनामूल्य, इंटरनेटची गरज नाही)',
+      'clear': 'हटवा',
 
       // Language Selection
       'select_language': 'आपली भाषा निवडा',
@@ -963,6 +982,7 @@ class LanguageProvider extends ChangeNotifier {
       'followup_title': 'पुढील प्रश्न',
       'followup_sub': 'डॉक्टरांच्या अचूक समजुतीसाठी कृपया या प्रश्नाचे उत्तर द्या.',
       'confirm_answer': 'उत्तर निश्चित करा',
+      'skip_to_summary': 'थेट सारांशावर जा',
 
       // Processing
       'processing': 'माहिती समजून घेत आहोत...',

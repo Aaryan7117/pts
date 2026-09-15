@@ -22,11 +22,11 @@ class VitalsScreen extends StatelessWidget {
     final encounter = context.read<EncounterProvider>();
 
     final vitalsList = [
-      {'name': lang.translate('bp_label'), 'val': intake.vitals['Blood Pressure'] ?? '120/80 mmHg', 'icon': Icons.favorite_rounded, 'status': lang.translate('normal_status')},
-      {'name': lang.translate('hr_label'), 'val': intake.vitals['Heart Rate'] ?? '72 bpm', 'icon': Icons.monitor_heart_rounded, 'status': lang.translate('normal_status')},
-      {'name': lang.translate('spo2_label'), 'val': intake.vitals['SpO2'] ?? '98%', 'icon': Icons.air_rounded, 'status': lang.translate('normal_status')},
-      {'name': lang.translate('temp_label'), 'val': intake.vitals['Temperature'] ?? '98.6 °F', 'icon': Icons.thermostat_rounded, 'status': lang.translate('normal_status')},
-      {'name': lang.translate('sugar_label'), 'val': intake.vitals['Blood Sugar'] ?? '110 mg/dL', 'icon': Icons.bloodtype_rounded, 'status': lang.translate('normal_status')},
+      {'name': lang.translate('bp_label'), 'val': intake.vitals['Blood Pressure'] ?? 'Pending (लंबित)', 'icon': Icons.favorite_rounded, 'status': intake.vitals['Blood Pressure'] != null ? lang.translate('normal_status') : 'Awaiting Check'},
+      {'name': lang.translate('hr_label'), 'val': intake.vitals['Heart Rate'] ?? 'Pending (लंबित)', 'icon': Icons.monitor_heart_rounded, 'status': intake.vitals['Heart Rate'] != null ? lang.translate('normal_status') : 'Awaiting Check'},
+      {'name': lang.translate('spo2_label'), 'val': intake.vitals['SpO2'] ?? 'Pending (लंबित)', 'icon': Icons.air_rounded, 'status': intake.vitals['SpO2'] != null ? lang.translate('normal_status') : 'Awaiting Check'},
+      {'name': lang.translate('temp_label'), 'val': intake.vitals['Temperature'] ?? 'Pending (लंबित)', 'icon': Icons.thermostat_rounded, 'status': intake.vitals['Temperature'] != null ? lang.translate('normal_status') : 'Awaiting Check'},
+      {'name': lang.translate('sugar_label'), 'val': intake.vitals['Blood Sugar'] ?? 'Pending (लंबित)', 'icon': Icons.bloodtype_rounded, 'status': intake.vitals['Blood Sugar'] != null ? lang.translate('normal_status') : 'Awaiting Check'},
     ];
 
     return MediScaffold(

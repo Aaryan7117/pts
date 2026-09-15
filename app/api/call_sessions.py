@@ -7,6 +7,7 @@ POST /api/call/session/end   — End session and lock intake
 These endpoints power the "Call AI Intake" feature on the mobile app.
 """
 
+from pathlib import Path
 from typing import Optional
 import uuid
 import json
@@ -30,6 +31,17 @@ router = APIRouter(prefix="/api/call", tags=["Call Sessions"])
 
 # In-memory session store (for hackathon; production would use Redis)
 _active_sessions: dict[str, dict] = {}
+
+AUDIO_DIR = Path("./static/audio")
+
+
+def _save_tts_audio_file(audio_bytes: bytes, prefix: str = "tts") -> str:
+    """Save synthesized TTS audio bytes to static/audio directory and return web URL (B3)."""
+    AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{prefix}_{uuid.uuid4().hex[:8]}.wav"
+    out_file = AUDIO_DIR / filename
+    out_file.write_bytes(audio_bytes)
+    return f"/static/audio/{filename}"
 
 
 @router.post("/session/start", response_model=CallSessionStartResponse)
@@ -64,13 +76,31 @@ async def start_call_session(request: CallSessionStartRequest, db=Depends(get_db
 
     session_id = f"call-sess-{uuid.uuid4().hex[:8]}"
 
-    # Initialize interview engine for this session
-    engine = InterviewEngine(language=request.language)
+    # Resolve department for context-based questioning (AYUSH vs General)
+    dept = getattr(request, "department", None)
+    if not dept and encounter:
+        enc_dict = dict(encounter)
+        dept = enc_dict.get("department")
+    if not dept:
+        q_row = await db.execute("SELECT department FROM queue_tokens WHERE encounter_id = ?", (request.encounter_id,))
+        q_data = await q_row.fetchone()
+        if q_data:
+            dept = dict(q_data).get("department")
+
+    # Initialize interview engine for this session with department context
+    engine = InterviewEngine(language=request.language, department=dept)
     opening_text = engine.get_opening_prompt()
 
     # Generate opening audio via TTS
     tts = get_tts_service()
     tts_result = await tts.synthesize(opening_text, request.language)
+
+    opening_audio_url = None
+    if tts_result and getattr(tts_result, "audio_bytes", None):
+        try:
+            opening_audio_url = _save_tts_audio_file(tts_result.audio_bytes, prefix=f"open_{session_id}")
+        except Exception as e:
+            logger.warning(f"Failed to save opening TTS audio file: {e}")
 
     # Store session state in memory
     _active_sessions[session_id] = {
@@ -100,7 +130,8 @@ async def start_call_session(request: CallSessionStartRequest, db=Depends(get_db
         session_id=session_id,
         status="CALL_ACTIVE",
         opening_text=opening_text,
-        opening_audio_base64=tts_result.audio_base64
+        opening_audio_base64=tts_result.audio_base64 if tts_result else None,
+        opening_audio_url=opening_audio_url
     )
 
 
@@ -135,8 +166,11 @@ async def process_audio_turn(
             await db.execute("INSERT OR IGNORE INTO encounters (id, token_number, language, channel, status) VALUES (?, ?, ?, 'mobile_byod', 'IN_PROGRESS')", (encounter_id, token, sess_lang))
             await db.execute("INSERT OR IGNORE INTO call_sessions (id, encounter_id, status, language, current_step) VALUES (?, ?, 'CALL_ACTIVE', ?, 'chief_complaint')", (session_id, encounter_id, sess_lang))
             await db.commit()
-        engine = InterviewEngine(language=sess_lang)
-        session = {"encounter_id": encounter_id, "language": sess_lang, "engine": engine, "turn_count": 0}
+        dept_row = await db.execute("SELECT department FROM queue_tokens WHERE encounter_id = ?", (encounter_id,))
+        dept_data = await dept_row.fetchone()
+        dept = dict(dept_data).get("department") if dept_data else None
+        engine = InterviewEngine(language=sess_lang, department=dept)
+        session = {"encounter_id": encounter_id, "language": sess_lang, "engine": engine, "turn_count": 0, "department": dept}
         _active_sessions[session_id] = session
 
     if language and language.strip():
@@ -205,19 +239,27 @@ async def process_audio_turn(
             )
         )
 
+    # Update session turn count
+    session["turn_count"] += 1
+    turn_index = session["turn_count"]
+
     # Step 4: Generate next question audio (if interview continues)
     next_question_text = None
     next_question_audio = None
+    next_question_audio_url = None
 
     if result["next_question"]:
         next_question_text = result["next_question"]["question_text"]
         tts = get_tts_service()
         tts_result = await tts.synthesize(next_question_text, active_language)
-        next_question_audio = tts_result.audio_base64
-
-    # Update session state
-    session["turn_count"] += 1
-    turn_index = session["turn_count"]
+        next_question_audio = tts_result.audio_base64 if tts_result else None
+        if tts_result and getattr(tts_result, "audio_bytes", None):
+            try:
+                next_question_audio_url = _save_tts_audio_file(
+                    tts_result.audio_bytes, prefix=f"turn_{session_id}_{turn_index}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save turn audio file: {e}")
 
     # Update DB
     current_step = result["next_question"]["section_id"] if result["next_question"] else "completed"
@@ -239,6 +281,8 @@ async def process_audio_turn(
         extracted_facts=extracted_facts,
         next_question_text=next_question_text,
         next_question_audio_base64=next_question_audio,
+        next_question_audio_url=next_question_audio_url,
+        suggested_options=result.get("suggested_options", []),
         is_completed=result["is_completed"]
     )
 
@@ -270,8 +314,11 @@ async def process_text_turn(
             await db.execute("INSERT OR IGNORE INTO encounters (id, token_number, language, channel, status) VALUES (?, ?, ?, 'mobile_byod', 'IN_PROGRESS')", (encounter_id, token, sess_lang))
             await db.execute("INSERT OR IGNORE INTO call_sessions (id, encounter_id, status, language, current_step) VALUES (?, ?, 'CALL_ACTIVE', ?, 'chief_complaint')", (session_id, encounter_id, sess_lang))
             await db.commit()
-        engine = InterviewEngine(language=sess_lang)
-        session = {"encounter_id": encounter_id, "language": sess_lang, "engine": engine, "turn_count": 0}
+        dept_row = await db.execute("SELECT department FROM queue_tokens WHERE encounter_id = ?", (encounter_id,))
+        dept_data = await dept_row.fetchone()
+        dept = dict(dept_data).get("department") if dept_data else None
+        engine = InterviewEngine(language=sess_lang, department=dept)
+        session = {"encounter_id": encounter_id, "language": sess_lang, "engine": engine, "turn_count": 0, "department": dept}
         _active_sessions[session_id] = session
 
     if language and language.strip():
@@ -318,19 +365,28 @@ async def process_text_turn(
             )
         )
 
+    # Update session turn count
+    session["turn_count"] += 1
+    turn_index = session["turn_count"]
+
     # Generate next question audio (if interview continues)
     next_question_text = None
     next_question_audio = None
+    next_question_audio_url = None
 
     if result["next_question"]:
         next_question_text = result["next_question"]["question_text"]
+        active_language = (language.strip().lower() if language and language.strip() else None) or session.get("language", "hi")
         tts = get_tts_service()
-        tts_result = await tts.synthesize(next_question_text, language)
-        next_question_audio = tts_result.audio_base64
-
-    # Update session state
-    session["turn_count"] += 1
-    turn_index = session["turn_count"]
+        tts_result = await tts.synthesize(next_question_text, active_language)
+        next_question_audio = tts_result.audio_base64 if tts_result else None
+        if tts_result and getattr(tts_result, "audio_bytes", None):
+            try:
+                next_question_audio_url = _save_tts_audio_file(
+                    tts_result.audio_bytes, prefix=f"text_turn_{session_id}_{turn_index}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save text turn audio file: {e}")
 
     # Update DB
     current_step = result["next_question"]["section_id"] if result["next_question"] else "completed"
@@ -364,6 +420,8 @@ async def process_text_turn(
         extracted_facts=extracted_facts,
         next_question_text=next_question_text,
         next_question_audio_base64=next_question_audio,
+        next_question_audio_url=next_question_audio_url,
+        suggested_options=result.get("suggested_options", []),
         is_completed=result["is_completed"]
     )
 
@@ -433,7 +491,18 @@ async def end_call_session(request: CallSessionEndRequest, db=Depends(get_db)):
         "SELECT token FROM queue_tokens WHERE encounter_id = ?", (encounter_id,)
     )
     token_record = await token_row.fetchone()
-    assigned_token = token_record["token"] if token_record else "TK-000"
+    if not token_record:
+        fallback_token = f"T-{uuid.uuid4().hex[:4].upper()}"
+        await db.execute(
+            """
+            INSERT OR IGNORE INTO queue_tokens (token, encounter_id, department, status, position)
+            VALUES (?, ?, 'General Medicine', 'WAITING', (SELECT COALESCE(MAX(position), 0) + 1 FROM queue_tokens))
+            """,
+            (fallback_token, encounter_id)
+        )
+        assigned_token = fallback_token
+    else:
+        assigned_token = token_record["token"]
 
     # Update encounter and session status
     await db.execute(

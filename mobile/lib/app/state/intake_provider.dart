@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/clinical_fact.dart';
 import '../../data/models/document_result.dart';
+import '../../data/models/call_session.dart';
 import '../../data/models/ayush_profile.dart';
 import '../../data/repositories/intake_repository.dart';
 
@@ -17,17 +18,16 @@ class IntakeProvider extends ChangeNotifier {
   bool _isInterviewCompleted = false;
 
   bool _isProcessingTurn = false;
+  bool _ocrFailed = false;
   DocumentUploadResponse? _lastDocumentResult;
+
+  final List<FollowupOption> _suggestedOptions = [];
+  List<int>? _capturedImageBytes;
+  String? _capturedImagePath;
 
   final List<ClinicalFact> _facts = [];
   final List<ExtractedMedication> _extractedMedications = [];
-  final Map<String, String> _vitals = {
-    'Blood Pressure': '120/80 mmHg',
-    'Heart Rate': '72 bpm',
-    'SpO2': '98%',
-    'Temperature': '98.6 °F',
-    'Blood Sugar': '110 mg/dL',
-  };
+  final Map<String, String> _vitals = {};
   AyurvedicIntakeRecord? _ayushRecord;
 
   IntakeProvider({IntakeRepository? repository})
@@ -41,7 +41,11 @@ class IntakeProvider extends ChangeNotifier {
   String get activeQuestion => _activeQuestion;
   String get currentLanguage => _currentLanguage;
   bool get isInterviewCompleted => _isInterviewCompleted;
+  bool get ocrFailed => _ocrFailed;
   DocumentUploadResponse? get lastDocumentResult => _lastDocumentResult;
+  List<FollowupOption> get suggestedOptions => List.unmodifiable(_suggestedOptions);
+  List<int>? get capturedImageBytes => _capturedImageBytes;
+  String? get capturedImagePath => _capturedImagePath;
   List<ClinicalFact> get facts => List.unmodifiable(_facts);
   List<ExtractedMedication> get extractedMedications => List.unmodifiable(_extractedMedications);
   Map<String, String> get vitals => Map.unmodifiable(_vitals);
@@ -72,17 +76,23 @@ class IntakeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startSession({required String encounterId, required String language}) async {
+  Future<void> startSession({
+    required String encounterId,
+    required String language,
+    String? department,
+  }) async {
     _currentLanguage = language;
     final res = await _repository.startCallSession(
       encounterId: encounterId,
       language: language,
+      department: department,
     );
     _sessionId = res.sessionId;
     _activeQuestion = res.openingText;
     _turnCount = 0;
     _isInterviewCompleted = false;
     _isProcessingTurn = false;
+    _ocrFailed = false;
     _lastDocumentResult = null;
     _facts.clear();
     _extractedMedications.clear();
@@ -96,8 +106,12 @@ class IntakeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      if (_sessionId == null) {
+        final autoEnc = 'enc-auto-${DateTime.now().millisecondsSinceEpoch}';
+        await startSession(encounterId: autoEnc, language: _currentLanguage);
+      }
       final res = await _repository.processAudioTurn(
-        sessionId: _sessionId ?? 'mock-session',
+        sessionId: _sessionId!,
         turnIndex: _turnCount,
         fallbackWords: patientSpeech ?? _currentTranscript,
         language: _currentLanguage,
@@ -108,6 +122,8 @@ class IntakeProvider extends ChangeNotifier {
       if (res.nextQuestionText != null && res.nextQuestionText!.isNotEmpty) {
         _activeQuestion = res.nextQuestionText!;
       }
+      _suggestedOptions.clear();
+      _suggestedOptions.addAll(res.suggestedOptions);
       _isInterviewCompleted = res.isCompleted;
 
       // Convert summaries to full ClinicalFact objects (deduplicate existing concepts)
@@ -166,8 +182,18 @@ class IntakeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setCapturedImage(List<int> bytes, String path) {
+    _capturedImageBytes = bytes;
+    _capturedImagePath = path;
+    notifyListeners();
+  }
+
   Future<void> processDocument(String encounterId, {List<int>? imageBytes, String filename = 'prescription.jpg'}) async {
     _isProcessingTurn = true;
+    _ocrFailed = false;
+    if (imageBytes != null) {
+      _capturedImageBytes = imageBytes;
+    }
     notifyListeners();
     try {
       final result = await _repository.uploadDocument(encounterId, imageBytes: imageBytes, filename: filename);
@@ -191,6 +217,8 @@ class IntakeProvider extends ChangeNotifier {
           status: 'pending',
         ));
       }
+    } catch (_) {
+      _ocrFailed = true;
     } finally {
       _isProcessingTurn = false;
       notifyListeners();
@@ -214,6 +242,9 @@ class IntakeProvider extends ChangeNotifier {
     _isProcessingTurn = false;
     _currentTranscript = '';
     _activeQuestion = '';
+    _suggestedOptions.clear();
+    _capturedImageBytes = null;
+    _capturedImagePath = null;
     _isInterviewCompleted = false;
     _lastDocumentResult = null;
     _facts.clear();

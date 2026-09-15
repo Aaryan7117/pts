@@ -7,9 +7,13 @@ import '../../app/theme/colors.dart';
 import '../../app/theme/dimensions.dart';
 import '../../app/theme/typography.dart';
 import '../../core/widgets/medi_scaffold.dart';
+import '../../core/widgets/primary_button.dart';
+import '../../core/widgets/secondary_button.dart';
 
 /// Screen 14 — OCR Processing Animation
-/// Laser scanner line simulation during optical character recognition
+/// Laser scanner line simulation during optical character recognition.
+/// If the upload fails (network error), shows a Retry / Skip card instead of
+/// silently pushing an empty result screen.
 /// Ref: MEDIKIOSK_ANDROID_DESIGN_SPEC.md Section 8 (Screen 14)
 class OcrProcessingScreen extends StatefulWidget {
   const OcrProcessingScreen({super.key});
@@ -21,6 +25,7 @@ class OcrProcessingScreen extends StatefulWidget {
 class _OcrProcessingScreenState extends State<OcrProcessingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
+  bool _showError = false;
 
   @override
   void initState() {
@@ -43,9 +48,15 @@ class _OcrProcessingScreenState extends State<OcrProcessingScreen>
       await Future.delayed(const Duration(milliseconds: 200));
     }
 
-    if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/ocr_result');
+    if (!mounted) return;
+
+    // D-05c: If network call failed, show error state instead of empty result
+    if (intake.ocrFailed) {
+      setState(() => _showError = true);
+      return;
     }
+
+    Navigator.of(context).pushReplacementNamed('/ocr_result');
   }
 
   @override
@@ -57,6 +68,10 @@ class _OcrProcessingScreenState extends State<OcrProcessingScreen>
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
+
+    if (_showError) {
+      return _buildErrorState(context, lang);
+    }
 
     return MediScaffold(
       title: 'Reading Prescription',
@@ -125,7 +140,7 @@ class _OcrProcessingScreenState extends State<OcrProcessingScreen>
             ),
             const SizedBox(height: MediDimensions.space8),
             const Text(
-              'Identifying doctor handwriting, medicine names, and dosages...',
+              'Identifying medicine names, dosages and doctor notes...',
               style: TextStyle(fontSize: 16, color: MediColors.textMuted),
               textAlign: TextAlign.center,
             ),
@@ -140,6 +155,62 @@ class _OcrProcessingScreenState extends State<OcrProcessingScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, LanguageProvider lang) {
+    return MediScaffold(
+      title: 'Upload Failed',
+      currentLanguage: lang.currentLanguage,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(MediDimensions.space24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: MediColors.triageTint,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.cloud_off_rounded, size: 44, color: MediColors.triageRed),
+              ),
+              const SizedBox(height: MediDimensions.space24),
+              Text(
+                'Could Not Read Prescription',
+                style: MediTypography.headlineLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: MediDimensions.space12),
+              const Text(
+                'The document could not be uploaded. This may be a network issue or the backend service may be unavailable.\n\nPlease check your connection and try again.',
+                style: TextStyle(fontSize: 16, color: MediColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PrimaryActionButton(
+            label: 'Try Again (दोबारा कोशिश करें)',
+            icon: Icons.refresh_rounded,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          const SizedBox(height: MediDimensions.space8),
+          SecondaryActionButton(
+            label: 'Skip — Continue Without Document',
+            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+              '/vitals',
+              (route) => route.settings.name == '/welcome',
+            ),
+          ),
+        ],
       ),
     );
   }

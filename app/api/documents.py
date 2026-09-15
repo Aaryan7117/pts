@@ -33,54 +33,146 @@ def _extract_medications_rule_based(ocr_lines: list) -> list[ExtractedMedication
     """
     Deterministic rule-based medical entity extractor for offline prescriptions.
     Guarantees extraction even if local LLM is cold, slow, or times out.
+    Accurately extracts brand names, generic formulations, doses, and frequencies.
     """
     import re
     extracted = []
 
-    for idx, line_obj in enumerate(ocr_lines):
-        line_str = line_obj.text.strip()
-        line_idx = line_obj.line_index
+    # Common medication names in India and worldwide
+    COMMON_MEDS = {
+        "paracetamol", "dolo", "crocin", "calpol", "pcm", "combiflam",
+        "azithromycin", "azithral", "amoxicillin", "amox", "augmentin", "moxikind", "clavum",
+        "pantoprazole", "pantocid", "pan", "pan-d", "pantop", "omez", "omeprazole", "rabeprazole", "rabicer",
+        "metformin", "glycomet", "glyciphage", "glimepiride", "amaryl", "vildagliptin", "galvus", "teneligliptin",
+        "cetirizine", "cetzine", "allegra", "fexofenadine", "levocetirizine", "montek", "montair",
+        "telmisartan", "telma", "telmikind", "amlodipine", "amlong", "stamlo", "losartan", "atenolol",
+        "atorvastatin", "atorva", "atorlip", "rosuvastatin", "rosuvas", "ecosprin", "aspirin", "clopidogrel",
+        "thyronorm", "eltroxin", "levothyroxine",
+        "ciprofloxacin", "ofloxacin", "cefixime", "zifi", "taxim",
+        "ibuprofen", "brufen", "aceclofenac", "zerodol", "diclofenac", "voveran", "tramadol",
+        "shelcal", "calcium", "limcee", "vitamin", "vit", "becosules", "supradyn", "neurobion",
+        "ranitidine", "zantac", "rantac", "ondansetron", "emset", "vomikind", "domperidone",
+        "salbutamol", "asthalin", "budecort", "foracort", "duolin", "montair-lc", "montek-lc"
+    }
 
-        # Ignore instruction verbs or administrative labels
-        if re.match(r'^(?:Take|Apply|Use|Give|Duration|Advice|Diagnosis|Date|Age|UHID|Ph|Reg|Consultation|Follow)\b', line_str, re.I):
+    # Drug class suffix patterns
+    DRUG_SUFFIXES = (
+        r'(?:cillin|mycin|micin|zole|statin|sartan|olol|pril|dipine|floxacin|fenac|'
+        r'mab|gliptin|glitazone|tidine|prazole|sone|nide|xacin|profen|mide|zide|parin)\b'
+    )
+
+    skip_words = {
+        'patient', 'clinic', 'hospital', 'doctor', 'date', 'dr.', 'dr', 'consultant',
+        'reg.', 'reg', 'mbbs', 'md', 'ms', 'diagnosis', 'advice', 'follow up', 'followup',
+        'duration', 'take', 'signature', 'sign', 'chief', 'complaint', 'history',
+        'examination', 'investigation', 'rx', 'name', 'age', 'sex', 'gender', 'weight'
+    }
+
+    for idx, line_obj in enumerate(ocr_lines):
+        if isinstance(line_obj, str):
+            line_str = line_obj.strip()
+            line_idx = idx
+        elif isinstance(line_obj, dict):
+            line_str = line_obj.get("text", "").strip()
+            line_idx = line_obj.get("line_index", idx)
+        else:
+            line_str = getattr(line_obj, "text", "").strip()
+            line_idx = getattr(line_obj, "line_index", idx)
+
+        if not line_str or len(line_str) < 3:
             continue
 
-        num_match = re.match(r'^(?:\d+[\.\)]\s*|(?:Tab|Cap|Syp|Inj)\.?\s+)(.+)$', line_str, re.I)
-        has_dose = bool(re.search(r'\b\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|iu|%)\b', line_str, re.I))
+        # Intelligent OCR token ungluing (common when RapidOCR groups words together)
+        line_str = re.sub(r'^(Tab|Cap|Syp|Inj|Drops|Ointment|Tablet|Capsule)\.?(?=[a-zA-Z])', r'\1 ', line_str, flags=re.I)
+        line_str = re.sub(r'([a-zA-Z]{3,})(\d+)', r'\1 \2', line_str)
+        line_str = re.sub(r'(mg|mcg|gm|ml|iu)(?=[0-9a-zA-Z])', r'\1 ', line_str, flags=re.I)
+
+        # Ignore obvious headers and administrative lines
+        if re.match(r'^(?:Take|Apply|Use|Give|Duration|Advice|Diagnosis|Date|Age|UHID|Ph|Reg|Consultation|Follow|Name|Sex|Weight)\b', line_str, re.I):
+            continue
+
+        num_match = re.match(r'^(?:\d+[\.\)]\s*|(?:Tab|Cap|Syp|Inj|Drops|Ointment|Tablet|Capsule)\.?\s+)(.+)$', line_str, re.I)
+        candidate = num_match.group(1).strip() if num_match else line_str
+
+        # Dose regex: e.g. 500mg, 650 mg, 40mg, 10 mg, 500, 650, 0.5mg, 50mcg, 5ml
+        dose_m = re.search(r'(\b\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|iu|%)\b)', candidate, re.I)
+        if not dose_m:
+            dose_num_m = re.search(r'\b(650|625|500|250|100|40|20|10|5|2\.5)\b', candidate)
+            if dose_num_m and any(w in candidate.lower() for w in ["dolo", "pan", "augmentin", "glycomet", "telma", "atorva", "calpol", "crocin"]):
+                dose_val = f"{dose_num_m.group(1)}mg"
+            else:
+                dose_val = None
+        else:
+            dose_val = dose_m.group(1)
+
         has_form = bool(re.search(r'\b(?:Tab|Cap|Syp|Suspension|Inj|Tablet|Capsule|Drops|Ointment)\b', line_str, re.I))
+        has_freq = bool(re.search(r'\b(?:OD|BD|TDS|QID|1-0-1|1-0-0|0-0-1|1-1-1|0-1-0|HS|SOS|daily|twice|thrice|times|meals|bedtime)\b', line_str, re.I))
 
-        if num_match or (has_dose and has_form):
-            candidate = num_match.group(1).strip() if num_match else line_str
-            dose_m = re.search(r'(\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|iu|%))', candidate, re.I)
+        # Check if line contains a known medication or medical drug suffix
+        words_in_line = set(re.findall(r'[a-zA-Z\-]+', candidate.lower()))
+        matched_common_med = bool(words_in_line.intersection(COMMON_MEDS)) or any(med in candidate.lower() for med in COMMON_MEDS)
+        matched_suffix = bool(re.search(DRUG_SUFFIXES, candidate, re.I))
 
-            clean_name = re.sub(r'\b\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|iu|%)\b', '', candidate, flags=re.I)
-            clean_name = re.sub(r'\((?:Tab|Cap|Syp|Suspension|Inj|Tablet|Capsule)\)', '', clean_name, flags=re.I).strip()
-            clean_name = re.sub(r'^(?:Tab|Cap|Syp|Inj)\.?\s+', '', clean_name, flags=re.I).strip()
+        is_med_candidate = (
+            num_match is not None or
+            (dose_val is not None and (has_form or has_freq or matched_common_med or matched_suffix or len(candidate.split()) <= 4)) or
+            matched_common_med or
+            (has_form and (matched_suffix or len(candidate.split()) <= 3))
+        )
 
-            skip_words = ['patient', 'clinic', 'hospital', 'doctor', 'date', 'dr.', 'consultant', 'reg.', 'mbbs', 'diagnosis', 'advice', 'follow up', 'duration', 'take']
-            if any(skip in clean_name.lower() for skip in skip_words) or len(clean_name) < 3:
-                continue
+        if not is_med_candidate:
+            continue
 
-            dose_val = dose_m.group(1) if dose_m else None
-            freq_val = None
-            source_lines = [line_idx]
+        clean_name = re.sub(r'\b\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|iu|%)\b', '', candidate, flags=re.I)
+        clean_name = re.sub(r'\((?:Tab|Cap|Syp|Suspension|Inj|Tablet|Capsule)\)', '', clean_name, flags=re.I).strip()
+        clean_name = re.sub(r'^(?:Tab|Cap|Syp|Inj|Tablet|Capsule)\.?\s+', '', clean_name, flags=re.I).strip()
+        clean_name = re.sub(r'\b(?:OD|BD|TDS|QID|HS|SOS|daily|meals|bedtime)\b', '', clean_name, flags=re.I).strip()
+        clean_name = re.sub(r'\b\d+-\d+(?:-\d+)?\b', '', clean_name).strip()
+        clean_name = re.sub(r'\b(?:x\s*)?\d+\s*(?:days?|weeks?|months?)\b', '', clean_name, flags=re.I).strip()
+        clean_name = re.sub(r'\b(?:before|after)(?:\s*(?:food|meals?))?\b', '', clean_name, flags=re.I).strip()
+        clean_name = re.sub(r'\s+', ' ', clean_name).strip(' -.,')
 
+        if not clean_name or len(clean_name) < 3 or clean_name.lower() in skip_words:
+            continue
+
+        if any(skip in clean_name.lower() for skip in ['hospital', 'clinic', 'diagnosis', 'doctor', 'patient']):
+            continue
+
+        freq_val = None
+        freq_m = re.search(r'\b(OD|BD|TDS|QID|1-0-1|1-0-0|0-0-1|1-1-1|0-1-0|HS|SOS|once daily|twice daily|thrice daily)\b', line_str, re.I)
+        if freq_m:
+            freq_val = freq_m.group(1).upper()
+
+        source_lines = [line_idx]
+
+        if not freq_val:
             for next_offset in [1, 2]:
                 if idx + next_offset < len(ocr_lines):
                     next_l = ocr_lines[idx + next_offset]
-                    next_text = next_l.text.strip()
-                    if re.search(r'\b(?:daily|meals|bedtime|OD|BD|TDS|QID|1-0-1|tablet|capsule|ml|times|after|before)\b', next_text, re.I) and not re.match(r'^\d+[\.\)]', next_text):
+                    if isinstance(next_l, str):
+                        next_text = next_l.strip()
+                        next_idx = idx + next_offset
+                    elif isinstance(next_l, dict):
+                        next_text = next_l.get("text", "").strip()
+                        next_idx = next_l.get("line_index", idx + next_offset)
+                    else:
+                        next_text = getattr(next_l, "text", "").strip()
+                        next_idx = getattr(next_l, "line_index", idx + next_offset)
+
+                    next_freq_m = re.search(r'\b(OD|BD|TDS|QID|1-0-1|1-0-0|0-0-1|1-1-1|0-1-0|HS|SOS|daily|after meals|before meals|times)\b', next_text, re.I)
+                    if next_freq_m and not re.match(r'^\d+[\.\)]', next_text):
                         freq_val = next_text
-                        source_lines.append(next_l.line_index)
+                        source_lines.append(next_idx)
                         break
 
-            extracted.append(ExtractedMedication(
-                name=clean_name,
-                dose=dose_val,
-                frequency=freq_val,
-                source_lines=source_lines,
-                confidence=line_obj.confidence
-            ))
+        conf = getattr(line_obj, "confidence", 0.9) if not isinstance(line_obj, dict) else line_obj.get("confidence", 0.9)
+        extracted.append(ExtractedMedication(
+            name=clean_name.title(),
+            dose=dose_val,
+            frequency=freq_val or "OD",
+            source_lines=source_lines,
+            confidence=round(float(conf), 2)
+        ))
 
     return extracted
 
@@ -119,14 +211,6 @@ async def _process_single_document(
 
     file_path = UPLOAD_DIR / f"{document_id}_{document.filename}"
     image_bytes = await document.read()
-
-    # If dummy or tiny image bytes sent from test screen, use real clinical sample prescription
-    if len(image_bytes) < 500:
-        sample_doc = Path("./static/uploads/doc-demo-lakshmi-rx_lakshmi_devi_prescription.jpg")
-        if sample_doc.exists():
-            image_bytes = sample_doc.read_bytes()
-            logger.info("Using real clinical sample prescription (Lakshmi Devi OPD Rx) for intake processing")
-
     file_path.write_bytes(image_bytes)
 
     logger.info(f"Document saved: {file_path} ({len(image_bytes)} bytes), type={document_type}")
@@ -338,8 +422,9 @@ async def _process_single_document(
     highlighted_url = ""
     if highlighted_path:
         highlighted_url = f"/static/evidence/{document_id}-boxed.jpg"
-    elif Path("./static/evidence/doc-demo-lakshmi-rx-boxed.jpg").exists():
-        highlighted_url = "/static/evidence/doc-demo-lakshmi-rx-boxed.jpg"
+    else:
+        # Fall back to the actual saved uploaded document (zero mockups!)
+        highlighted_url = f"/static/uploads/{document_id}_{document.filename}"
 
     return DocumentUploadResponse(
         document_id=document_id,

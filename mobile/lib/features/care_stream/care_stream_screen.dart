@@ -120,6 +120,7 @@ class _CareStreamScreenState extends State<CareStreamScreen> {
             await context.read<IntakeProvider>().startSession(
               encounterId: encounter.encounterId!,
               language: lang.currentLanguage,
+              department: _selectedStream,
             );
             if (context.mounted) {
               Navigator.of(context).pushNamed('/intake');

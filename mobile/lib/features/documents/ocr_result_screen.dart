@@ -172,11 +172,12 @@ class OcrResultScreen extends StatelessWidget {
             onPressed: () => Navigator.of(context).pushNamed('/vitals'),
           ),
           const SizedBox(height: MediDimensions.space8),
-          SecondaryActionButton(
-            label: 'Inspect Source Document (मूल पर्ची देखें)',
-            icon: Icons.image_search_rounded,
-            onPressed: () => Navigator.of(context).pushNamed('/doc_view'),
-          ),
+          if (intake.lastDocumentResult != null && !intake.ocrFailed)
+            SecondaryActionButton(
+              label: 'Inspect Source Document (मूल पर्ची देखें)',
+              icon: Icons.image_search_rounded,
+              onPressed: () => Navigator.of(context).pushNamed('/doc_view'),
+            ),
         ],
       ),
     );

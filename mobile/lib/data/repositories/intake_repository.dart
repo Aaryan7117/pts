@@ -5,11 +5,13 @@ import '../models/call_session.dart';
 import '../models/document_result.dart';
 import '../models/queue_status.dart';
 
-/// Repository coordinating live backend vs offline mock data
-/// Automatically provides mock fallbacks during network interruptions
+/// Repository coordinating live backend vs test mock data.
+/// Fences MockDataSource strictly behind explicit `USE_MOCK=true` environment flag.
+/// Production and shipped paths (USE_MOCK=false) communicate strictly with the live backend
+/// and propagate network failures so the UI presents honest offline/error states (Ticket T-011).
 class IntakeRepository {
   final ApiDataSource api;
-  bool useMock;
+  final bool useMock;
 
   IntakeRepository({
     ApiDataSource? api,
@@ -24,15 +26,11 @@ class IntakeRepository {
     if (useMock) {
       return MockDataSource.getMockBootstrap(language: language);
     }
-    try {
-      return await api.bootstrapEncounter(EncounterBootstrapRequest(
-        qrToken: qrToken,
-        deviceChannel: channel,
-        language: language,
-      ));
-    } catch (_) {
-      return MockDataSource.getMockBootstrap(language: language);
-    }
+    return await api.bootstrapEncounter(EncounterBootstrapRequest(
+      qrToken: qrToken,
+      deviceChannel: channel,
+      language: language,
+    ));
   }
 
   Future<bool> updateLanguage({
@@ -40,28 +38,22 @@ class IntakeRepository {
     required String language,
   }) async {
     if (useMock) return true;
-    try {
-      return await api.updateEncounterLanguage(encounterId, language);
-    } catch (_) {
-      return false;
-    }
+    return await api.updateEncounterLanguage(encounterId, language);
   }
 
   Future<CallSessionStartResponse> startCallSession({
     required String encounterId,
     required String language,
+    String? department,
   }) async {
     if (useMock) {
       return MockDataSource.getMockCallStart(language: language);
     }
-    try {
-      return await api.startCallSession(CallSessionStartRequest(
-        encounterId: encounterId,
-        language: language,
-      ));
-    } catch (_) {
-      return MockDataSource.getMockCallStart(language: language);
-    }
+    return await api.startCallSession(CallSessionStartRequest(
+      encounterId: encounterId,
+      language: language,
+      department: department,
+    ));
   }
 
   Future<AudioTurnResponse> processAudioTurn({
@@ -70,28 +62,29 @@ class IntakeRepository {
     String? fallbackWords,
     String language = 'hi',
   }) async {
-    if (!useMock && fallbackWords != null && fallbackWords.isNotEmpty) {
-      try {
-        return await api.sendTextTurn(
-          sessionId: sessionId,
-          text: fallbackWords,
-        );
-      } catch (_) {
-        // Fall back gracefully to mock if network fails
-      }
+    if (useMock) {
+      return MockDataSource.getMockAudioTurn(
+        turnIndex: turnIndex,
+        patientWords: fallbackWords,
+        language: language,
+      );
     }
-    // In mock mode or fallback, returns simulated SOCRATES adaptive turn
-    return MockDataSource.getMockAudioTurn(
-      turnIndex: turnIndex,
-      patientWords: fallbackWords,
-      language: language,
-    );
+
+    if (fallbackWords != null && fallbackWords.isNotEmpty) {
+      return await api.sendTextTurn(
+        sessionId: sessionId,
+        text: fallbackWords,
+        language: language,
+      );
+    }
+
+    throw StateError('Cannot process voice turn without audio payload or patient transcript.');
   }
 
   Future<CallSessionEndResponse> endCallSession(String sessionId) async {
     if (useMock) {
       return const CallSessionEndResponse(
-        encounterId: 'enc-mock-001',
+        encounterId: 'enc-test-001',
         status: 'COMPLETED',
         assignedToken: 'A-104',
         department: 'General Medicine',
@@ -100,19 +93,7 @@ class IntakeRepository {
         severityBadge: 'GREEN',
       );
     }
-    try {
-      return await api.endCallSession(sessionId);
-    } catch (_) {
-      return const CallSessionEndResponse(
-        encounterId: 'enc-mock-001',
-        status: 'COMPLETED',
-        assignedToken: 'A-104',
-        department: 'General Medicine',
-        totalFactsCaptured: 5,
-        redFlagsDetected: false,
-        severityBadge: 'GREEN',
-      );
-    }
+    return await api.endCallSession(sessionId);
   }
 
   Future<DocumentUploadResponse> uploadDocument(
@@ -123,25 +104,17 @@ class IntakeRepository {
     if (useMock) {
       return MockDataSource.getMockDocumentUpload(filename: filename);
     }
-    try {
-      return await api.uploadDocument(
-        encounterId: encounterId,
-        fileBytes: imageBytes,
-        filename: filename,
-      );
-    } catch (_) {
-      return MockDataSource.getMockDocumentUpload(filename: filename);
-    }
+    return await api.uploadDocument(
+      encounterId: encounterId,
+      fileBytes: imageBytes,
+      filename: filename,
+    );
   }
 
   Future<QueueStatusResponse> getQueueStatus(String token) async {
     if (useMock) {
       return MockDataSource.getMockQueueStatus();
     }
-    try {
-      return await api.getQueueStatus(token);
-    } catch (_) {
-      return MockDataSource.getMockQueueStatus();
-    }
+    return await api.getQueueStatus(token);
   }
 }

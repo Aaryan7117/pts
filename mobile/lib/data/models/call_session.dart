@@ -2,15 +2,18 @@
 class CallSessionStartRequest {
   final String encounterId;
   final String language;
+  final String? department;
 
   const CallSessionStartRequest({
     required this.encounterId,
     this.language = 'hi',
+    this.department,
   });
 
   Map<String, dynamic> toJson() => {
         'encounter_id': encounterId,
         'language': language,
+        if (department != null) 'department': department,
       };
 }
 
@@ -69,6 +72,32 @@ class ExtractedFactSummary {
   }
 }
 
+class FollowupOption {
+  final String title;
+  final String subtitle;
+  final String val;
+
+  const FollowupOption({
+    required this.title,
+    required this.subtitle,
+    required this.val,
+  });
+
+  factory FollowupOption.fromJson(Map<String, dynamic> json) {
+    return FollowupOption(
+      title: json['title'] as String? ?? '',
+      subtitle: json['subtitle'] as String? ?? '',
+      val: json['val'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'subtitle': subtitle,
+        'val': val,
+      };
+}
+
 class AudioTurnResponse {
   final String sessionId;
   final int turnIndex;
@@ -76,6 +105,7 @@ class AudioTurnResponse {
   final List<ExtractedFactSummary> extractedFacts;
   final String? nextQuestionText;
   final String? nextQuestionAudioBase64;
+  final List<FollowupOption> suggestedOptions;
   final bool isCompleted;
 
   const AudioTurnResponse({
@@ -85,6 +115,7 @@ class AudioTurnResponse {
     required this.extractedFacts,
     this.nextQuestionText,
     this.nextQuestionAudioBase64,
+    this.suggestedOptions = const [],
     this.isCompleted = false,
   });
 
@@ -99,6 +130,10 @@ class AudioTurnResponse {
           [],
       nextQuestionText: json['next_question_text'] as String?,
       nextQuestionAudioBase64: json['next_question_audio_base64'] as String?,
+      suggestedOptions: (json['suggested_options'] as List<dynamic>?)
+              ?.map((e) => FollowupOption.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
       isCompleted: json['is_completed'] as bool? ?? false,
     );
   }

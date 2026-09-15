@@ -41,7 +41,14 @@ class PatientQueueEntry(BaseModel):
 class DoctorQueueResponse(BaseModel):
     """Full waiting queue for the doctor dashboard."""
     queue: list[PatientQueueEntry] = Field(default_factory=list)
+    patients: list[PatientQueueEntry] = Field(default_factory=list)
     total_waiting: int = 0
+
+    def model_post_init(self, __context):
+        if not self.patients and self.queue:
+            self.patients = self.queue
+        elif not self.queue and self.patients:
+            self.queue = self.patients
 
 
 class PatientDetailView(BaseModel):

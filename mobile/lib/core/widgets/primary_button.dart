@@ -29,8 +29,8 @@ class PrimaryActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = backgroundColor ?? MediColors.brandPrimary;
-    final fg = foregroundColor ?? MediColors.white;
+    final bg = backgroundColor ?? MediColors.primaryBtnBg;
+    final fg = foregroundColor ?? MediColors.primaryBtnText;
 
     return Semantics(
       button: true,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// MediKiosk 3-Layer Design Token Architecture
-/// Layer 1: Primitive Tokens (Raw Palette)
-/// Layer 2: Semantic Tokens (Intent & Context)
-/// Layer 3: Component Tokens (Widget-Scoped)
+/// MediKiosk 3-Layer Design Token Architecture (Spec v4.0.0)
+/// ReliaCare Light Medical Glassmorphism Standard
+/// Canvas: Cream/Sage (#F8FAF5)
+/// Dominant CTA: Vibrant Lime (#A3E635) with Deep Forest (#064E3B) text (7.6:1 AAA Contrast)
 /// Ref: MEDIKIOSK_ANDROID_DESIGN_SPEC.md Section 2
 abstract class MediColors {
   // ============================================================
@@ -29,10 +29,18 @@ abstract class MediColors {
   static const Color blue200 = Color(0xFFBFDBFE);
   static const Color blue600 = Color(0xFF2563EB);
   static const Color blue700 = Color(0xFF1D4ED8);
-  static const Color blue800 = Color(0xFF1E3A8A); // Dominant Brand Primary
+  static const Color blue800 = Color(0xFF1E3A8A);
   static const Color blue900 = Color(0xFF172554);
 
-  // Clinical AYUSH Forest Green
+  // ReliaCare Light Medical Palette (Spec v4.0.0)
+  static const Color creamSage = Color(0xFFF8FAF5); // Canvas background
+  static const Color limeCTA = Color(0xFFA3E635); // Vibrant Lime CTA
+  static const Color limeHover = Color(0xFF84CC16);
+  static const Color forestDark = Color(0xFF064E3B); // Deep Forest text (7.6:1 AAA)
+  static const Color forestMid = Color(0xFF047857);
+  static const Color forestSubtle = Color(0xFFE8EFE6);
+
+  // Clinical AYUSH Forest Green & Emeralds
   static const Color emerald50 = Color(0xFFECFDF5);
   static const Color emerald100 = Color(0xFFD1FAE5);
   static const Color emerald200 = Color(0xFFA7F3D0);
@@ -64,15 +72,15 @@ abstract class MediColors {
   // ============================================================
   // LAYER 2: SEMANTIC TOKENS
   // ============================================================
-  static const Color canvas = slate50;
+  static const Color canvas = creamSage;
   static const Color surface = white;
-  static const Color surfaceSubtle = slate100;
+  static const Color surfaceSubtle = forestSubtle;
   static const Color surfaceElevated = white;
 
-  static const Color brandPrimary = blue800;
-  static const Color brandDark = slate900;
-  static const Color brandTint = blue50;
-  static const Color brandInteractive = blue600;
+  static const Color brandPrimary = limeCTA;
+  static const Color brandDark = forestDark;
+  static const Color brandTint = forestSubtle;
+  static const Color brandInteractive = forestMid;
 
   static const Color ayushGreen = emerald800;
   static const Color ayushTint = emerald50;
@@ -87,9 +95,9 @@ abstract class MediColors {
   static const Color success = emerald700;
   static const Color successTint = emerald50;
 
-  static const Color border = slate200;
-  static const Color borderStrong = slate400;
-  static const Color borderSelected = blue800;
+  static const Color border = Color(0x1A064E3B); // Subtle forest border
+  static const Color borderStrong = Color(0x38064E3B);
+  static const Color borderSelected = forestMid;
 
   static const Color textPrimary = slate900;
   static const Color textMuted = slate600;
@@ -99,18 +107,18 @@ abstract class MediColors {
   // ============================================================
   // LAYER 3: COMPONENT TOKENS
   // ============================================================
-  static const Color primaryBtnBg = blue800;
-  static const Color primaryBtnText = white;
-  static const Color secondaryBtnBorder = slate300;
-  static const Color secondaryBtnText = slate800;
+  static const Color primaryBtnBg = limeCTA;
+  static const Color primaryBtnText = forestDark; // 7.6:1 AAA Contrast
+  static const Color secondaryBtnBorder = Color(0x28064E3B);
+  static const Color secondaryBtnText = forestDark;
 
   static const Color choiceCardBg = white;
-  static const Color choiceCardSelectedBg = blue50;
-  static const Color choiceCardSelectedBorder = blue800;
+  static const Color choiceCardSelectedBg = Color(0xFFF0FDF4);
+  static const Color choiceCardSelectedBorder = emerald600;
 
-  static const Color voiceBtnIdle = blue800;
+  static const Color voiceBtnIdle = forestDark;
   static const Color voiceBtnListening = red600;
-  static const Color voiceHaloIdle = Color(0x2E1E3A8A);
+  static const Color voiceHaloIdle = Color(0x40A3E635);
   static const Color voiceHaloListening = Color(0x3DDC2626);
 
   static const Color emergencyBannerBg = red800;

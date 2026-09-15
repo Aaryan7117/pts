@@ -35,19 +35,28 @@ class WelcomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: MediDimensions.space24),
-            // Medical Brand Hero Mark
+            // Medical Brand Hero Mark (Official Website Logo)
             Container(
-              width: 100,
-              height: 100,
+              width: 120,
+              height: 80,
               decoration: BoxDecoration(
-                color: MediColors.brandPrimary,
-                borderRadius: MediDimensions.borderXl,
-                boxShadow: MediDimensions.elevation3,
-              ),
-              child: const Icon(
-                Icons.local_hospital_rounded,
-                size: 56,
                 color: MediColors.white,
+                borderRadius: MediDimensions.borderXl,
+                boxShadow: MediDimensions.elevation2,
+                border: Border.all(color: MediColors.border, width: 1.5),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: MediDimensions.space12,
+                vertical: MediDimensions.space8,
+              ),
+              child: Image.asset(
+                'assets/images/medikiosk-mark.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.local_hospital_rounded,
+                  size: 48,
+                  color: MediColors.brandPrimary,
+                ),
               ),
             ),
             const SizedBox(height: MediDimensions.space24),
@@ -67,12 +76,28 @@ class WelcomeScreen extends StatelessWidget {
             // 1-Tap Voice AI Fast Track Card
             InkWell(
               onTap: () async {
-                await encounter.bootstrap(channel: 'android_byod', language: lang.currentLanguage);
+                try {
+                  await encounter.bootstrap(channel: 'android_byod', language: lang.currentLanguage);
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not connect to server. Continuing in offline mode.'),
+                        backgroundColor: MediColors.warning,
+                        duration: Duration(seconds: 4),
+                      ),
+                    );
+                  }
+                }
                 if (!context.mounted) return;
-                await context.read<IntakeProvider>().startSession(
-                  encounterId: encounter.encounterId ?? 'enc-001',
-                  language: lang.currentLanguage,
-                );
+                try {
+                  await context.read<IntakeProvider>().startSession(
+                    encounterId: encounter.encounterId ?? 'enc-auto-${DateTime.now().millisecondsSinceEpoch}',
+                    language: lang.currentLanguage,
+                  );
+                } catch (_) {
+                  // Session start failed — proceed to call screen in degraded mode
+                }
                 if (!context.mounted) return;
                 Navigator.of(context).pushNamed('/active_call');
               },
@@ -147,13 +172,13 @@ class WelcomeScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          '2G Toll-Free Phone Intake (कॉल सुविधा)',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: MediColors.brandPrimary),
+                        Text(
+                          lang.translate('helpline_card_title'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: MediColors.brandPrimary),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'For family with basic keypad phones: Dial 1800-890-AYUSH (Toll-Free, zero internet)',
+                          lang.translate('helpline_card_sub'),
                           style: MediTypography.bodySmall.copyWith(color: MediColors.textMuted),
                         ),
                       ],
@@ -181,10 +206,22 @@ class WelcomeScreen extends StatelessWidget {
             label: lang.translate('start_button'),
             icon: Icons.play_arrow_rounded,
             onPressed: () async {
-              await encounter.bootstrap(
-                channel: 'android_byod',
-                language: lang.currentLanguage,
-              );
+              try {
+                await encounter.bootstrap(
+                  channel: 'android_byod',
+                  language: lang.currentLanguage,
+                );
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Server unreachable. Some features may be limited.'),
+                      backgroundColor: MediColors.warning,
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
+                }
+              }
               if (context.mounted) {
                 Navigator.of(context).pushNamed('/language');
               }
