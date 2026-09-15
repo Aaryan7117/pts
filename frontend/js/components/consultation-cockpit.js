@@ -6,6 +6,19 @@
 
 import { renderEvidenceViewer } from './evidence-viewer.js';
 
+function formatAyushSummary(ayush = {}) {
+  const parts = [];
+  const prakriti = ayush.prakriti_baseline?.dominant_dosha;
+  const agni = ayush.agni?.agni_type || (typeof ayush.agni === 'string' ? ayush.agni : null);
+  const koshtha = ayush.koshtha?.koshtha_type;
+
+  if (prakriti) parts.push(`Prakriti ${String(prakriti).replace(/_/g, ' ')}`);
+  if (agni) parts.push(`${String(agni)} Agni`);
+  if (koshtha) parts.push(`${String(koshtha)} Koshtha`);
+
+  return parts.length > 0 ? parts.join(' · ') : 'Sama Agni (Balanced digestion)';
+}
+
 export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
   const enc = encounterDetail.encounter || {};
   const pat = encounterDetail.patient || {};
@@ -139,7 +152,7 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
             <div style="background:var(--bg-surface-soft); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--border-default); display:flex; flex-direction:column; gap:8px;">
               <div><strong>Chief Complaint:</strong> ${chiefComplaint}</div>
               <div><strong>Recorded Medications:</strong> ${medications.length > 0 ? medications.map(m => m.value).join(', ') : (isIvr ? 'None reported yet' : 'None reported / reconciled')}</div>
-              <div><strong>AYUSH Prakriti / Agni:</strong> ${ayush.agni ? `${ayush.agni.agni_type || ayush.agni} Agni` : 'Sama Agni (Balanced digestion)'}</div>
+              <div><strong>AYUSH Profile:</strong> ${formatAyushSummary(ayush)}</div>
               <div><strong>Department:</strong> ${enc.department || 'All India Institute of Ayurveda (AIIA)'}</div>
             </div>
           </div>

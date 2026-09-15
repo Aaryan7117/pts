@@ -48,7 +48,7 @@ class TTSReader {
 
   off(event, callback) {
     if (this._listeners[event]) {
-      this._listeners[event].filter(cb => cb !== callback);
+      this._listeners[event] = this._listeners[event].filter(cb => cb !== callback);
     }
   }
 
