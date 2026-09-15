@@ -20,8 +20,8 @@ export function renderAccountTypePage() {
         <!-- Card 1: Kiosk Terminal -->
         <a href="#/kiosk/welcome" class="card card-interactive" style="text-decoration:none; display:flex; flex-direction:column; justify-content:space-between; min-height:280px;">
           <div>
-            <div style="width:52px; height:52px; border-radius:var(--radius-lg); background:var(--brand-tint); color:var(--brand-primary); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:var(--space-4);">
-              🏥
+            <div class="portal-card__icon portal-card__icon--kiosk" aria-hidden="true">
+              <i class="fa-solid fa-hospital"></i>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-2);">
               <h3 class="text-h3" style="color:var(--text-primary);">Physical OPD Kiosk</h3>
@@ -40,8 +40,8 @@ export function renderAccountTypePage() {
         <!-- Card 2: Patient Portal -->
         <a href="#/patient/dashboard" class="card card-interactive" style="text-decoration:none; display:flex; flex-direction:column; justify-content:space-between; min-height:280px;">
           <div>
-            <div style="width:52px; height:52px; border-radius:var(--radius-lg); background:#F3E8FF; color:#7E22CE; display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:var(--space-4);">
-              👤
+            <div class="portal-card__icon portal-card__icon--patient" aria-hidden="true">
+              <i class="fa-solid fa-user"></i>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-2);">
               <h3 class="text-h3" style="color:var(--text-primary);">Patient Health Portal</h3>
@@ -60,8 +60,8 @@ export function renderAccountTypePage() {
         <!-- Card 3: Doctor Workstation -->
         <a href="#/doctor/queue" class="card card-interactive" style="text-decoration:none; display:flex; flex-direction:column; justify-content:space-between; min-height:280px;">
           <div>
-            <div style="width:52px; height:52px; border-radius:var(--radius-lg); background:var(--status-warning-tint); color:var(--status-warning); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:var(--space-4);">
-              🩺
+            <div class="portal-card__icon portal-card__icon--doctor" aria-hidden="true">
+              <i class="fa-solid fa-user-doctor"></i>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-2);">
               <h3 class="text-h3" style="color:var(--text-primary);">Doctor Station</h3>
@@ -80,8 +80,8 @@ export function renderAccountTypePage() {
         <!-- Card 4: 2G IVR Telephony Studio -->
         <a href="#/ivr" class="card card-interactive" style="text-decoration:none; display:flex; flex-direction:column; justify-content:space-between; min-height:280px;">
           <div>
-            <div style="width:52px; height:52px; border-radius:var(--radius-lg); background:var(--status-success-tint); color:var(--status-success); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:var(--space-4);">
-              📞
+            <div class="portal-card__icon portal-card__icon--ivr" aria-hidden="true">
+              <i class="fa-solid fa-phone"></i>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-2);">
               <h3 class="text-h3" style="color:var(--text-primary);">2G IVR Studio</h3>

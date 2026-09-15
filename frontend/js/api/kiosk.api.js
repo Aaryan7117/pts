@@ -46,6 +46,9 @@ export const kioskApi = {
   endCallSession: (sessionId) => 
     api.post('/api/call/session/end', { session_id: sessionId }),
 
+  // Calculate AYUSH scores from kiosk responses
+  calculateAyush: (payload) => api.post('/api/ayush/calculate', payload),
+
   // Save AYUSH Dashavidha Pariksha assessment
   saveAyushAssessment: (encounterId, assessmentRecord) => 
     api.post(`/api/ayush/encounter/${encounterId}/assessment`, assessmentRecord),

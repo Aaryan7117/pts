@@ -11,8 +11,8 @@ export function renderDoctorLogin() {
     <div style="min-height:calc(100vh - var(--header-height)); display:flex; align-items:center; justify-content:center; padding:var(--space-6); background:var(--bg-canvas);">
       <div class="card" style="width:100%; max-width:440px; padding:var(--space-8); box-shadow:var(--shadow-xl); border:1.5px solid var(--border-default);">
         <div style="text-align:center; margin-bottom:var(--space-6);">
-          <div style="width:60px; height:60px; border-radius:var(--radius-xl); background:linear-gradient(135deg, #0D3B7A, #1667D9); color:#fff; display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto var(--space-4); box-shadow:0 4px 14px rgba(13,59,122,0.3);">
-            🩺
+          <div class="doctor-login__icon" aria-hidden="true">
+            <i class="fa-solid fa-user-doctor"></i>
           </div>
           <h2 class="text-h2">Doctor Workstation</h2>
           <p style="font-size:14px; color:var(--text-secondary); margin-top:4px;">
@@ -22,7 +22,7 @@ export function renderDoctorLogin() {
 
         <!-- Evaluation Demo Banner -->
         <div style="background:var(--brand-tint); border:1px dashed var(--brand-primary); border-radius:var(--radius-md); padding:10px; text-align:center; margin-bottom:var(--space-6);">
-          <div style="font-size:11px; font-weight:700; color:var(--brand-primary);">QUICK EVALUATION DEMO</div>
+          <div style="font-size:11px; font-weight:700; color:var(--brand-dark);">QUICK EVALUATION DEMO</div>
           <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-top:2px;">
             Default Doctor PIN: <code style="background:#fff; padding:2px 6px; border-radius:4px; font-weight:800;">1234</code>
           </div>

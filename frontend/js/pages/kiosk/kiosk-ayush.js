@@ -132,32 +132,55 @@ export function initKioskAyush() {
       const selectedKoshtha = document.querySelector('.ayush-chip.selected[data-field="koshtha"]')?.getAttribute('data-val') || 'madhyama';
       const selectedNidra = document.querySelector('.ayush-chip.selected[data-field="nidra"]')?.getAttribute('data-val') || 'sound';
 
-      const ayushAssessment = {
-        agni: {
-          agni_type: selectedAgni,
-          hunger_frequency: selectedAgni === 'sama' ? 'normal' : (selectedAgni === 'tikshna' ? 'intense' : 'sluggish'),
-          post_meal_heaviness: selectedAgni === 'manda'
-        },
-        koshtha: {
-          bowel_frequency: selectedKoshtha === 'krura' ? 'irregular' : 'daily',
-          stool_consistency: selectedKoshtha === 'mridu' ? 'loose' : (selectedKoshtha === 'krura' ? 'hard' : 'formed'),
-          requires_laxative: selectedKoshtha === 'krura'
-        },
-        nidra: {
-          sleep_quality: selectedNidra,
-          hours_per_night: selectedNidra === 'sound' ? 7 : (selectedNidra === 'insomnia' ? 4 : 5)
-        }
+      const agniByType = {
+        sama: { appetite_pattern: 'regular', post_meal_heaviness: false, bowel_regularity: 'regular' },
+        manda: { appetite_pattern: 'low_absent', post_meal_heaviness: true, bowel_regularity: 'sluggish_mucus' },
+        tikshna: { appetite_pattern: 'excessive_burning', post_meal_heaviness: false, bowel_regularity: 'loose_burning' },
+      };
+      const koshthaByType = {
+        madhyama: { bowel_frequency: 'once_daily', stool_consistency: 'soft_formed' },
+        krura: { bowel_frequency: 'once_or_less_daily', stool_consistency: 'hard_dry' },
+        mridu: { bowel_frequency: 'twice_or_more_daily', stool_consistency: 'soft_loose' },
+      };
+      const sleepByNidra = {
+        sound: 'moderate_sound',
+        disturbed: 'light_interrupted',
+        insomnia: 'light_interrupted',
       };
 
-      store.updateKioskIntake({ ayushRecord: ayushAssessment });
+      const kioskState = store.getState().kiosk || {};
+      const symptoms = (kioskState.extractedFacts || [])
+        .filter(f => f.category === 'chief_complaint' || f.category === 'symptom')
+        .map(f => f.value)
+        .filter(Boolean);
 
-      const encounterId = store.getState().kiosk.encounterId;
-      if (encounterId) {
+      const calculatePayload = {
+        prakriti: {
+          body_frame: 'medium_muscular',
+          skin_texture: 'warm_reddish_sweaty',
+          weather_sensitivity: 'intolerant_to_heat',
+          sleep_pattern: sleepByNidra[selectedNidra] || 'moderate_sound',
+        },
+        agni: agniByType[selectedAgni] || agniByType.sama,
+        koshtha: koshthaByType[selectedKoshtha] || koshthaByType.madhyama,
+        symptoms,
+      };
+
+      const encounterId = kioskState.encounterId;
+      if (encounterId && !String(encounterId).startsWith('enc-offline')) {
         try {
-          await kioskApi.saveAyushAssessment(encounterId, ayushAssessment);
+          // Match monolith flow: calculate → persist scored AyurvedicIntakeRecord
+          const calculatedRecord = await kioskApi.calculateAyush(calculatePayload);
+          await kioskApi.saveAyushAssessment(encounterId, calculatedRecord);
+          store.updateKioskIntake({ ayushRecord: calculatedRecord });
         } catch (e) {
           console.warn('AYUSH save fallback:', e);
+          store.updateKioskIntake({ ayushRecord: calculatePayload });
+          store.addToast('AYUSH saved locally — server sync pending', 'warning');
         }
+      } else {
+        store.updateKioskIntake({ ayushRecord: calculatePayload });
+        store.addToast('No active encounter — AYUSH kept on this device only', 'warning');
       }
 
       window.location.hash = '#/kiosk/queue';

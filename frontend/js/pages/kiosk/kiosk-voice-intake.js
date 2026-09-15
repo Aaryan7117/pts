@@ -1124,6 +1124,13 @@ export async function initKioskVoiceIntake() {
         statusText.textContent = getVoiceUi('intake_complete', lang);
         statusText.style.color = 'var(--status-success)';
       }
+
+      // Finalize backend call session from recent voice-intake API changes
+      if (sessionId && !String(sessionId).startsWith('sess-')) {
+        kioskApi.endCallSession(sessionId).catch(err => {
+          console.warn('endCallSession failed:', err);
+        });
+      }
       
       tts.speak(closingSpeech, lang, nextAudioBase64);
       setTimeout(() => {
@@ -1160,7 +1167,7 @@ export async function initKioskVoiceIntake() {
 
   // Done button: Proceed immediately to summary verification
   if (doneBtn) {
-    doneBtn.addEventListener('click', () => {
+    doneBtn.addEventListener('click', async () => {
       tts.stop();
       if (isRecording) {
         stopRecordingAndProcess();
@@ -1168,6 +1175,14 @@ export async function initKioskVoiceIntake() {
       const textToSave = recordedPatientText || (typingInput ? typingInput.value.trim() : '');
       if (textToSave) {
         store.updateKioskIntake({ patientWords: textToSave });
+      }
+      const activeSessionId = store.getState().kiosk.sessionId;
+      if (activeSessionId && !String(activeSessionId).startsWith('sess-')) {
+        try {
+          await kioskApi.endCallSession(activeSessionId);
+        } catch (err) {
+          console.warn('endCallSession failed:', err);
+        }
       }
       window.location.hash = '#/kiosk/summary';
     });
