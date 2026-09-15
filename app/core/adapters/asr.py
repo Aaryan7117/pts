@@ -13,6 +13,7 @@ Ref: speech_stack_research.md — IndicConformer covers the 22 scheduled Indian
      languages and runs on CPU, leaving the 8 GB GPU free for Qwen 7B and IndicF5.
 """
 
+import os
 import asyncio
 import logging
 import socket
@@ -61,7 +62,8 @@ class ASRService:
     """
 
     def __init__(self):
-        pass
+        self._indic_models = {}
+        self._whisper_model = None
 
     def is_online(self) -> bool:
         """Quick 50ms network probe to check internet connectivity."""
@@ -79,10 +81,11 @@ class ASRService:
         Transcribe audio bytes to text.
 
         Priority:
-          1. Sarvam Saaras V4 (cloud, if online + API key present)
+          1. Sarvam Saaras V4 (cloud, if online + not STANDALONE)
           2. Groq Whisper-Large-v3-Turbo (cloud secondary)
           3. IndicConformer / faster-whisper on GPU Edge Server (via SPEECH_SERVICE_URL)
-          4. Mock transcript (dev fallback — never crashes the API)
+          4. Local faster-whisper (offline on CPU, 0 MB VRAM)
+          5. No speech detected
 
         Args:
             audio_bytes: Raw audio data (WAV, WEBM, M4A)
@@ -91,8 +94,9 @@ class ASRService:
         if not audio_bytes:
             return ASRResult(text="", language=language, confidence=0.0, provider="empty_input")
 
-        # --- Tier 1: Cloud ---
-        if self.is_online():
+        # --- Tier 1: Cloud (if online and not forced OFFLINE) ---
+        deployment_mode = os.getenv("DEPLOYMENT_MODE", settings.DEPLOYMENT_MODE).upper()
+        if self.is_online() and deployment_mode != "OFFLINE":
             if settings.has_sarvam:
                 try:
                     res = await self._transcribe_sarvam(audio_bytes, language)
@@ -109,14 +113,31 @@ class ASRService:
                 except Exception as e:
                     logger.warning(f"Groq Whisper failed: {e}.")
 
-        # --- Tier 2: IndicConformer / faster-whisper on GPU Edge Server (Offline LAN) ---
+        # --- Tier 2: Local AI4Bharat Speech Models (IndicConformer + IndicWhisper) ---
+        # 1. AI4Bharat IndicConformer (IIT Madras 12,000h Vistaar dataset on CPU ONNX)
+        try:
+            res = await self._transcribe_indicconformer_local(audio_bytes, language)
+            if res.text and len(res.text.strip()) > 1:
+                return res
+        except Exception as e:
+            logger.warning(f"Local AI4Bharat IndicConformer transcription error: {repr(e)}")
+
+        # 2. AI4Bharat IndicWhisper / faster-whisper (Offline CPU INT8, 0 MB VRAM)
+        try:
+            res = await self._transcribe_whisper_local(audio_bytes, language)
+            if res.text and res.text.strip():
+                return res
+        except Exception as e:
+            logger.warning(f"Local IndicWhisper transcription error: {repr(e)}")
+
+        # --- Tier 3: IndicConformer on Remote GPU Edge Server (LAN) ---
         if settings.has_remote_speech:
             try:
                 res = await self._transcribe_indic_remote(audio_bytes, language)
                 if res.text and res.text.strip():
                     return res
             except Exception as e:
-                logger.warning(f"IndicConformer Edge Server forwarding failed: {e}.")
+                logger.warning(f"IndicConformer Edge Server forwarding failed: {repr(e)}")
 
         # Silence / No speech detected
         return ASRResult(
@@ -241,17 +262,144 @@ class ASRService:
                 provider=res_json.get("provider", "indicconformer_edge_server")
             )
 
+    def _get_indicconformer_model(self, language: str = "hi"):
+        """
+        Lazy-load AI4Bharat IndicConformer ONNX model for the requested language.
+        Purpose-built by IIT Madras on 12,000h Vistaar dataset.
+        Runs purely on CPU via ONNX Runtime (0 MB VRAM), leaving GPU free for Qwen 7B & IndicF5.
+        """
+        lang_code = language.lower().strip()
+        if lang_code not in self._indic_models:
+            import onnx_asr
+            repo_map = {
+                "hi": "OpenVoiceOS/ai4bharat-indicconformer-hi-onnx",
+                "ta": "OpenVoiceOS/ai4bharat-indicconformer-ta-onnx",
+                "te": "OpenVoiceOS/ai4bharat-indicconformer-te-onnx",
+                "mr": "OpenVoiceOS/ai4bharat-indicconformer-mr-onnx",
+                "bn": "OpenVoiceOS/ai4bharat-indicconformer-bn-onnx",
+                "gu": "OpenVoiceOS/ai4bharat-indicconformer-gu-onnx",
+                "kn": "OpenVoiceOS/ai4bharat-indicconformer-kn-onnx",
+                "ml": "OpenVoiceOS/ai4bharat-indicconformer-ml-onnx",
+                "pa": "OpenVoiceOS/ai4bharat-indicconformer-pa-onnx",
+                "ur": "OpenVoiceOS/ai4bharat-indicconformer-ur-onnx",
+                "en": "OpenVoiceOS/ai4bharat-indicconformer-hi-onnx",
+            }
+            repo_id = repo_map.get(lang_code, "OpenVoiceOS/ai4bharat-indicconformer-hi-onnx")
+            logger.info(f"Initializing AI4Bharat IndicConformer for '{lang_code}' from {repo_id}...")
+            self._indic_models[lang_code] = onnx_asr.load_model(repo_id)
+            logger.info(f"AI4Bharat IndicConformer ({lang_code}) initialized successfully on CPU")
+
+        return self._indic_models[lang_code]
+
     @staticmethod
-    def _lang_to_whisper(lang: str) -> str:
-        """Map MediKiosk language codes to Whisper language codes."""
-        mapping = {
-            "en": "en",
-            "hi": "hi",
-            "ta": "ta",
-            "te": "te",
-            "mr": "mr"
-        }
-        return mapping.get(lang, "hi")
+    def _ensure_pcm_wav(audio_bytes: bytes) -> bytes:
+        """
+        Normalize incoming audio (WebM/Opus from browser, MP3, AAC, WAV)
+        into standard 16kHz mono 16-bit PCM WAV for AI4Bharat IndicConformer.
+        """
+        import io
+        import av
+        import soundfile as sf
+        import numpy as np
+
+        try:
+            container = av.open(io.BytesIO(audio_bytes))
+            resampler = av.AudioResampler(format='s16', layout='mono', rate=16000)
+            frames = []
+            for frame in container.decode(audio=0):
+                resampled = resampler.resample(frame)
+                for rf in resampled:
+                    frames.append(rf.to_ndarray())
+            if not frames:
+                return audio_bytes
+            pcm_data = np.concatenate(frames, axis=1)
+            buf = io.BytesIO()
+            sf.write(buf, pcm_data.T, 16000, format='WAV', subtype='PCM_16')
+            return buf.getvalue()
+        except Exception as e:
+            logger.warning(f"Audio normalization to 16kHz PCM WAV failed: {e}. Passing raw bytes.")
+            return audio_bytes
+
+    async def _transcribe_indicconformer_local(self, audio_bytes: bytes, language: str) -> ASRResult:
+        """Offline local ASR via AI4Bharat IndicConformer ONNX on CPU (0 MB VRAM)."""
+        model = self._get_indicconformer_model(language)
+        if not model:
+            return ASRResult(text="", language=language, confidence=0.0, provider="indicconformer_unavailable")
+
+        # Convert browser WebM / Opus to clean 16kHz mono PCM WAV
+        wav_bytes = self._ensure_pcm_wav(audio_bytes)
+
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            f.write(wav_bytes)
+            temp_path = f.name
+
+        try:
+            loop = asyncio.get_running_loop()
+            transcript = await loop.run_in_executor(None, model.recognize, temp_path)
+            transcript = transcript.strip() if transcript else ""
+
+            safe_txt = transcript.encode('ascii', errors='backslashreplace').decode('ascii')[:60]
+            logger.info(f"AI4Bharat IndicConformer ASR ({language}): '{safe_txt}'")
+
+            return ASRResult(
+                text=transcript,
+                language=language,
+                confidence=0.95 if transcript else 0.0,
+                provider="ai4bharat_indicconformer"
+            )
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
+
+    def _get_whisper_model(self):
+        """
+        Lazy-load faster-whisper (IndicWhisper) on CPU INT8.
+        Uses 0 MB VRAM, runs in ~0.5s on modern multi-core CPU.
+        """
+        if self._whisper_model is None:
+            from faster_whisper import WhisperModel
+            logger.info("Initializing faster-whisper (IndicWhisper) on CPU INT8...")
+            self._whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
+            logger.info("faster-whisper (IndicWhisper) initialized successfully")
+        return self._whisper_model
+
+    async def _transcribe_whisper_local(self, audio_bytes: bytes, language: str) -> ASRResult:
+        """Offline local ASR via faster-whisper / IndicWhisper on CPU INT8."""
+        model = self._get_whisper_model()
+        if not model:
+            return ASRResult(text="", language=language, confidence=0.0, provider="whisper_unavailable")
+
+        wav_bytes = self._ensure_pcm_wav(audio_bytes)
+
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            f.write(wav_bytes)
+            temp_path = f.name
+
+        try:
+            loop = asyncio.get_running_loop()
+
+            def _infer():
+                lang = language if language in ["hi", "ta", "te", "mr", "bn", "gu", "kn", "ml", "pa", "ur", "en"] else None
+                segments, info = model.transcribe(
+                    temp_path,
+                    language=lang,
+                    beam_size=5,
+                    temperature=0.0,
+                    initial_prompt="नमस्ते, मुझे बुखार, दर्द, खांसी या कोई स्वास्थ्य समस्या है।" if lang == "hi" else None
+                )
+                return " ".join(s.text.strip() for s in segments if s.text).strip()
+
+            transcript = await loop.run_in_executor(None, _infer)
+            safe_txt = transcript.encode('ascii', errors='backslashreplace').decode('ascii')[:60]
+            logger.info(f"IndicWhisper (faster-whisper) ASR ({language}): '{safe_txt}'")
+
+            return ASRResult(
+                text=transcript,
+                language=language,
+                confidence=0.92 if transcript else 0.0,
+                provider="ai4bharat_indicwhisper"
+            )
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
 
 
 # Singleton

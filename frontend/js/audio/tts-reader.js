@@ -75,9 +75,12 @@ class TTSReader {
       clearTimeout(this._watchdogTimer);
       this._watchdogTimer = null;
     }
-    if (this._fallbackTimer) {
-      clearTimeout(this._fallbackTimer);
-      this._fallbackTimer = null;
+    if (this._activeAudio) {
+      try {
+        this._activeAudio.pause();
+        this._activeAudio.currentTime = 0;
+      } catch (_) {}
+      this._activeAudio = null;
     }
   }
 
@@ -93,11 +96,77 @@ class TTSReader {
     }
   }
 
-  speak(text, lang = 'hi') {
-    if (!text || !text.trim()) return;
+  speak(text, lang = 'hi', audioBase64 = null) {
+    if ((!text || !text.trim()) && !audioBase64) return;
 
     // Stop any in-flight speech or audio
     this.stop();
+
+    // Priority 1: If base64 neural/F5 audio is available from the backend, play it!
+    if (audioBase64 && audioBase64.length > 200) {
+      this._speakWithAudioPayload(audioBase64, text, lang);
+      return;
+    }
+
+    // Priority 2: Browser native WebSpeech API
+    if (this.synth) {
+      const targetLocale = this._mapLocale(lang);
+      this._speakWithWebSpeech(text, lang, targetLocale);
+    } else {
+      // Fallback directly to acoustic Web Audio synthesizer
+      this._speakWithAcousticFallback(text, lang);
+    }
+  }
+
+  _speakWithAudioPayload(audioBase64, text, lang) {
+    try {
+      const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+      this._activeAudio = audio;
+
+      audio.addEventListener('play', () => {
+        this._emit('start', { text, lang, provider: 'indicf5_audio' });
+      });
+
+      audio.addEventListener('ended', () => {
+        this._activeAudio = null;
+        this._emit('end', { text, lang, provider: 'indicf5_audio' });
+      });
+
+      audio.addEventListener('error', (err) => {
+        console.warn('Base64 audio playback error, falling back to WebSpeech:', err);
+        this._activeAudio = null;
+        if (this.synth) {
+          this._speakWithWebSpeech(text, lang, this._mapLocale(lang));
+        } else {
+          this._emit('end', { text, lang, error: err });
+        }
+      });
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('Audio play() error (autoplay policy), trying WebSpeech fallback:', err);
+          this._activeAudio = null;
+          if (this.synth) {
+            this._speakWithWebSpeech(text, lang, this._mapLocale(lang));
+          } else {
+            this._emit('end', { text, lang });
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Audio element initialization failed:', e);
+      if (this.synth) {
+        this._speakWithWebSpeech(text, lang, this._mapLocale(lang));
+      }
+    }
+  }
+
+  _speakWithWebSpeech(text, lang, targetLocale) {
+    try {
+      this.synth.cancel();
+      this.synth.resume();
+    } catch (_) {}
 
     // Refresh voice registry
     if (this.synth) {
@@ -107,34 +176,22 @@ class TTSReader {
       } catch (_) {}
     }
 
-    const hasNativeVoices = this.voices && this.voices.length > 0;
-    const targetLocale = this._mapLocale(lang);
-
-    // If native speech engine with voices is available, attempt WebSpeech
-    if (this.synth && hasNativeVoices) {
-      this._speakWithWebSpeech(text, lang, targetLocale);
-    } else {
-      // Fallback directly to acoustic Web Audio synthesizer
-      this._speakWithAcousticFallback(text, lang);
-    }
-  }
-
-  _speakWithWebSpeech(text, lang, targetLocale) {
-    let startFired = false;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = targetLocale;
-    utterance.rate = 0.95;
+    utterance.rate = 0.92;
 
-    // Pick best matching voice, or fallback to any voice to avoid language-unavailable error
-    const matchedVoice = this.voices.find(v => v.lang === targetLocale)
-      || this.voices.find(v => v.lang && v.lang.startsWith(targetLocale.slice(0, 2)))
-      || this.voices.find(v => v.lang && v.lang.startsWith('en'))
-      || this.voices[0];
+    if (this.voices && this.voices.length > 0) {
+      const matchedVoice = this.voices.find(v => v.lang === targetLocale)
+        || this.voices.find(v => v.lang && v.lang.startsWith(targetLocale.slice(0, 2)))
+        || this.voices.find(v => v.lang && v.lang.startsWith('en'))
+        || this.voices[0];
 
-    if (matchedVoice) {
-      utterance.voice = matchedVoice;
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
     }
 
+    let startFired = false;
     utterance.onstart = () => {
       startFired = true;
       this._emit('start', { text, lang, provider: 'webspeech' });
@@ -145,7 +202,7 @@ class TTSReader {
     };
 
     utterance.onerror = (e) => {
-      console.warn('WebSpeech error, failing over to acoustic voice:', e ? e.error : 'unknown');
+      console.warn('WebSpeech error:', e ? e.error : 'unknown');
       if (!startFired) {
         this._speakWithAcousticFallback(text, lang);
       } else {
@@ -153,23 +210,14 @@ class TTSReader {
       }
     };
 
-    // Stalling detector: If onstart hasn't fired within 300ms, WebSpeech is blocked or hung
-    this._fallbackTimer = setTimeout(() => {
-      if (!startFired && !this._speaking) {
-        console.warn('WebSpeech onstart timeout (speech-dispatcher absent or pending). Cascading to acoustic voice.');
-        try { this.synth.cancel(); } catch (_) {}
-        this._speakWithAcousticFallback(text, lang);
-      }
-    }, 300);
-
-    // Watchdog timer: ensure utterance doesn't hang indefinitely
-    const estimatedDuration = Math.max(2500, Math.ceil((text.length / 10) * 1000));
+    // Watchdog timer: ensure utterance doesn't hang indefinitely if browser stalls
+    const estimatedDuration = Math.max(3000, Math.ceil((text.length / 8) * 1000));
     this._watchdogTimer = setTimeout(() => {
       if (this._speaking) {
         console.warn('TTS watchdog auto-closing stalled utterance');
         this.stop();
       }
-    }, estimatedDuration + 3000);
+    }, estimatedDuration + 4000);
 
     this.currentUtterance = utterance;
     try {

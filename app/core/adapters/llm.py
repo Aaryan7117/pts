@@ -61,13 +61,14 @@ class LLMProvider(ABC):
 # Gemini Flash Provider (Cloud Quality Tier)
 # ============================================================
 class GeminiFlashProvider(LLMProvider):
-    """Cloud Quality Tier: Gemini 2.5 Flash using official modern google-genai SDK."""
+    """Cloud Quality Tier: Gemini Flash using official modern google-genai SDK."""
 
     def __init__(self, api_key: str):
-        self.timeout_seconds = 10.0
+        self.timeout_seconds = 15.0
         self.provider_name = "GeminiFlash"
         self._api_key = api_key
         self._client = None
+        self._model = getattr(settings, "GEMINI_MODEL", "gemini-flash-latest")
 
     def _get_client(self):
         if self._client is None:
@@ -87,7 +88,7 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-flash-latest",
+                model=self._model,
                 contents=prompt,
                 config=config
             ),
@@ -105,7 +106,7 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-flash-latest",
+                model=self._model,
                 contents=prompt,
                 config=config
             ),
@@ -138,14 +139,14 @@ class GeminiFlashProvider(LLMProvider):
         )
         response = await asyncio.wait_for(
             client.aio.models.generate_content(
-                model="gemini-flash-latest",
+                model=self._model,
                 contents=[
                     image_part,
                     "Extract all medications and their 2D bounding boxes [ymin, xmin, ymax, xmax] from this prescription."
                 ],
                 config=config
             ),
-            timeout=8.0
+            timeout=15.0
         )
         return ExtractedMedicationList.model_validate_json(response.text)
 
@@ -154,10 +155,10 @@ class GeminiFlashProvider(LLMProvider):
 # Groq Llama Provider (Cloud Speed Tier)
 # ============================================================
 class GroqLlamaProvider(LLMProvider):
-    """Cloud Speed Tier: Llama 3.1 70B on Groq LPUs (~280 tok/s)."""
+    """Cloud Speed Tier: Fast LLM on Groq LPUs (~280 tok/s)."""
 
     def __init__(self, api_key: str):
-        self.timeout_seconds = 2.5
+        self.timeout_seconds = 10.0
         self.provider_name = "GroqLlama"
         self._api_key = api_key
         self._client = None
@@ -210,7 +211,7 @@ class OllamaEdgeProvider(LLMProvider):
     """Offline Edge Core: Qwen 2.5 7B Q4 on Single 8GB RTX GPU."""
 
     def __init__(self, base_url: str = None, model: str = None):
-        self.timeout_seconds = 12.0  # Local inference can be slower
+        self.timeout_seconds = 120.0  # Local inference / model cold loading on 8GB GPU
         self.provider_name = "OllamaEdge"
         self._base_url = base_url or settings.OLLAMA_BASE_URL
         self._model = model or settings.OLLAMA_MODEL
@@ -328,13 +329,16 @@ class ResilientLLMService:
         """Run task across provider chain with failover."""
         candidates = []
 
-        if self.is_online():
-            candidates.extend(self.cloud_providers)
-            logger.debug("Network probe: ONLINE — cloud providers available")
+        if settings.DEPLOYMENT_MODE == "STANDALONE":
+            logger.info("Deployment mode STANDALONE: routing strictly to local Edge (Ollama GPU)")
+            candidates.extend(self.edge_providers)
         else:
-            logger.info("Network probe: OFFLINE — routing to edge providers only")
-
-        candidates.extend(self.edge_providers)
+            if self.is_online():
+                candidates.extend(self.cloud_providers)
+                logger.debug("Network probe: ONLINE — cloud providers available")
+            else:
+                logger.info("Network probe: OFFLINE — routing to edge providers only")
+            candidates.extend(self.edge_providers)
 
         if not candidates:
             raise RuntimeError(
@@ -366,7 +370,7 @@ class ResilientLLMService:
         mime_type: str = "image/jpeg"
     ) -> Optional[ExtractedMedicationList]:
         """Attempt zero-shot prescription vision extraction via Gemini Flash if online."""
-        if not self.is_online():
+        if settings.DEPLOYMENT_MODE == "STANDALONE" or not self.is_online():
             return None
 
         for provider in self.cloud_providers:
@@ -397,9 +401,9 @@ class ResilientLLMService:
 llm_service: Optional[ResilientLLMService] = None
 
 
-def get_llm_service() -> ResilientLLMService:
-    """Get the global LLM service instance."""
+def get_llm_service(force_new: bool = True) -> ResilientLLMService:
+    """Get the LLM service instance, freshly initialized to pick up current settings."""
     global llm_service
-    if llm_service is None:
+    if force_new or llm_service is None:
         llm_service = ResilientLLMService()
     return llm_service

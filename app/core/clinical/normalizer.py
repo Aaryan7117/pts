@@ -103,8 +103,18 @@ class SemanticConceptNormalizer:
 
         try:
             from sentence_transformers import SentenceTransformer
-            self._embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
-            logger.info(f"Loaded embedding model: {settings.EMBEDDING_MODEL_NAME}")
+            # Try loading from local cache first to avoid hanging on HuggingFace Hub network checks when offline
+            try:
+                self._embedding_model = SentenceTransformer(
+                    settings.EMBEDDING_MODEL_NAME,
+                    local_files_only=True
+                )
+                logger.info(f"Loaded embedding model from local cache: {settings.EMBEDDING_MODEL_NAME}")
+            except Exception as cache_err:
+                logger.info(f"Local cache lookup failed ({cache_err}). Fetching model...")
+                self._embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
+                logger.info(f"Loaded embedding model: {settings.EMBEDDING_MODEL_NAME}")
+
             self._build_concept_index()
         except ImportError:
             logger.warning(

@@ -68,7 +68,7 @@ async def get_doctor_queue(db=Depends(get_db)):
                 WHEN 'YELLOW' THEN 1
                 ELSE 2
             END,
-            qt.position ASC
+            e.created_at DESC
         """
     )
     encounters = await rows.fetchall()

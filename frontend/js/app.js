@@ -4,7 +4,7 @@
  * Manages screen transitions, global state, and wires up all UI interactions.
  */
 import { api } from './api.js';
-import { AudioRecorder, WaveformVisualizer, playAudioBase64, playDing } from './audio.js';
+import { AudioRecorder, WaveformVisualizer, playAudioBase64, playDing, isSilentWav, speakTextNative } from './audio.js';
 import { CameraCapture } from './camera.js';
 import { DoctorScene } from './three/scene.js';
 import { DoctorCharacter } from './three/doctor.js';
@@ -188,6 +188,9 @@ function navigateTo(screen) {
     doctor?.setState('wave');
     setTimeout(() => doctor?.setState('point'), 2500);
   } else if (screen === 'doctor') {
+    if (state.encounterId) {
+      state.selectedEncounterId = state.encounterId;
+    }
     loadDoctorQueue();
   } else if (screen === 'ivr') {
     const currentPhone = document.getElementById('ivrPhoneInput')?.value || '9876543210';
@@ -570,10 +573,15 @@ function initWelcomeScreen() {
       // Navigate to voice intake
       navigateTo('voice');
 
-      // Play opening question
-      if (callData.opening_audio_base64) {
+      // Play opening question (cloud/edge voice or native browser speech offline)
+      const isSilentOpen = isSilentWav(callData.opening_audio_base64);
+      if (callData.opening_audio_base64 && !isSilentOpen) {
         doctor?.setState('talk');
         await playAudioBase64(callData.opening_audio_base64);
+        doctor?.setState('listen');
+      } else if (callData.opening_text) {
+        doctor?.setState('talk');
+        await speakTextNative(callData.opening_text, state.language);
         doctor?.setState('listen');
       }
 
@@ -787,8 +795,11 @@ async function handleTurnResult(result) {
     addChatBubble('doctor', result.next_question_text);
     doctor?.setState('talk');
 
-    if (result.next_question_audio_base64) {
+    const isSilentNext = isSilentWav(result.next_question_audio_base64);
+    if (result.next_question_audio_base64 && !isSilentNext) {
       await playAudioBase64(result.next_question_audio_base64);
+    } else if (result.next_question_text) {
+      await speakTextNative(result.next_question_text, state.language);
     }
 
     doctor?.setState('listen');
@@ -1134,6 +1145,7 @@ async function loadDoctorQueue() {
     for (const entry of data.queue) {
       const el = document.createElement('div');
       el.className = 'queue-entry';
+      el.dataset.encId = entry.encounter_id;
       if (entry.encounter_id === state.selectedEncounterId) {
         el.classList.add('selected');
       }
@@ -1186,12 +1198,22 @@ async function loadDoctorQueue() {
       list.appendChild(el);
     }
 
-    // Auto-select first patient if none selected
-    if (data.queue.length > 0 && (!state.selectedEncounterId || !data.queue.some(q => q.encounter_id === state.selectedEncounterId))) {
-      state.selectedEncounterId = data.queue[0].encounter_id;
-      const firstCard = list.querySelector('.queue-entry');
-      firstCard?.classList.add('selected');
-      loadPatientDetail(data.queue[0].encounter_id);
+    // Auto-select the active encounter or first patient
+    const targetId = (state.selectedEncounterId && data.queue.some(q => q.encounter_id === state.selectedEncounterId))
+      ? state.selectedEncounterId
+      : (state.encounterId && data.queue.some(q => q.encounter_id === state.encounterId))
+        ? state.encounterId
+        : data.queue[0]?.encounter_id;
+
+    if (targetId) {
+      state.selectedEncounterId = targetId;
+      const targetCard = list.querySelector(`[data-enc-id="${targetId}"]`) || list.querySelector('.queue-entry');
+      if (targetCard) {
+        list.querySelectorAll('.queue-entry').forEach(e => e.classList.remove('selected'));
+        targetCard.classList.add('selected');
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      loadPatientDetail(targetId);
     }
   } catch (err) {
     console.error('Load queue failed:', err);
