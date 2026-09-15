@@ -3,35 +3,124 @@
  * MediaRecorder, waveform visualization, base64 audio playback.
  */
 
-/** Play base64-encoded audio (WAV/OGG/MP3) */
-export function playAudioBase64(base64, format = 'wav') {
-  return new Promise((resolve, reject) => {
-    if (!base64) { resolve(); return; }
-    const audio = new Audio(`data:audio/${format};base64,${base64}`);
+/** Detect if a base64 WAV payload is just pure silence fallback (e.g. offline dev fallback) */
+export function isSilentWav(base64) {
+  if (!base64 || base64.length < 100) return true;
+  try {
+    // Decode a wider window (up to 3000 bytes) to avoid false-positives from brief lead-in silence padding
+    const sampleLength = Math.min(base64.length, 4000);
+    const binary = atob(base64.slice(0, sampleLength));
+    if (binary.length > 44) {
+      // Check samples after standard 44-byte WAV header
+      for (let i = 44; i < binary.length; i++) {
+        if (binary.charCodeAt(i) !== 0) return false; // Found audible sample!
+      }
+      return true; // Entire sampled range is zero (pure silence fallback)
+    }
+  } catch (e) {
+    // If not base64 decodable, assume not silent
+  }
+  return false;
+}
 
+/** Speak text aloud using browser's native Web Speech API (offline TTS fallback) */
+export function speakTextNative(text, language = 'en') {
+  return new Promise((resolve) => {
+    if (!window.speechSynthesis || !text) {
+      resolve();
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+    } catch (e) {}
+
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    const langMap = {
+      'en': 'en-IN',
+      'hi': 'hi-IN',
+      'ta': 'ta-IN',
+      'te': 'te-IN',
+      'mr': 'mr-IN'
+    };
+    utterance.lang = langMap[language] || 'en-IN';
+    utterance.rate = 0.92;
+
+    const voices = window.speechSynthesis.getVoices();
+    const targetLang = utterance.lang.slice(0, 2);
+    const matchingVoice = voices.find(v => v.lang.toLowerCase().startsWith(targetLang));
+    if (matchingVoice) utterance.voice = matchingVoice;
+
+    let finished = false;
     const notifyStart = () => {
       window.dispatchEvent(new CustomEvent('medikiosk-speech-start'));
+      window.dispatchEvent(new CustomEvent('medikiosk-tts-start', { detail: { text, lang: language } }));
+    };
+
+    const finish = () => {
+      if (!finished) {
+        finished = true;
+        window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+        window.dispatchEvent(new CustomEvent('medikiosk-tts-end', { detail: { text, lang: language } }));
+        resolve();
+      }
+    };
+
+    utterance.onstart = notifyStart;
+    utterance.onend = finish;
+    utterance.onerror = (err) => {
+      console.warn('Native speech synthesis error:', err);
+      finish();
+    };
+
+    // Safety timeout in case speech synthesis hangs
+    setTimeout(finish, Math.max(4000, text.length * 150));
+
+    setTimeout(() => {
+      try {
+        window.speechSynthesis.resume();
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        finish();
+      }
+    }, 40);
+  });
+}
+
+/** Play base64-encoded audio (WAV/OGG/MP3) */
+export function playAudioBase64(base64, format = 'wav') {
+  return new Promise((resolve) => {
+    if (!base64 || base64.length < 100) { resolve(); return; }
+    const audio = new Audio(`data:audio/${format};base64,${base64}`);
+
+    let finished = false;
+    const notifyStart = () => {
+      window.dispatchEvent(new CustomEvent('medikiosk-speech-start'));
+      window.dispatchEvent(new CustomEvent('medikiosk-tts-start', { detail: { format, provider: 'base64_audio' } }));
     };
 
     const notifyEnd = () => {
-      window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+      if (!finished) {
+        finished = true;
+        window.dispatchEvent(new CustomEvent('medikiosk-speech-end'));
+        window.dispatchEvent(new CustomEvent('medikiosk-tts-end', { detail: { format, provider: 'base64_audio' } }));
+        resolve();
+      }
     };
 
     audio.addEventListener('play', notifyStart);
     audio.addEventListener('playing', notifyStart);
     audio.addEventListener('pause', notifyEnd);
-    audio.addEventListener('ended', () => {
-      notifyEnd();
-      resolve();
-    });
+    audio.addEventListener('ended', notifyEnd);
     audio.addEventListener('error', (err) => {
+      console.warn('Audio playback error:', err);
       notifyEnd();
-      reject(err);
     });
 
     audio.play().catch((err) => {
+      console.warn('Audio play() error (autoplay policy):', err);
       notifyEnd();
-      reject(err);
     });
   });
 }

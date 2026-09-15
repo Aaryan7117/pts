@@ -29,6 +29,62 @@ UPLOAD_DIR = Path("./static/uploads")
 EVIDENCE_DIR = Path("./static/evidence")
 
 
+def _extract_medications_rule_based(ocr_lines: list) -> list[ExtractedMedication]:
+    """
+    Deterministic rule-based medical entity extractor for offline prescriptions.
+    Guarantees extraction even if local LLM is cold, slow, or times out.
+    """
+    import re
+    extracted = []
+
+    for idx, line_obj in enumerate(ocr_lines):
+        line_str = line_obj.text.strip()
+        line_idx = line_obj.line_index
+
+        # Ignore instruction verbs or administrative labels
+        if re.match(r'^(?:Take|Apply|Use|Give|Duration|Advice|Diagnosis|Date|Age|UHID|Ph|Reg|Consultation|Follow)\b', line_str, re.I):
+            continue
+
+        num_match = re.match(r'^(?:\d+[\.\)]\s*|(?:Tab|Cap|Syp|Inj)\.?\s+)(.+)$', line_str, re.I)
+        has_dose = bool(re.search(r'\b\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|iu|%)\b', line_str, re.I))
+        has_form = bool(re.search(r'\b(?:Tab|Cap|Syp|Suspension|Inj|Tablet|Capsule|Drops|Ointment)\b', line_str, re.I))
+
+        if num_match or (has_dose and has_form):
+            candidate = num_match.group(1).strip() if num_match else line_str
+            dose_m = re.search(r'(\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|iu|%))', candidate, re.I)
+
+            clean_name = re.sub(r'\b\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|iu|%)\b', '', candidate, flags=re.I)
+            clean_name = re.sub(r'\((?:Tab|Cap|Syp|Suspension|Inj|Tablet|Capsule)\)', '', clean_name, flags=re.I).strip()
+            clean_name = re.sub(r'^(?:Tab|Cap|Syp|Inj)\.?\s+', '', clean_name, flags=re.I).strip()
+
+            skip_words = ['patient', 'clinic', 'hospital', 'doctor', 'date', 'dr.', 'consultant', 'reg.', 'mbbs', 'diagnosis', 'advice', 'follow up', 'duration', 'take']
+            if any(skip in clean_name.lower() for skip in skip_words) or len(clean_name) < 3:
+                continue
+
+            dose_val = dose_m.group(1) if dose_m else None
+            freq_val = None
+            source_lines = [line_idx]
+
+            for next_offset in [1, 2]:
+                if idx + next_offset < len(ocr_lines):
+                    next_l = ocr_lines[idx + next_offset]
+                    next_text = next_l.text.strip()
+                    if re.search(r'\b(?:daily|meals|bedtime|OD|BD|TDS|QID|1-0-1|tablet|capsule|ml|times|after|before)\b', next_text, re.I) and not re.match(r'^\d+[\.\)]', next_text):
+                        freq_val = next_text
+                        source_lines.append(next_l.line_index)
+                        break
+
+            extracted.append(ExtractedMedication(
+                name=clean_name,
+                dose=dose_val,
+                frequency=freq_val,
+                source_lines=source_lines,
+                confidence=line_obj.confidence
+            ))
+
+    return extracted
+
+
 async def _process_single_document(
     encounter_id: str,
     document: UploadFile,
@@ -86,7 +142,11 @@ async def _process_single_document(
     evidence_file = str(EVIDENCE_DIR / f"{document_id}-boxed.jpg")
 
     # Step 1: Vision / OCR Extraction
-    vision_result = await llm.extract_prescription_vision(image_bytes)
+    try:
+        vision_result = await llm.extract_prescription_vision(image_bytes)
+    except Exception as e:
+        logger.warning(f"Vision extraction raised exception: {e}. Falling back to OCR.")
+        vision_result = None
     if vision_result and vision_result.medications:
         logger.info(f"Gemini Flash Vision extracted {len(vision_result.medications)} medications")
         extracted_meds = [
@@ -101,7 +161,16 @@ async def _process_single_document(
             for m in vision_result.medications
         ]
         ocr_status = "SUCCESS"
-        raw_ocr_text = "\n".join(f"{m.name} {m.dose or ''} {m.frequency or ''}" for m in extracted_meds)
+        raw_ocr_text = "\n".join(f"{m.name} {m.dose or ''} {m.frequency or ''}".strip() for m in extracted_meds)
+        ocr_lines_data = [
+            {
+                "line_index": idx + 1,
+                "text": f"{m.name} {m.dose or ''} {m.frequency or ''}".strip(),
+                "confidence": m.confidence or 0.95,
+                "box_2d": m.box_2d
+            }
+            for idx, m in enumerate(extracted_meds)
+        ]
 
         boxes = [m.box_2d for m in extracted_meds if m.box_2d]
         if boxes:
@@ -163,6 +232,12 @@ async def _process_single_document(
             except Exception as e:
                 logger.warning(f"LLM extraction skipped/fallback: {e}")
 
+            # Deterministic offline rule-based fallback if LLM extraction was empty or timed out
+            if not extracted_meds and ocr_result and ocr_result.lines:
+                extracted_meds = _extract_medications_rule_based(ocr_result.lines)
+                if extracted_meds:
+                    logger.info(f"Rule-based fallback extracted {len(extracted_meds)} medications from OCR lines")
+
         # Highlight lines if medications found
         if extracted_meds:
             all_source_lines = []
@@ -218,6 +293,9 @@ async def _process_single_document(
     drug_alerts = [DrugInteractionAlert(**alert) for alert in drug_alerts_raw]
 
     # Step 4: Save Document Record
+    web_file_path = file_path.as_posix()
+    web_highlighted_path = Path(highlighted_path).as_posix() if highlighted_path else ""
+
     await db.execute(
         """
         INSERT INTO documents
@@ -226,7 +304,7 @@ async def _process_single_document(
         """,
         (
             document_id, encounter_id, linked_patient_id, document_type, document_date,
-            str(file_path), ocr_status, raw_ocr_text, json.dumps(ocr_lines_data), highlighted_path
+            web_file_path, ocr_status, raw_ocr_text, json.dumps(ocr_lines_data), web_highlighted_path
         )
     )
 

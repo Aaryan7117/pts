@@ -14,6 +14,15 @@ Endpoints:
 Run: python run.py
 """
 
+import sys
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+import os
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -144,6 +153,7 @@ async def health_check():
         "service": "MediKiosk Backend",
         "version": "3.0.0",
         "sih_problem_id": "SIH26047",
+        "deployment_mode": os.getenv("DEPLOYMENT_MODE", settings.DEPLOYMENT_MODE),
         "network": "ONLINE" if llm_status["is_online"] else "OFFLINE",
         "llm_providers": {
             "cloud": llm_status["cloud_providers"],

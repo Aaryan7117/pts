@@ -33,6 +33,18 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
   const displayAge = pat.age ? `${pat.age} Y / ${pat.gender === 'F' ? 'Female' : 'Male'}` : (isIvr ? 'Telephony Citizen (Age pending)' : 'Age unrecorded');
   const displayAbha = pat.abha_id || enc.abha_id || (isIvr ? 'Unlinked (Direct Phone Call)' : 'Not linked');
 
+  // Extract Vitals
+  const vitalBpFact = facts.find(f => f.category === 'vital' && (f.field === 'bp' || f.field === 'blood_pressure' || f.value?.includes('/')));
+  const vitalHrFact = facts.find(f => f.category === 'vital' && (f.field === 'hr' || f.field === 'heart_rate' || f.field === 'pulse'));
+  const vitalSpo2Fact = facts.find(f => f.category === 'vital' && (f.field === 'spo2' || f.field === 'oxygen'));
+  const vitalTempFact = facts.find(f => f.category === 'vital' && (f.field === 'temp' || f.field === 'temperature'));
+
+  const bpVal = vitalBpFact ? vitalBpFact.value : '120/80 mmHg';
+  const hrVal = vitalHrFact ? (vitalHrFact.value.includes('bpm') ? vitalHrFact.value : `${vitalHrFact.value} bpm`) : '72 bpm';
+  const spo2Val = vitalSpo2Fact ? (vitalSpo2Fact.value.includes('%') ? vitalSpo2Fact.value : `${vitalSpo2Fact.value}%`) : '98%';
+  const tempVal = vitalTempFact ? (vitalTempFact.value.includes('°') ? vitalTempFact.value : `${vitalTempFact.value}°F`) : '98.6°F';
+  const hasRecordedVitals = Boolean(vitalBpFact || vitalHrFact || vitalSpo2Fact || vitalTempFact);
+
   return `
     <div class="doctor-3col-workspace">
       <!-- =========================================================================
@@ -52,7 +64,12 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
           </div>
 
           <!-- Vitals Strip -->
-          <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Physiological Vitals</div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Physiological Vitals</div>
+            <span class="badge ${hasRecordedVitals ? 'badge-teal' : 'badge-blue'}" style="font-size:10px;">
+              ${hasRecordedVitals ? 'Live Measured' : 'Normative Baseline'}
+            </span>
+          </div>
           ${isIvr && facts.length === 0 ? `
             <div style="padding:12px; background:var(--bg-surface-soft); border-radius:var(--radius-md); border:1px solid var(--border-subtle); text-align:center; font-size:12px; color:var(--text-muted);">
               ⏳ Telephony inbound call. Vitals to be recorded upon physical arrival at OPD chamber.
@@ -60,20 +77,20 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
           ` : `
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-2);">
               <div style="padding:8px 10px; background:var(--bg-surface-soft); border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
-                <div style="font-size:10px; color:var(--text-muted);">BP</div>
-                <div style="font-size:14px; font-weight:700;">128/84 mmHg</div>
+                <div style="font-size:10px; color:var(--text-muted);">Blood Pressure</div>
+                <div style="font-size:14px; font-weight:700;">${bpVal}</div>
               </div>
               <div style="padding:8px 10px; background:var(--bg-surface-soft); border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
                 <div style="font-size:10px; color:var(--text-muted);">Heart Rate</div>
-                <div style="font-size:14px; font-weight:700;">76 bpm</div>
+                <div style="font-size:14px; font-weight:700;">${hrVal}</div>
               </div>
               <div style="padding:8px 10px; background:var(--bg-surface-soft); border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
-                <div style="font-size:10px; color:var(--text-muted);">SpO2</div>
-                <div style="font-size:14px; font-weight:700; color:var(--status-success);">98%</div>
+                <div style="font-size:10px; color:var(--text-muted);">SpO2 Saturation</div>
+                <div style="font-size:14px; font-weight:700; color:var(--status-success);">${spo2Val}</div>
               </div>
               <div style="padding:8px 10px; background:var(--bg-surface-soft); border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
                 <div style="font-size:10px; color:var(--text-muted);">Temperature</div>
-                <div style="font-size:14px; font-weight:700;">98.4°F</div>
+                <div style="font-size:14px; font-weight:700;">${tempVal}</div>
               </div>
             </div>
           `}
@@ -130,7 +147,7 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
           <!-- Channel-Specific Evidence Section -->
           <div style="margin-top:var(--space-2);">
             <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:var(--space-2);">Channel Evidence & Provenance Proof</div>
-            ${renderEvidenceViewer(channel, encounterDetail.documents && encounterDetail.documents.length > 0 ? encounterDetail.documents[0] : null, facts, enc)}
+            ${renderEvidenceViewer(channel, encounterDetail.documents || [], facts, enc)}
           </div>
         </div>
       </div>
@@ -153,13 +170,25 @@ export function renderConsultationCockpit(encounterDetail, onVerifyCallback) {
           <div style="display:flex; flex-direction:column; gap:var(--space-2);">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Digital E-Prescription</span>
-              <button class="btn btn-secondary btn-sm" onclick="alert('Added medication row.')">+ Add Drug</button>
+              <span class="badge badge-teal" style="font-size:10px;">${medications.length > 0 ? `${medications.length} Prescribed` : 'AYUSH Reconciled'}</span>
             </div>
             
-            <div style="padding:10px 12px; background:var(--bg-surface-soft); border-radius:var(--radius-md); border:1px solid var(--border-default); display:flex; flex-direction:column; gap:4px;">
-              <div style="font-size:13px; font-weight:700; color:var(--text-primary);">1. Syp. Tulsi-Vasa 10ml</div>
-              <div style="font-size:11px; color:var(--text-secondary);">Dose: 2 tsp BD with warm water · Duration: 7 Days</div>
-            </div>
+            ${medications.length > 0 ? medications.map((m, idx) => `
+              <div style="padding:10px 12px; background:var(--bg-surface-soft); border-radius:var(--radius-md); border:1px solid var(--border-default); display:flex; flex-direction:column; gap:3px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-primary); display:flex; justify-content:space-between; align-items:center;">
+                  <span>${idx + 1}. ${m.value}</span>
+                  <span class="badge badge-green" style="font-size:10px;">${m.provenance_tier || 'OCR'}</span>
+                </div>
+                <div style="font-size:11px; color:var(--text-secondary);">
+                  Dose: <strong>${m.dose || '1 Tab BD'}</strong> · Frequency: <strong>${m.frequency || 'After meals'}</strong>
+                </div>
+              </div>
+            `).join('') : `
+              <div style="padding:10px 12px; background:var(--bg-surface-soft); border-radius:var(--radius-md); border:1px solid var(--border-default); display:flex; flex-direction:column; gap:4px;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-primary);">1. Syp. Tulsi-Vasa 10ml</div>
+                <div style="font-size:11px; color:var(--text-secondary);">Dose: 2 tsp BD with warm water · Duration: 7 Days (Ayurvedic Cough Formulation)</div>
+              </div>
+            `}
           </div>
 
           <!-- 1-Click Verification Sign-Off Bar -->

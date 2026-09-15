@@ -59,46 +59,28 @@ export async function initDoctorPatient(encounterId) {
       attachCockpitEvents(encounterId);
     }
   } catch (err) {
-    console.warn('Doctor patient API fetch fallback (using local mock encounter):', err);
-    const kioskState = store.getState().kiosk || {};
-    const hasKioskFacts = kioskState.extractedFacts && kioskState.extractedFacts.length > 0;
-    const dynamicFacts = hasKioskFacts ? kioskState.extractedFacts : [
-      { category: 'chief_complaint', value: kioskState.patientWords || 'General OPD Consultation (सामान्य परामर्श)', patient_words: kioskState.patientWords || 'Consultation request', provenance_tier: 'VOICE' },
-      { category: 'medication', value: 'Metformin 500mg BD', provenance_tier: 'ONNX_OCR' },
-      { category: 'medication', value: 'Atorvastatin 20mg HS', provenance_tier: 'ONNX_OCR' }
-    ];
-
-    const mockDetail = {
-      encounter: {
-        id: encounterId,
-        patient_id: kioskState.patientId || 'Ramesh Kumar (56 / M)',
-        token_number: kioskState.tokenNumber || 'A-261',
-        channel: kioskState.channel || 'kiosk',
-        severity_badge: kioskState.severityBadge || 'GREEN',
-        department: kioskState.careStream || 'General Medicine',
-        status: 'IN_PROGRESS'
-      },
-      clinical_facts: dynamicFacts,
-      ayush_intake: kioskState.ayushRecord || {},
-      drug_interaction_alerts: [
-        { drug_a: 'Metformin', drug_b: 'Contrast Media', description: 'Evaluate renal profile before dye administration.' }
-      ],
-      documents: kioskState.uploadedDocument ? [kioskState.uploadedDocument] : [
-        {
-          id: 'doc-sample',
-          file_path: '/static/uploads/sample_prescription.jpg',
-          ocr_lines: [
-            { line_index: 1, text: 'Rx: Tab Metformin 500mg - 1 Tab BD x 30 days', confidence: '98%' },
-            { line_index: 2, text: 'Tab Atorvastatin 20mg - 1 Tab HS x 30 days', confidence: '94%' }
-          ]
-        }
-      ]
-    };
-    store.setSelectedPatientDetail(encounterId, mockDetail);
+    console.warn('Doctor patient API fetch error:', err);
     const container = document.getElementById('pageContent');
     if (container) {
-      container.innerHTML = renderDoctorPatient(encounterId);
-      attachCockpitEvents(encounterId);
+      container.innerHTML = `
+        <div style="padding:var(--space-10); text-align:center;">
+          <div class="card" style="max-width:500px; margin:0 auto; padding:var(--space-8); border:1.5px solid var(--status-danger);">
+            <div style="font-size:36px; margin-bottom:var(--space-3);">⚠️</div>
+            <h3 class="text-h3" style="color:var(--status-danger); margin-bottom:8px;">Unable to Load Patient Case</h3>
+            <p style="font-size:14px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
+              Could not retrieve encounter data for <strong>${encounterId}</strong> from the server.<br>
+              <small style="color:var(--text-secondary); font-size:12px;">${err.message || 'Server connection failed or encounter not found'}</small>
+            </p>
+            <div style="display:flex; justify-content:center; gap:12px;">
+              <a href="#/doctor/queue" class="btn btn-secondary btn-sm">← Return to Queue</a>
+              <button class="btn btn-primary btn-sm" id="btnRetryLoadPatient">🔄 Retry Now</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('btnRetryLoadPatient')?.addEventListener('click', () => {
+        initDoctorPatient(encounterId);
+      });
     }
   }
 }

@@ -75,9 +75,12 @@ class TTSReader {
       clearTimeout(this._watchdogTimer);
       this._watchdogTimer = null;
     }
-    if (this._fallbackTimer) {
-      clearTimeout(this._fallbackTimer);
-      this._fallbackTimer = null;
+    if (this._activeAudio) {
+      try {
+        this._activeAudio.pause();
+        this._activeAudio.currentTime = 0;
+      } catch (_) {}
+      this._activeAudio = null;
     }
   }
 
@@ -93,11 +96,77 @@ class TTSReader {
     }
   }
 
-  speak(text, lang = 'hi') {
-    if (!text || !text.trim()) return;
+  speak(text, lang = 'hi', audioBase64 = null) {
+    if ((!text || !text.trim()) && !audioBase64) return;
 
     // Stop any in-flight speech or audio
     this.stop();
+
+    // Priority 1: If base64 neural/F5 audio is available from the backend, play it!
+    if (audioBase64 && audioBase64.length > 200) {
+      this._speakWithAudioPayload(audioBase64, text, lang);
+      return;
+    }
+
+    // Priority 2: Browser native WebSpeech API
+    if (this.synth) {
+      const targetLocale = this._mapLocale(lang);
+      this._speakWithWebSpeech(text, lang, targetLocale);
+    } else {
+      // Fallback directly to acoustic Web Audio synthesizer
+      this._speakWithAcousticFallback(text, lang);
+    }
+  }
+
+  _speakWithAudioPayload(audioBase64, text, lang) {
+    try {
+      const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+      this._activeAudio = audio;
+
+      audio.addEventListener('play', () => {
+        this._emit('start', { text, lang, provider: 'indicf5_audio' });
+      });
+
+      audio.addEventListener('ended', () => {
+        this._activeAudio = null;
+        this._emit('end', { text, lang, provider: 'indicf5_audio' });
+      });
+
+      audio.addEventListener('error', (err) => {
+        console.warn('Base64 audio playback error, falling back to WebSpeech:', err);
+        this._activeAudio = null;
+        if (this.synth) {
+          this._speakWithWebSpeech(text, lang, this._mapLocale(lang));
+        } else {
+          this._emit('end', { text, lang, error: err });
+        }
+      });
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('Audio play() error (autoplay policy), trying WebSpeech fallback:', err);
+          this._activeAudio = null;
+          if (this.synth) {
+            this._speakWithWebSpeech(text, lang, this._mapLocale(lang));
+          } else {
+            this._emit('end', { text, lang });
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Audio element initialization failed:', e);
+      if (this.synth) {
+        this._speakWithWebSpeech(text, lang, this._mapLocale(lang));
+      }
+    }
+  }
+
+  _speakWithWebSpeech(text, lang, targetLocale) {
+    try {
+      this.synth.cancel();
+      this.synth.resume();
+    } catch (_) {}
 
     // Refresh voice registry
     if (this.synth) {
@@ -107,34 +176,22 @@ class TTSReader {
       } catch (_) {}
     }
 
-    const hasNativeVoices = this.voices && this.voices.length > 0;
-    const targetLocale = this._mapLocale(lang);
-
-    // If native speech engine with voices is available, attempt WebSpeech
-    if (this.synth && hasNativeVoices) {
-      this._speakWithWebSpeech(text, lang, targetLocale);
-    } else {
-      // Fallback directly to acoustic Web Audio synthesizer
-      this._speakWithAcousticFallback(text, lang);
-    }
-  }
-
-  _speakWithWebSpeech(text, lang, targetLocale) {
-    let startFired = false;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = targetLocale;
-    utterance.rate = 0.95;
+    utterance.rate = 0.92;
 
-    // Pick best matching voice, or fallback to any voice to avoid language-unavailable error
-    const matchedVoice = this.voices.find(v => v.lang === targetLocale)
-      || this.voices.find(v => v.lang && v.lang.startsWith(targetLocale.slice(0, 2)))
-      || this.voices.find(v => v.lang && v.lang.startsWith('en'))
-      || this.voices[0];
+    if (this.voices && this.voices.length > 0) {
+      const matchedVoice = this.voices.find(v => v.lang === targetLocale)
+        || this.voices.find(v => v.lang && v.lang.startsWith(targetLocale.slice(0, 2)))
+        || this.voices.find(v => v.lang && v.lang.startsWith('en'))
+        || this.voices[0];
 
-    if (matchedVoice) {
-      utterance.voice = matchedVoice;
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
     }
 
+    let startFired = false;
     utterance.onstart = () => {
       startFired = true;
       this._emit('start', { text, lang, provider: 'webspeech' });
@@ -145,7 +202,7 @@ class TTSReader {
     };
 
     utterance.onerror = (e) => {
-      console.warn('WebSpeech error, failing over to acoustic voice:', e ? e.error : 'unknown');
+      console.warn('WebSpeech error:', e ? e.error : 'unknown');
       if (!startFired) {
         this._speakWithAcousticFallback(text, lang);
       } else {
@@ -153,23 +210,14 @@ class TTSReader {
       }
     };
 
-    // Stalling detector: If onstart hasn't fired within 300ms, WebSpeech is blocked or hung
-    this._fallbackTimer = setTimeout(() => {
-      if (!startFired && !this._speaking) {
-        console.warn('WebSpeech onstart timeout (speech-dispatcher absent or pending). Cascading to acoustic voice.');
-        try { this.synth.cancel(); } catch (_) {}
-        this._speakWithAcousticFallback(text, lang);
-      }
-    }, 300);
-
-    // Watchdog timer: ensure utterance doesn't hang indefinitely
-    const estimatedDuration = Math.max(2500, Math.ceil((text.length / 10) * 1000));
+    // Watchdog timer: ensure utterance doesn't hang indefinitely if browser stalls
+    const estimatedDuration = Math.max(3000, Math.ceil((text.length / 8) * 1000));
     this._watchdogTimer = setTimeout(() => {
       if (this._speaking) {
         console.warn('TTS watchdog auto-closing stalled utterance');
         this.stop();
       }
-    }, estimatedDuration + 3000);
+    }, estimatedDuration + 4000);
 
     this.currentUtterance = utterance;
     try {
@@ -181,126 +229,52 @@ class TTSReader {
   }
 
   /**
-   * Acoustic Formant Voice Synthesizer (Web Audio API)
-   * Plays pleasant clinical speech harmonics matching the phonetic duration and rhythm
-   * of the text. Ensures auditory feedback and avatar synchronization on all platforms.
+   * Graceful speech fallback:
+   * Retries clean browser SpeechSynthesis without custom voice pitch modulation.
+   * If synthesis is completely unsupported, smoothly completes with a natural reading timer
+   * so the avatar and intake flow proceed without alien/sawtooth acoustic noise.
    */
   _speakWithAcousticFallback(text, lang) {
     this._clearTimers();
     this._stopFallbackAudio();
 
-    try {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) {
-        this._emit('start', { text, lang, provider: 'timer_fallback' });
-        const dur = Math.max(2000, (text.length / 15) * 1000);
-        this._fallbackTimer = setTimeout(() => this._emit('end', { text, lang }), dur);
+    if (this.synth) {
+      try {
+        this.synth.cancel();
+        const simpleUtterance = new SpeechSynthesisUtterance(text);
+        simpleUtterance.lang = this._mapLocale(lang);
+        simpleUtterance.rate = 0.95;
+        let started = false;
+        simpleUtterance.onstart = () => {
+          started = true;
+          this._emit('start', { text, lang, provider: 'webspeech_retry' });
+        };
+        simpleUtterance.onend = () => {
+          this._emit('end', { text, lang });
+        };
+        simpleUtterance.onerror = () => {
+          if (!started) {
+            this._runSilentCompletion(text, lang);
+          } else {
+            this._emit('end', { text, lang });
+          }
+        };
+        this.synth.speak(simpleUtterance);
         return;
+      } catch (e) {
+        console.warn('WebSpeech clean retry failed:', e);
       }
-
-      if (!this._audioCtx || this._audioCtx.state === 'closed') {
-        this._audioCtx = new AudioContextClass();
-      }
-      if (this._audioCtx.state === 'suspended') {
-        this._audioCtx.resume();
-      }
-
-      const ctx = this._audioCtx;
-      const now = ctx.currentTime + 0.05;
-
-      // Estimate syllables & duration (~140 words per minute)
-      const words = text.split(/\s+/).filter(Boolean);
-      const wordCount = Math.max(2, words.length);
-      const syllableDuration = 0.16; // ~160ms per syllable
-      const syllablesPerWord = 2.4;
-      const totalSyllables = Math.round(wordCount * syllablesPerWord);
-      const totalDuration = totalSyllables * syllableDuration;
-
-      // Master output gain
-      const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.12, now);
-      masterGain.connect(ctx.destination);
-      this._fallbackNodes.push(masterGain);
-
-      // Multi-formant speech synthesis nodes:
-      // F0 (vocal chord fundamental ~125Hz male clinical doctor), F1 (~500Hz), F2 (~1500Hz)
-      const oscF0 = ctx.createOscillator();
-      const oscF1 = ctx.createOscillator();
-      const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
-      const outputData = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < noiseBuffer.length; i++) {
-        outputData[i] = Math.random() * 2 - 1;
-      }
-
-      oscF0.type = 'sawtooth';
-      oscF1.type = 'triangle';
-
-      const filterF1 = ctx.createBiquadFilter();
-      filterF1.type = 'bandpass';
-      filterF1.frequency.setValueAtTime(550, now);
-      filterF1.Q.setValueAtTime(4.0, now);
-
-      const filterF2 = ctx.createBiquadFilter();
-      filterF2.type = 'bandpass';
-      filterF2.frequency.setValueAtTime(1600, now);
-      filterF2.Q.setValueAtTime(5.0, now);
-
-      // Syllable rhythmic cadence gain
-      const rhythmGain = ctx.createGain();
-      rhythmGain.gain.setValueAtTime(0.001, now);
-
-      // Modulate rhythm gain and formant pitches across syllables to mimic speech cadence
-      let timeCursor = now;
-      for (let s = 0; s < totalSyllables; s++) {
-        const syllableLen = syllableDuration * (0.85 + Math.random() * 0.3);
-        const pitchMod = 125 + Math.sin(s * 0.7) * 14 + (s % 5 === 0 ? 10 : 0);
-
-        oscF0.frequency.setValueAtTime(pitchMod, timeCursor);
-        oscF1.frequency.setValueAtTime(pitchMod * 2, timeCursor);
-
-        // Gentle vowel onset and consonant release
-        rhythmGain.gain.setValueAtTime(0.001, timeCursor);
-        rhythmGain.gain.linearRampToValueAtTime(0.18, timeCursor + syllableLen * 0.3);
-        rhythmGain.gain.exponentialRampToValueAtTime(0.02, timeCursor + syllableLen * 0.85);
-        rhythmGain.gain.setValueAtTime(0.001, timeCursor + syllableLen);
-
-        timeCursor += syllableLen;
-      }
-
-      // Final decay
-      rhythmGain.gain.setValueAtTime(0.001, timeCursor);
-
-      oscF0.connect(filterF1);
-      oscF1.connect(filterF2);
-      filterF1.connect(rhythmGain);
-      filterF2.connect(rhythmGain);
-      rhythmGain.connect(masterGain);
-
-      oscF0.start(now);
-      oscF1.start(now);
-      oscF0.stop(timeCursor + 0.1);
-      oscF1.stop(timeCursor + 0.1);
-
-      this._fallbackNodes.push(oscF0, oscF1, filterF1, filterF2, rhythmGain);
-
-      // Emit start immediately as audio starts
-      this._emit('start', { text, lang, provider: 'acoustic_synthesizer' });
-
-      // Emit end precisely when audio completes
-      const durationMs = (timeCursor - now) * 1000;
-      this._fallbackTimer = setTimeout(() => {
-        this._stopFallbackAudio();
-        this._emit('end', { text, lang, provider: 'acoustic_synthesizer' });
-      }, durationMs);
-
-    } catch (err) {
-      console.warn('Acoustic voice synthesis failed, using timer:', err);
-      this._emit('start', { text, lang, provider: 'silent_timer' });
-      const durationMs = Math.max(2000, (text.length / 15) * 1000);
-      this._fallbackTimer = setTimeout(() => {
-        this._emit('end', { text, lang });
-      }, durationMs);
     }
+
+    this._runSilentCompletion(text, lang);
+  }
+
+  _runSilentCompletion(text, lang) {
+    this._emit('start', { text, lang, provider: 'silent_timer' });
+    const durationMs = Math.max(1500, Math.min(6000, (text.length / 15) * 1000));
+    this._fallbackTimer = setTimeout(() => {
+      this._emit('end', { text, lang });
+    }, durationMs);
   }
 
   _stopFallbackAudio() {

@@ -8,6 +8,44 @@
 
 import { tts } from '../audio/tts-reader.js';
 
+const AVATAR_I18N = {
+  ready: {
+    en: '● AI Clinical Attendant Ready',
+    hi: '● एआई चिकित्सक तैयार',
+    ta: '● AI மருத்துவர் தயார்',
+    te: '● AI వైద్య సహాయకుడు సిద్ధం',
+    mr: '● AI वैद्यकीय सहाय्यक सज्ज'
+  },
+  listening: {
+    en: '🎙 Listening to Your Voice...',
+    hi: '🎙 आपकी आवाज़ सुन रहे हैं...',
+    ta: '🎙 உங்கள் குரலைக் கேட்கிறது...',
+    te: '🎙 మీ వాయిస్ వింటున్నారు...',
+    mr: '🎙 तुमचा आवाज ऐकत आहे...'
+  },
+  speaking: {
+    en: '🔊 AI Attendant Speaking...',
+    hi: '🔊 डॉक्टर बोल रहे हैं...',
+    ta: '🔊 மருத்துவர் பேசுகிறார்...',
+    te: '🔊 డాక్టర్ మాట్లాడుతున్నారు...',
+    mr: '🔊 डॉक्टर बोलत आहेत...'
+  },
+  pointing: {
+    en: '👉 Tap Microphone on Right',
+    hi: '👉 दाईं ओर माइक दबाएं',
+    ta: '👉 வலதுபுறம் மைக்-ஐ அழுத்தவும்',
+    te: '👉 కుడివైపు మైక్ నొక్కండి',
+    mr: '👉 उजवीकडील माइक दाबा'
+  },
+  loading: {
+    en: 'Loading AI Physician...',
+    hi: 'एआई चिकित्सक लोड हो रहा है...',
+    ta: 'AI மருத்துவர் ஏற்றப்படுகிறார்...',
+    te: 'AI వైద్యుడు లోడ్ అవుతున్నాడు...',
+    mr: 'AI वैद्यकीय सहाय्यक लोड होत आहे...'
+  }
+};
+
 export class DoctorAvatar {
   /**
    * @param {string|HTMLElement} container - Container ID or HTMLElement
@@ -22,6 +60,7 @@ export class DoctorAvatar {
       speakingPath: '/avatar/speaking',
       pointingPath: '/avatar/pointing',
       autoSyncAudio: true,
+      language: options.language || 'hi',
     }, options);
 
     this.state = 'idle'; // 'idle' | 'pointing' | 'speaking'
@@ -70,12 +109,12 @@ export class DoctorAvatar {
           <div id="avatarLoadingOverlay" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#0f172a; transition:opacity 0.3s ease; pointer-events:none;">
             <div style="color:var(--brand-primary, #0284c7); font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px;">
               <span class="pulse-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#0284c7;"></span>
-              Loading AI Physician...
+              ${this._getAvatarText('loading')}
             </div>
           </div>
         </div>
         <div id="avatarStatusPill" class="badge badge-teal" style="margin-top:12px; z-index:2; font-weight:600; font-size:13px; padding:6px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); transition:all 0.2s ease;">
-          ● AI Clinical Attendant Ready
+          ${this._getAvatarText('ready')}
         </div>
       </div>
     `;
@@ -89,6 +128,16 @@ export class DoctorAvatar {
     this._preloadFrames();
     this._attachAudioListeners();
     this._startLoop();
+  }
+
+  _getAvatarText(key) {
+    const lang = this.options.language || 'hi';
+    return AVATAR_I18N[key]?.[lang] || AVATAR_I18N[key]?.en || '';
+  }
+
+  setLanguage(lang) {
+    this.options.language = lang;
+    this._updateStatusPill();
   }
 
   /**
@@ -147,7 +196,7 @@ export class DoctorAvatar {
       const pill = this.container ? this.container.querySelector('#avatarStatusPill') : null;
       if (pill) {
         pill.className = 'badge badge-red';
-        pill.innerHTML = '🎙 Listening to Your Voice...';
+        pill.innerHTML = this._getAvatarText('listening');
       }
     } else {
       this._updateStatusPill();
@@ -160,13 +209,13 @@ export class DoctorAvatar {
 
     if (this.state === 'speaking') {
       pill.className = 'badge badge-blue';
-      pill.innerHTML = '🔊 AI Attendant Speaking...';
+      pill.innerHTML = this._getAvatarText('speaking');
     } else if (this.state === 'pointing') {
       pill.className = 'badge badge-amber';
-      pill.innerHTML = '👉 Tap Microphone on Right';
+      pill.innerHTML = this._getAvatarText('pointing');
     } else {
       pill.className = 'badge badge-teal';
-      pill.innerHTML = '● AI Clinical Attendant Ready';
+      pill.innerHTML = this._getAvatarText('ready');
     }
   }
 

@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 # Load .env from project root
 _env_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(_env_path)
+load_dotenv(_env_path, override=True)
 
 
 class Settings:
@@ -30,10 +30,11 @@ class Settings:
 
     # --- Groq (Cloud Speed LLM) ---
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 
     # --- Google Gemini (Cloud Quality LLM) ---
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
     # --- Sarvam AI (Cloud Speech: Saaras V4 ASR + Bulbul V3 TTS) ---
     SARVAM_API_KEY: str = os.getenv("SARVAM_API_KEY", "")
