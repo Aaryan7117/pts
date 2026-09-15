@@ -59,11 +59,19 @@ export function renderKioskAvatarPreview() {
           <!-- State Controls -->
           <div style="background:var(--bg-surface); border:1px solid var(--border-default); border-radius:var(--radius-xl); padding:var(--space-5);">
             <h3 style="font-size:15px; font-weight:700; margin-bottom:var(--space-3);">1. Direct State Control</h3>
-            <div style="display:flex; gap:10px;">
-              <button id="btnForceIdle" class="btn btn-secondary btn-md" style="flex:1; justify-content:center;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+              <button id="btnForceIdle" class="btn btn-secondary btn-md" style="justify-content:center;">
                 ● Force IDLE
               </button>
-              <button id="btnForceSpeaking" class="btn btn-primary btn-md" style="flex:1; justify-content:center;">
+              <button id="btnForcePointing" class="btn btn-secondary btn-md" style="justify-content:center; color:var(--brand-primary); font-weight:700;">
+                👉 Play POINTING (Once)
+              </button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <button id="btnForceListening" class="btn btn-secondary btn-md" style="justify-content:center;">
+                🎙️ Simulate LISTENING
+              </button>
+              <button id="btnForceSpeaking" class="btn btn-primary btn-md" style="justify-content:center;">
                 🔊 Force SPEAKING
               </button>
             </div>
@@ -95,6 +103,7 @@ export function renderKioskAvatarPreview() {
           <!-- Asset Info Card -->
           <div style="background:var(--bg-surface); border:1px solid var(--border-default); border-radius:var(--radius-xl); padding:var(--space-4); font-size:12px; color:var(--text-secondary); line-height:1.6;">
             <div>📁 <strong>Idle Assets:</strong> <code>/avatar/idle/frame-001.webp</code> – <code>frame-150.webp</code> (150 frames)</div>
+            <div>📁 <strong>Pointing Assets:</strong> <code>/avatar/pointing/frame-001.webp</code> – <code>frame-150.webp</code> (150 frames)</div>
             <div>📁 <strong>Speaking Assets:</strong> <code>/avatar/speaking/frame-001.webp</code> – <code>frame-150.webp</code> (150 frames)</div>
             <div>⏱ <strong>Source Duration:</strong> 6.0 seconds · <strong>Math:</strong> 150 frames ÷ 6.0s = 25.0 FPS</div>
           </div>
@@ -129,6 +138,24 @@ export function initKioskAvatarPreview() {
     btnIdle.addEventListener('click', () => {
       tts.stop();
       avatarInstance.setState('idle');
+    });
+  }
+
+  const btnPointing = document.getElementById('btnForcePointing');
+  if (btnPointing) {
+    btnPointing.addEventListener('click', () => {
+      tts.stop();
+      avatarInstance.playPointingOnce(() => {
+        avatarInstance.setState('idle');
+      });
+    });
+  }
+
+  const btnListening = document.getElementById('btnForceListening');
+  if (btnListening) {
+    btnListening.addEventListener('click', () => {
+      tts.stop();
+      avatarInstance.setListening(true);
     });
   }
 

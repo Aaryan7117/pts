@@ -18,7 +18,8 @@ let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
 let avatarInstance = null;
-let autoPlayTimer = null;
+let onboardingTimer = null;
+let hasPointedOnboarding = false;
 let speechRecognizer = null;
 let inputMode = 'voice'; // 'voice' | 'typing'
 
@@ -109,8 +110,12 @@ export function renderKioskVoiceIntake() {
         <!-- Right Pane: Live Voice or Touch Typing -->
         <div class="kiosk-right-pane">
           <div class="kiosk-task-canvas" style="align-items:center; justify-content:center; text-align:center;">
-            <h1 class="text-h1" style="margin-bottom:var(--space-1); font-size:24px;">${promptText}</h1>
-            <p class="text-body-lg" style="margin-bottom:var(--space-4); max-width:620px; font-size:15px;">${subText}</p>
+            <h1 class="text-h1" style="margin-bottom:var(--space-2); font-size:24px;">${promptText}</h1>
+            <div id="kioskMicrophoneInstructionBox" style="margin-bottom:var(--space-4); padding:10px 20px; border-radius:14px; background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); display:inline-block; transition:all 0.3s ease;">
+              <p id="kioskMicrophoneInstruction" style="margin:0; font-size:16px; font-weight:700; color:var(--brand-primary); line-height:1.4;">
+                👉 ${subText}
+              </p>
+            </div>
 
             <!-- Mode 1: Voice Recorder Container -->
             <div id="kioskVoiceModeContainer" class="voice-recorder-container" style="display:flex; flex-direction:column; align-items:center; width:100%;">
@@ -198,28 +203,60 @@ export async function initKioskVoiceIntake() {
   inputMode = 'voice';
   let recordedPatientText = '';
 
-  // Mount Doctor Avatar
+  // 1. Doctor Avatar starts strictly in IDLE / LISTENING animation.
+  // When the OPD Kiosk first loads:
+  // → DO NOT play POINTING.
+  // → DO NOT play SPEAKING.
+  // → Play IDLE continuously.
   avatarInstance = new DoctorAvatar('kioskVoiceAvatarContainer');
   avatarInstance.mount();
+  avatarInstance.setState('idle');
 
   visualizer = new AudioVisualizer(canvas);
 
-  // Ask question aloud upon arrival
-  const askIntakeQuestion = () => {
-    const prompt = i18n.t('voice_prompt', lang);
-    const sub = i18n.t('voice_sub', lang);
-    tts.speak(`${prompt} ${sub}`, lang);
-  };
+  // 2. INITIAL MICROPHONE INSTRUCTION:
+  // When the UI reaches the onboarding instruction:
+  // "Tap the microphone button and speak naturally"
+  // → Play the POINTING animation.
+  // → The seated doctor raises his hand and points specifically toward the microphone button on the RIGHT side of the screen.
+  // → Play POINTING only once.
+  // → After the pointing animation completes, transition back to IDLE.
+  const instructionBox = document.getElementById('kioskMicrophoneInstructionBox');
 
-  autoPlayTimer = setTimeout(() => {
-    askIntakeQuestion();
-  }, 400);
+  onboardingTimer = setTimeout(() => {
+    if (hasPointedOnboarding || !avatarInstance || isRecording) return;
+    hasPointedOnboarding = true;
 
-  // Hear question button
+    if (micBtn) {
+      micBtn.classList.add('mic-btn-highlight');
+    }
+    if (instructionBox) {
+      instructionBox.style.boxShadow = '0 0 0 4px rgba(2,132,199,0.2)';
+      instructionBox.style.background = 'rgba(2,132,199,0.12)';
+    }
+
+    avatarInstance.playPointingOnce(() => {
+      // After pointing completes, transition back to IDLE
+      if (avatarInstance) {
+        avatarInstance.setState('idle');
+      }
+      if (micBtn) {
+        micBtn.classList.remove('mic-btn-highlight');
+      }
+      if (instructionBox) {
+        instructionBox.style.boxShadow = '';
+        instructionBox.style.background = 'rgba(2,132,199,0.06)';
+      }
+    });
+  }, 700);
+
+  // Hear question button (optional user-invoked audio guidance)
   const hearBtn = document.getElementById('btnHearIntakeQuestion');
   if (hearBtn) {
     hearBtn.addEventListener('click', () => {
-      askIntakeQuestion();
+      const prompt = i18n.t('voice_prompt', lang);
+      const sub = i18n.t('voice_sub', lang);
+      tts.speak(`${prompt} ${sub}`, lang);
     });
   }
 
@@ -370,14 +407,31 @@ export async function initKioskVoiceIntake() {
       if (!isRecording) {
         tts.stop();
 
+        // If onboarding pointing timer is pending, clear it
+        if (onboardingTimer) {
+          clearTimeout(onboardingTimer);
+          onboardingTimer = null;
+        }
+        hasPointedOnboarding = true; // POINTING is an onboarding animation only
+
         // START RECORDING
         isRecording = true;
         micBtn.classList.add('active');
+        micBtn.classList.remove('mic-btn-highlight');
+        if (instructionBox) {
+          instructionBox.style.boxShadow = '';
+          instructionBox.style.background = 'rgba(2,132,199,0.06)';
+        }
         statusText.textContent = i18n.t('listening_status', lang);
         statusText.style.color = 'var(--status-danger)';
         sounds.playStartListening();
         visualizer.start();
 
+        // PATIENT SPEAKING:
+        // When the patient activates the microphone and is speaking:
+        // → IDLE / LISTENING animation.
+        // → Doctor remains seated, attentive, breathing/blinking naturally.
+        // → Do NOT use SPEAKING.
         if (avatarInstance) {
           avatarInstance.setListening(true);
         }
@@ -615,10 +669,11 @@ function extractClinicalFactsFromText(patientWords, lang) {
 }
 
 export function destroyKioskVoiceIntake() {
-  if (autoPlayTimer) {
-    clearTimeout(autoPlayTimer);
-    autoPlayTimer = null;
+  if (onboardingTimer) {
+    clearTimeout(onboardingTimer);
+    onboardingTimer = null;
   }
+  hasPointedOnboarding = false;
   tts.stop();
   if (speechRecognizer) {
     try { speechRecognizer.stop(); } catch (_) {}

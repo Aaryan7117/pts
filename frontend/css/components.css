@@ -339,6 +339,23 @@
   box-shadow: 0 8px 28px rgba(200, 58, 58, 0.45);
 }
 
+/* Onboarding pointing pulse on microphone */
+.mic-btn.mic-btn-highlight {
+  animation: micPromptPulse 2s infinite ease-in-out;
+  box-shadow: 0 0 0 8px rgba(2, 132, 199, 0.25), 0 8px 30px rgba(2, 132, 199, 0.45);
+}
+
+@keyframes micPromptPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(2, 132, 199, 0.25), 0 8px 30px rgba(2, 132, 199, 0.45);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 14px rgba(2, 132, 199, 0.35), 0 10px 36px rgba(2, 132, 199, 0.6);
+  }
+}
+
 /* Pulsing Outer Rings during recording */
 .mic-halo {
   position: absolute;
