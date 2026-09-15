@@ -1,65 +1,86 @@
 /**
  * MediKiosk Web — 3-Layer Design Token Architecture
- * Conforms to MEDIKIOSK_WEB_DESIGN_SPEC.md & WCAG 2.2 Level AAA (>= 7:1)
- * "RetinopathyScan Light Medical Standard"
+ * Visual source of truth: ReliaCare-inspired glassmorphism healthcare UI
+ * (soft sage→cream gradient, lime accent, forest text, frosted glass chrome)
+ *
+ * Accessibility notes:
+ * - Lime (#A3E635) on cream can fail AA for small text; primary CTAs use
+ *   dark forest text on lime (≈7:1+) instead of white-on-lime.
+ * - Glass nav uses translucent white; for higher contrast enable
+ *   prefers-contrast: more / .theme-high-contrast (opaque surfaces, solid borders).
+ * - Clinical status colors (danger/warning) remain saturated for triage clarity.
  */
 
 :root {
   /* =========================================================================
-     LAYER 1: PRIMITIVE TOKENS (Raw Hex, Spacing, Radius, Shadow Units)
+     LAYER 1: PRIMITIVE TOKENS
      ========================================================================= */
 
-  /* Neutral Slate Palette */
-  --pr-slate-25:  #FBFCFE;
-  --pr-slate-50:  #F6F9FC; /* Base canvas */
-  --pr-slate-100: #EEF3F8; /* Card hover / input background */
-  --pr-slate-200: #DCE5F0; /* Clean thin border */
-  --pr-slate-300: #B8C8DB; /* Border strong / icon inactive */
-  --pr-slate-400: #8FA2BA; /* Disabled placeholder */
-  --pr-slate-500: #6B7A90; /* Secondary metadata text */
-  --pr-slate-600: #4B586B; /* Body muted text */
-  --pr-slate-700: #334053; /* High contrast body copy */
-  --pr-slate-800: #1D2B3F; /* Secondary heading */
-  --pr-slate-900: #10233E; /* Deep clinical contrast primary text */
+  /* ReliaCare sage / cream neutrals */
+  --pr-slate-25:  #FBFDF9;
+  --pr-slate-50:  #F8FAF5; /* cream canvas end */
+  --pr-slate-100: #EEF6F1;
+  --pr-slate-200: #D7E8DF;
+  --pr-slate-300: #B5CDBF;
+  --pr-slate-400: #8AA99A;
+  --pr-slate-500: #5F7A6E; /* muted text */
+  --pr-slate-600: #456056;
+  --pr-slate-700: #374151; /* secondary body */
+  --pr-slate-800: #1A3C34; /* forest heading */
+  --pr-slate-900: #064E3B; /* deep forest primary text */
   --pr-white:     #FFFFFF;
 
-  /* Primary Royal Blues */
-  --pr-blue-50:   #EAF3FF;
-  --pr-blue-100:  #D4E6FE;
-  --pr-blue-200:  #A7C8FD;
-  --pr-blue-400:  #5392F8;
-  --pr-blue-600:  #1E75E8;
-  --pr-blue-700:  #1667D9; /* Primary action blue */
-  --pr-blue-900:  #0D3B7A; /* Deep navy authority */
-  --pr-blue-950:  #08244D;
+  /* Lime accent (primary interactive fill) */
+  --pr-lime-50:   #F3FCE8;
+  --pr-lime-100:  #E4F8C8;
+  --pr-lime-200:  #C9F0A0;
+  --pr-lime-400:  #B4E86A;
+  --pr-lime-500:  #A3E635; /* primary CTA fill */
+  --pr-lime-600:  #8BCF28;
+  --pr-lime-800:  #4D7C0F;
 
-  /* Healthcare Teals & AYUSH Greens */
+  /* Soft sage / mint backgrounds */
+  --pr-sage-100:  #DFF2EB;
+  --pr-sage-200:  #C8E8DC;
+  --pr-sage-300:  #A8D5C6;
+
+  /* Legacy blue primitives remapped toward forest/lime (keep names for compat) */
+  --pr-blue-50:   #EAF8F0;
+  --pr-blue-100:  #D4F0E2;
+  --pr-blue-200:  #A7D9C4;
+  --pr-blue-400:  #5FAE8A;
+  --pr-blue-600:  #2F8F6A;
+  --pr-blue-700:  #1A3C34;
+  --pr-blue-900:  #064E3B;
+  --pr-blue-950:  #033526;
+
+  /* Healthcare teals & AYUSH greens */
   --pr-teal-50:   #E7F8F6;
   --pr-teal-100:  #C4F1EB;
   --pr-teal-500:  #12A59C;
-  --pr-teal-700:  #0B8F87; /* Telehealth & device status */
+  --pr-teal-700:  #0B8F87;
   --pr-teal-900:  #075B56;
 
   --pr-green-50:  #EAF8F0;
   --pr-green-100: #D0F2DF;
-  --pr-green-600: #17824C; /* Clinical success */
+  --pr-green-600: #17824C;
   --pr-green-800: #0D6338;
-  --pr-green-900: #047857; /* Ministry of AYUSH emerald */
+  --pr-green-900: #047857;
 
-  /* Triage Red & Warning Amber */
+  /* Triage Red & Warning Amber (clinical — unchanged intent) */
   --pr-red-50:    #FFF0F0;
   --pr-red-100:   #FFE0E0;
   --pr-red-600:   #E04040;
-  --pr-red-700:   #C83A3A; /* Red Flag urgent emergency */
+  --pr-red-700:   #C83A3A;
   --pr-red-900:   #881D1D;
 
   --pr-amber-50:  #FFF6E5;
   --pr-amber-100: #FEEDCC;
   --pr-amber-500: #D97E00;
-  --pr-amber-700: #B66A00; /* Drug alert / missing document */
+  --pr-amber-700: #B66A00;
   --pr-amber-900: #7A4300;
 
-  /* Spacing Scale (8px system with 4px micro offsets) */
+  /* Spacing Scale (4/8 system) */
   --space-0-5: 2px;
   --space-1:   4px;
   --space-2:   8px;
@@ -73,23 +94,30 @@
   --space-16:  64px;
   --space-20:  80px;
 
-  /* Border Radius Scale */
+  /* Border Radius — ReliaCare: pills + soft cards */
   --radius-xs:   4px;
   --radius-sm:   8px;
   --radius-md:   12px;
   --radius-lg:   16px;
-  --radius-xl:   20px;
-  --radius-2xl:  28px;
+  --radius-xl:   24px;
+  --radius-2xl:  32px;
   --radius-full: 9999px;
 
-  /* Shadows (Multi-layered, low-tint, crisp medical elevation) */
-  --shadow-xs: 0 1px 2px rgba(16, 35, 62, 0.04);
-  --shadow-sm: 0 2px 4px rgba(16, 35, 62, 0.04), 0 1px 2px rgba(16, 35, 62, 0.03);
-  --shadow-md: 0 4px 12px rgba(16, 35, 62, 0.06), 0 2px 4px rgba(16, 35, 62, 0.04);
-  --shadow-lg: 0 8px 24px rgba(16, 35, 62, 0.08), 0 3px 6px rgba(16, 35, 62, 0.04);
-  --shadow-xl: 0 16px 36px rgba(16, 35, 62, 0.12), 0 6px 12px rgba(16, 35, 62, 0.06);
-  --shadow-active-blue: 0 0 0 3px rgba(22, 103, 217, 0.2), 0 4px 14px rgba(22, 103, 217, 0.18);
+  /* Soft diffused elevation */
+  --shadow-xs: 0 1px 2px rgba(6, 78, 59, 0.04);
+  --shadow-sm: 0 2px 8px rgba(6, 78, 59, 0.05), 0 1px 2px rgba(6, 78, 59, 0.03);
+  --shadow-md: 0 8px 20px rgba(6, 78, 59, 0.08), 0 2px 6px rgba(6, 78, 59, 0.04);
+  --shadow-lg: 0 16px 32px rgba(6, 78, 59, 0.10), 0 4px 10px rgba(6, 78, 59, 0.05);
+  --shadow-xl: 0 20px 40px -8px rgba(6, 78, 59, 0.14), 0 10px 16px -6px rgba(6, 78, 59, 0.06);
+  --shadow-active-blue: 0 0 0 3px rgba(163, 230, 53, 0.45), 0 4px 14px rgba(163, 230, 53, 0.28);
   --shadow-active-red:  0 0 0 3px rgba(200, 58, 58, 0.25), 0 6px 20px rgba(200, 58, 58, 0.25);
+
+  /* Glassmorphism */
+  --glass-bg:            rgba(255, 255, 255, 0.42);
+  --glass-bg-strong:     rgba(255, 255, 255, 0.72);
+  --glass-border:        rgba(255, 255, 255, 0.65);
+  --glass-blur:          14px;
+  --highlight-tint:      rgba(163, 230, 53, 0.55);
 
   /* Z-Index Stack */
   --z-base:         1;
@@ -100,7 +128,7 @@
   --z-modal-canvas: 1000;
   --z-toast:        1100;
 
-  /* Motion & Easing Curves */
+  /* Motion */
   --motion-instant:  100ms;
   --motion-fast:     180ms;
   --motion-normal:   280ms;
@@ -112,81 +140,111 @@
   --ease-in-out:    cubic-bezier(0.4, 0, 0.2, 1);
 
   /* =========================================================================
-     LAYER 2: SEMANTIC TOKENS (Intent & Role)
+     LAYER 2: SEMANTIC TOKENS
      ========================================================================= */
 
-  /* Backgrounds & Canvas */
-  --bg-canvas:         var(--pr-slate-50);     /* #F6F9FC Base Page Canvas */
-  --bg-surface:        var(--pr-white);        /* #FFFFFF Card & Modal Surfaces */
-  --bg-surface-soft:   var(--pr-slate-25);     /* #FBFCFE Subtle Inset */
-  --bg-surface-subtle: var(--pr-slate-100);    /* #EEF3F8 Disabled / Alternate Row */
+  --bg-canvas:         var(--pr-slate-50);
+  --bg-primary:        var(--bg-canvas); /* alias used by screens.css */
+  --bg-surface:        var(--pr-white);
+  --bg-surface-soft:   var(--pr-slate-25);
+  --bg-surface-subtle: var(--pr-slate-100);
+  --bg-gradient:       linear-gradient(118deg, #DFF2EB 0%, #F8FAF5 48%, #E8F6EF 100%);
 
-  /* Text & Typography */
-  --text-primary:      var(--pr-slate-900);    /* #10233E (WCAG AAA: 15.2:1) */
-  --text-secondary:    var(--pr-slate-700);    /* #334053 (WCAG AAA: 10.1:1) */
-  --text-muted:        var(--pr-slate-500);    /* #6B7A90 (WCAG AA: 5.2:1) */
-  --text-inverse:      var(--pr-white);        /* #FFFFFF */
-  --text-brand:        var(--pr-blue-700);     /* #1667D9 Interactive links */
+  --text-primary:      var(--pr-slate-900);
+  --text-secondary:    var(--pr-slate-700);
+  --text-muted:        var(--pr-slate-500);
+  --text-inverse:      var(--pr-white);
+  --text-on-brand:     var(--pr-slate-900); /* forest on lime CTAs */
+  --text-brand:        var(--pr-slate-800);
 
-  /* Borders & Dividers */
   --border-subtle:     var(--pr-slate-100);
-  --border-default:    var(--pr-slate-200);    /* #DCE5F0 Standard card borders */
+  --border-default:    var(--pr-slate-200);
   --border-strong:     var(--pr-slate-300);
-  --border-brand:      var(--pr-blue-700);
+  --border-brand:      var(--pr-lime-500);
 
-  /* Brand Interactive */
-  --brand-primary:     var(--pr-blue-700);     /* #1667D9 Dominant Action */
-  --brand-dark:        var(--pr-blue-900);     /* #0D3B7A Deep Header Accent */
-  --brand-tint:        var(--pr-blue-50);      /* #EAF3FF Selected Card Fill */
-  --brand-hover:       var(--pr-blue-600);
+  --brand-primary:     var(--pr-lime-500);
+  --brand-dark:        var(--pr-slate-900);
+  --brand-tint:        var(--pr-lime-50);
+  --brand-hover:       var(--pr-lime-600);
 
-  /* Clinical Status Intent */
-  --status-teal:         var(--pr-teal-700);   /* #0B8F87 Clinical Telehealth & Sensors */
+  --status-teal:         var(--pr-teal-700);
   --status-teal-tint:    var(--pr-teal-50);
-  --status-ayush:        var(--pr-green-900);  /* #047857 Ministry of AYUSH & Verified */
-  --status-success:      var(--pr-green-600);  /* #17824C Normal Range / Verified Fact */
+  --status-ayush:        var(--pr-green-900);
+  --status-ayush-tint:   var(--pr-green-50);
+  --status-success:      var(--pr-green-600);
   --status-success-tint: var(--pr-green-50);
-  --status-warning:      var(--pr-amber-700);  /* #B66A00 Drug Alert / Missing Document */
+  --status-warning:      var(--pr-amber-700);
   --status-warning-tint: var(--pr-amber-50);
-  --status-danger:       var(--pr-red-700);    /* #C83A3A Red Flag Triage & Emergency */
+  --status-danger:       var(--pr-red-700);
   --status-danger-tint:  var(--pr-red-50);
 
   /* =========================================================================
      LAYER 3: COMPONENT-SCOPED TOKENS
      ========================================================================= */
 
-  /* Shell Dimensions */
-  --header-height:           72px;
+  --header-height:           80px;
   --sidebar-width:            250px;
   --sidebar-collapsed-width:  76px;
 
-  /* Card Specifications */
   --card-padding-sm:          16px;
   --card-padding-md:          24px;
   --card-padding-lg:          32px;
-  --card-radius:              var(--radius-xl);   /* 20px */
+  --card-radius:              var(--radius-2xl);
   --card-border-width:        1px;
 
-  /* Button Dimensions */
   --btn-height-sm:            36px;
   --btn-height-md:            48px;
-  --btn-height-lg:            60px;
-  --btn-height-touch:         68px; /* For Kiosk / Touch tablets */
-  --btn-radius:               var(--radius-md);   /* 12px */
+  --btn-height-lg:            56px;
+  --btn-height-touch:         64px;
+  --btn-radius:               var(--radius-full);
 
-  /* Voice & Waveform Widgets */
   --mic-btn-size-desktop:     88px;
   --mic-btn-size-kiosk:       104px;
   --waveform-bar-width:       5px;
   --waveform-bar-gap:         6px;
   --waveform-bar-radius:      3px;
 
-  /* Document Bounding Boxes ("No Receipt, No Fact") */
   --bounding-box-color:       #F59E0B;
   --bounding-box-bg:          rgba(245, 158, 11, 0.18);
   --bounding-box-border:      2.5px solid #D97706;
 
-  /* Typography Font Stack */
-  --font-family-sans: 'Plus Jakarta Sans', 'Inter', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Lora', Georgia, 'Times New Roman', serif;
+  --font-body: 'DM Sans', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-sans: var(--font-body);
+  --font-family-display: var(--font-display);
   --font-family-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+/* Forced high-contrast / prefers-contrast: opaque surfaces, solid borders */
+@media (prefers-contrast: more) {
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.96);
+    --glass-bg-strong: #FFFFFF;
+    --glass-border: var(--pr-slate-300);
+    --glass-blur: 0px;
+    --bg-gradient: var(--pr-white);
+    --text-muted: var(--pr-slate-700);
+    --border-default: var(--pr-slate-400);
+  }
+
+  body::before {
+    display: none;
+  }
+}
+
+.theme-high-contrast {
+  --glass-bg: #FFFFFF;
+  --glass-bg-strong: #FFFFFF;
+  --glass-border: #1A3C34;
+  --glass-blur: 0px;
+  --bg-gradient: #FFFFFF;
+  --brand-primary: #4D7C0F;
+  --text-on-brand: #FFFFFF;
+  --text-muted: #374151;
+  --border-default: #456056;
+}
+
+.theme-high-contrast body::before,
+.theme-high-contrast::before {
+  display: none;
 }

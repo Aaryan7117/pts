@@ -15,36 +15,34 @@ export function renderTopbar(currentPath) {
     <header class="topbar">
       <!-- Left: Institutional Brand -->
       <a href="#/welcome" class="topbar__brand">
-        <div class="topbar__brand-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v20M2 12h20"></path>
-          </svg>
+        <div class="topbar__brand-icon" aria-hidden="true">
+          <img src="/medikiosk-mark.png" alt="" class="topbar__brand-mark" width="56" height="56" />
         </div>
         <div>
-          <div class="topbar__title">MediKiosk <span style="font-weight:400; color:var(--brand-primary); font-size:14px;">AI</span></div>
+          <div class="topbar__title">MediKiosk <span style="font-family:var(--font-body); font-weight:500; color:var(--brand-primary); font-size:14px;">AI</span></div>
           <div class="topbar__subtitle">AIIA New Delhi · AYUSH OPD</div>
         </div>
       </a>
 
       <!-- Center: Portal Switcher Navigation -->
-      <nav class="topbar__portal-nav">
+      <nav class="topbar__portal-nav" aria-label="Portal switcher">
         <a href="#/account-type" class="topbar__portal-btn ${currentPath === '/account-type' ? 'active' : ''}">
-          🌐 Role Hub
+          <i class="fa-solid fa-globe" aria-hidden="true"></i> Role Hub
         </a>
         <a href="#/kiosk/welcome" class="topbar__portal-btn ${currentPath.startsWith('/kiosk') ? 'active' : ''}">
-          🏥 OPD Kiosk
+          <i class="fa-solid fa-hospital" aria-hidden="true"></i> OPD Kiosk
         </a>
         <a href="#/patient/dashboard" class="topbar__portal-btn ${currentPath.startsWith('/patient') ? 'active' : ''}">
-          👤 Patient Portal
+          <i class="fa-solid fa-user" aria-hidden="true"></i> Patient Portal
         </a>
         <a href="#/doctor/queue" class="topbar__portal-btn ${currentPath.startsWith('/doctor') ? 'active' : ''}">
-          🩺 Doctor Station
+          <i class="fa-solid fa-user-doctor" aria-hidden="true"></i> Doctor Station
         </a>
         <a href="#/ivr" class="topbar__portal-btn ${currentPath.startsWith('/ivr') ? 'active' : ''}">
-          📞 2G IVR Studio
+          <i class="fa-solid fa-phone" aria-hidden="true"></i> 2G IVR Studio
         </a>
         <a href="/mobile.html" target="_blank" class="topbar__portal-btn" style="text-decoration:none;">
-          📱 Mobile App ↗
+          <i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> Mobile App
         </a>
       </nav>
 

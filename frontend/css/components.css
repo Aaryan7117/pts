@@ -10,9 +10,9 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
   border-radius: var(--btn-radius);
   border: 1px solid transparent;
   cursor: pointer;
@@ -20,6 +20,7 @@
   text-decoration: none;
   white-space: nowrap;
   user-select: none;
+  letter-spacing: 0.01em;
 }
 
 .btn:active {
@@ -28,7 +29,7 @@
 
 .btn-sm {
   height: var(--btn-height-sm);
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-4);
   font-size: 0.85rem;
 }
 
@@ -41,40 +42,43 @@
 .btn-lg {
   height: var(--btn-height-lg);
   padding: 0 var(--space-6);
-  font-size: 1.1rem;
-  border-radius: var(--radius-lg);
+  font-size: 1.05rem;
 }
 
 /* Kiosk Touch Target Button */
 .btn-touch {
   height: var(--btn-height-touch);
   padding: 0 var(--space-8);
-  font-size: 1.25rem;
-  font-weight: 700;
-  border-radius: var(--radius-xl);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow-md);
 }
 
-/* Button Variants */
+/* Button Variants — ReliaCare lime primary / glass secondary */
 .btn-primary {
   background-color: var(--brand-primary);
-  color: var(--text-inverse);
-  box-shadow: 0 2px 6px rgba(22, 103, 217, 0.25);
+  color: var(--text-on-brand);
+  box-shadow: 0 4px 14px rgba(163, 230, 53, 0.35);
 }
 .btn-primary:hover {
   background-color: var(--brand-hover);
-  box-shadow: 0 4px 12px rgba(22, 103, 217, 0.35);
+  box-shadow: 0 6px 18px rgba(163, 230, 53, 0.45);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background-color: var(--bg-surface);
+  background-color: var(--glass-bg-strong);
   color: var(--text-primary);
-  border-color: var(--border-default);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   box-shadow: var(--shadow-xs);
 }
 .btn-secondary:hover {
-  background-color: var(--bg-surface-soft);
+  background-color: var(--pr-white);
   border-color: var(--border-strong);
+  transform: translateY(-1px);
 }
 
 .btn-ghost {
@@ -97,12 +101,12 @@
 }
 
 .btn-ayush {
-  background-color: var(--status-ayush);
-  color: var(--text-inverse);
-  box-shadow: 0 2px 6px rgba(4, 120, 87, 0.25);
+  background-color: var(--brand-primary);
+  color: var(--text-on-brand);
+  box-shadow: 0 4px 14px rgba(163, 230, 53, 0.3);
 }
 .btn-ayush:hover {
-  background-color: var(--pr-green-800);
+  background-color: var(--brand-hover);
 }
 
 .btn-outline-danger {
@@ -125,17 +129,19 @@
    2. CARDS & CONTAINERS
    ========================================================================= */
 .card {
-  background-color: var(--bg-surface);
-  border: var(--card-border-width) solid var(--border-default);
+  background-color: var(--glass-bg-strong);
+  border: 2px solid var(--glass-border);
   border-radius: var(--card-radius);
   padding: var(--card-padding-md);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--motion-fast) var(--ease-smooth), border-color var(--motion-fast);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.5));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.5));
+  transition: box-shadow var(--motion-fast) var(--ease-smooth), border-color var(--motion-fast), transform var(--motion-fast);
 }
 
 .card-sm {
   padding: var(--card-padding-sm);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
 }
 
 .card-lg {
@@ -148,7 +154,8 @@
 }
 .card-interactive:hover {
   border-color: var(--brand-primary);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 /* Large Choice Card (For Kiosk & Setup) */
@@ -157,18 +164,20 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-5) var(--space-6);
-  background-color: var(--bg-surface);
-  border: 1.5px solid var(--border-default);
-  border-radius: var(--radius-xl);
+  background-color: var(--glass-bg-strong);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
   cursor: pointer;
   transition: all var(--motion-fast) var(--ease-smooth);
   gap: var(--space-4);
   min-height: 80px;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 .choice-card:hover {
   border-color: var(--brand-primary);
-  background-color: var(--bg-surface-soft);
+  background-color: var(--bg-surface);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -201,18 +210,21 @@
 
 .choice-card.selected .choice-card__icon-wrap {
   background-color: var(--brand-primary);
-  color: var(--text-inverse);
+  color: var(--text-on-brand);
 }
 
 .choice-card__title {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 2px;
 }
 
 .choice-card__subtitle {
+  font-family: var(--font-body);
   font-size: 0.9rem;
+  font-weight: 400;
   color: var(--text-muted);
 }
 
@@ -235,7 +247,7 @@
   content: '';
   width: 8px;
   height: 8px;
-  background-color: var(--text-inverse);
+  background-color: var(--text-on-brand);
   border-radius: 50%;
 }
 
@@ -247,11 +259,12 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 500;
   border-radius: var(--radius-full);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0.01em;
   border: 1px solid transparent;
   line-height: 1.2;
 }
@@ -276,8 +289,8 @@
 
 .badge-blue {
   background-color: var(--brand-tint);
-  border-color: var(--pr-blue-400);
-  color: var(--brand-primary);
+  border-color: var(--pr-lime-400);
+  color: var(--brand-dark);
 }
 
 .badge-teal {
@@ -320,13 +333,13 @@
   border-radius: 50%;
   border: none;
   background-color: var(--brand-primary);
-  color: var(--text-inverse);
+  color: var(--text-on-brand);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 2;
-  box-shadow: 0 8px 24px rgba(22, 103, 217, 0.4);
+  box-shadow: 0 8px 24px rgba(163, 230, 53, 0.45);
   transition: transform var(--motion-fast), background-color var(--motion-fast);
 }
 
@@ -336,23 +349,24 @@
 
 .mic-btn.active {
   background-color: var(--status-danger);
+  color: var(--text-inverse);
   box-shadow: 0 8px 28px rgba(200, 58, 58, 0.45);
 }
 
 /* Onboarding pointing pulse on microphone */
 .mic-btn.mic-btn-highlight {
   animation: micPromptPulse 2s infinite ease-in-out;
-  box-shadow: 0 0 0 8px rgba(2, 132, 199, 0.25), 0 8px 30px rgba(2, 132, 199, 0.45);
+  box-shadow: 0 0 0 8px rgba(163, 230, 53, 0.28), 0 8px 30px rgba(163, 230, 53, 0.4);
 }
 
 @keyframes micPromptPulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 0 0 8px rgba(2, 132, 199, 0.25), 0 8px 30px rgba(2, 132, 199, 0.45);
+    box-shadow: 0 0 0 8px rgba(163, 230, 53, 0.28), 0 8px 30px rgba(163, 230, 53, 0.4);
   }
   50% {
     transform: scale(1.06);
-    box-shadow: 0 0 0 14px rgba(2, 132, 199, 0.35), 0 10px 36px rgba(2, 132, 199, 0.6);
+    box-shadow: 0 0 0 14px rgba(163, 230, 53, 0.38), 0 10px 36px rgba(163, 230, 53, 0.55);
   }
 }
 
@@ -430,20 +444,21 @@
   min-height: 90px;
   padding: 12px 16px;
   font-size: 1.05rem;
-  font-family: inherit;
+  font-family: var(--font-body);
+  font-weight: 400;
   border: 1.5px solid var(--border-default);
   border-radius: var(--radius-lg);
   background: var(--bg-canvas);
   color: var(--text-primary);
   resize: vertical;
-  line-height: 1.5;
+  line-height: 1.55;
   transition: border-color var(--motion-fast);
 }
 
 .kiosk-typing-textarea:focus {
   outline: none;
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+  box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.35);
 }
 
 .kiosk-symptom-chips-container {
@@ -453,10 +468,11 @@
 }
 
 .kiosk-symptom-chips-title {
+  font-family: var(--font-body);
   font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.01em;
   color: var(--text-muted);
 }
 
@@ -471,8 +487,9 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
   padding: 6px 14px;
+  font-family: var(--font-body);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-primary);
   cursor: pointer;
   display: inline-flex;
@@ -595,20 +612,22 @@
 }
 
 .queue-ticket__header {
+  font-family: var(--font-body);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
-  text-transform: uppercase;
+  text-transform: none;
   margin-bottom: var(--space-2);
 }
 
 .queue-ticket__token {
-  font-size: 4rem;
-  font-weight: 800;
+  font-size: 3.5rem;
+  font-weight: 600;
   color: var(--brand-primary);
   font-family: var(--font-family-mono);
   line-height: 1;
   margin: var(--space-3) 0 var(--space-5);
+  letter-spacing: 0.02em;
 }
 
 .queue-ticket__meta-grid {
@@ -644,10 +663,11 @@
 .clinical-table th {
   background-color: var(--bg-surface-soft);
   color: var(--text-secondary);
-  font-weight: 700;
+  font-family: var(--font-body);
+  font-weight: 500;
   font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0.01em;
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border-default);
 }
@@ -742,8 +762,9 @@
   width: 100%;
   height: 48px;
   padding: 0 var(--space-4);
-  font-family: inherit;
+  font-family: var(--font-body);
   font-size: 1rem;
+  font-weight: 400;
   background-color: var(--bg-surface);
   border: 1.5px solid var(--border-default);
   border-radius: var(--radius-md);
